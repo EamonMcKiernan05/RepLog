@@ -1,0 +1,26 @@
+[project]
+name = "lift-sync"
+version = "1.0.0"
+description = "Self-hosted CSV sync service for RepLog workout sessions"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["lift_sync*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

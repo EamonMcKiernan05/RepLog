@@ -1,0 +1,25 @@
+# lift-sync — run locally (dev) or on the NAS.
+#
+# Local dev:
+#   cd service && LIFT_SYNC_TOKEN=$(openssl rand -hex 16) docker compose up
+#
+# NAS (TrueNAS custom app): same compose, with the data volume pointing at
+# the dataset folder that is SMB-shared, e.g.
+#   - /mnt/tank/Gym/Hermes Coach Workspace/sync:/data
+#
+# The token goes in .env (never in this file, never in the repo).
+services:
+  lift-sync:
+    build: .
+    image: replog/lift-sync:1.0.0
+    ports:
+      - "8080:8080"
+    environment:
+      LIFT_SYNC_DATA_DIR: /data
+      LIFT_SYNC_TOKEN: ${LIFT_SYNC_TOKEN:?set LIFT_SYNC_TOKEN in .env}
+    volumes:
+      - lift-sync-data:/data
+    restart: unless-stopped
+
+volumes:
+  lift-sync-data:
