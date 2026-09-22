@@ -15,28 +15,24 @@ final class DataStore {
     static var mainContextRef: ModelContext?
 
     init(inMemory: Bool = false) {
-        // DIAGNOSTIC: find a reliable test-host signal at init() time.
-        let env = ProcessInfo.processInfo.environment
-        let sigKeys = ["XCTestConfigurationFilePath", "XCTestBundlePath", "DYLD_INSERT_LIBRARIES"]
-        let found = sigKeys.filter { env[$0] != nil }
-        FileHandle.standardError.write("DataStore DIAG args=\(CommandLine.arguments.prefix(6))\n".data(using: .utf8)!)
-        FileHandle.standardError.write("DataStore DIAG testEnvKeys=\(found)\n".data(using: .utf8)!)
+        // In the unit-test host the app's UI is not exercised (the unit tests
+        // are pure logic + their own in-memory stores). Disk stores resolve to
+        // /dev/null in that context, so use an in-memory store there.
+        let isTestHost = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         let schema = Schema([
             Session.self, ExerciseEntry.self, SetEntry.self,
             Routine.self, RoutineExercise.self, Exercise.self,
             Category.self, BodyweightEntry.self,
         ])
+        let useMemory = inMemory || isTestHost
         let config: ModelConfiguration
-        if inMemory {
+        if useMemory {
             config = ModelConfiguration(
                 "RepLog", schema: schema,
                 isStoredInMemoryOnly: true, allowsSave: false
             )
         } else {
-            // Explicit store URL in Application Support. Relying on SwiftData's
-            // default URL resolves to /dev/null when the app runs as a unit-test
-            // host, which crashes the host and fails the whole run. An explicit
-            // path is valid in both the real app and the test host.
+            // Explicit store URL in Application Support.
             let fm = FileManager.default
             let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
                 ?? fm.temporaryDirectory
@@ -50,10 +46,10 @@ final class DataStore {
         }
         do {
             container = try ModelContainer(for: schema, configurations: [config])
+            FileHandle.standardError.write("DataStore DIAG container OK (memory=\(useMemory))\n".data(using: .utf8)!)
         } catch {
-            // In the test-host context a store failure must not crash the host
-            // (the unit tests use their own in-memory store). Fall back to an
-            // in-memory container so the host app stays alive.
+            FileHandle.standardError.write("DataStore DIAG container FAILED (memory=\(useMemory)): \(error)\n".data(using: .utf8)!)
+            // Last resort: an in-memory container so the host app never crashes.
             let fallback = ModelConfiguration(
                 "RepLog", schema: schema,
                 isStoredInMemoryOnly: true, allowsSave: false
@@ -61,12 +57,6 @@ final class DataStore {
             if let mem = try? ModelContainer(for: schema, configurations: [fallback]) {
                 container = mem
             } else {
-                // DIAGNOSTIC: capture the in-memory error specifically.
-                do {
-                    _ = try ModelContainer(for: schema, configurations: [fallback])
-                } catch {
-                    FileHandle.standardError.write("DataStore DIAG in-memory also failed: \(error)\n".data(using: .utf8)!)
-                }
                 fatalError("Failed to create ModelContainer: \(error)")
             }
         }
