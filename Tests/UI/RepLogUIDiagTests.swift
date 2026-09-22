@@ -14,7 +14,7 @@ final class RepLogUIDiagTests: XCTestCase {
     @MainActor
     func testTapOnboarding() async {
         func shot(_ name: String) {
-            if let data = app.screenshot().image?.pngData() {
+            if let data = app.screenshot().image.pngData() {
                 try? data.write(to: URL(fileURLWithPath: "/tmp/\(name).png"))
             }
         }
