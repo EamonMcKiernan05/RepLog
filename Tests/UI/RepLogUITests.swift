@@ -19,63 +19,74 @@ final class RepLogUITests: XCTestCase {
         app.launch()
     }
 
+    /// Wait until the element exists; returns whether it appeared.
+    private func wait(for element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
+        let exp = NSPredicate(format: "exists == true")
+        let ok = expectation(for: exp, evaluatedWith: element, handler: nil)
+        let result = wait(for: [ok], timeout: timeout)
+        return result == .completed
+    }
+
     /// Walk past onboarding (units -> privacy -> sync) to the Log tab.
     private func completeOnboarding() {
         // Page 1: pick kg (default), Continue
         let continueBtn = app.buttons["Continue"]
-        XCTAssertTrue(waitFor(continueBtn), "onboarding Continue not found")
+        XCTAssertTrue(wait(for: continueBtn), "onboarding Continue not found")
         continueBtn.tap()
         // Page 2: Continue
-        waitFor(app.buttons["Continue"]).tap()
+        XCTAssertTrue(wait(for: app.buttons["Continue"]), "second Continue not found")
+        app.buttons["Continue"].tap()
         // Page 3: Get Started (skip sync)
         let start = app.buttons["Get Started"]
-        XCTAssertTrue(waitFor(start), "Get Started not found")
+        XCTAssertTrue(wait(for: start), "Get Started not found")
         start.tap()
     }
 
-    private func waitFor(_ element: XCUIElement, timeout: TimeInterval = 8) -> XCUIElement {
-        let exp = NSPredicate(format: "exists == true")
-        let ok = expectation(for: exp, evaluatedWith: element, handler: nil)
-        wait(for: [ok], timeout: timeout)
-        return element
+    /// Start a workout and add the first exercise, landing on the active
+    /// workout screen with one exercise card.
+    private func startWorkoutWithOneExercise() {
+        app.buttons["plus"].tap()
+        XCTAssertTrue(wait(for: app.buttons["New Workout (Today)"]), "New Workout not found")
+        app.buttons["New Workout (Today)"].tap()
+        XCTAssertTrue(wait(for: app.buttons["Add Exercise"]), "Add Exercise not found")
+        app.buttons["Add Exercise"].tap()
+        // Category list -> tap first category row.
+        let firstCategory = app.tables.firstMatch.cells.firstMatch
+        XCTAssertTrue(wait(for: firstCategory), "no category row")
+        firstCategory.tap()
+        // Variant list: the first exercise is a button whose label contains
+        // the exercise name. Use the first button in the list.
+        let firstExercise = app.buttons.matching(
+            predicate: NSPredicate(format: "identifier BEGINSWITH 'exercise-'")
+        ).firstMatch
+        XCTAssertTrue(wait(for: firstExercise), "no exercise row")
+        firstExercise.tap()
     }
 
     // MARK: - RPE entry
 
     func testRPEEntryTypes85AndReadsBack() {
         completeOnboarding()
-        // Start a workout.
-        app.buttons["plus"].tap()
-        waitFor(app.buttons["New Workout (Today)"]).tap()
-        // Add an exercise: open the sheet, pick a category, pick the first exercise.
-        waitFor(app.buttons["Add Exercise"]).tap()
-        // Category list -> tap first category row.
-        let firstCategory = app.tables.firstMatch.cells.firstMatch
-        XCTAssertTrue(waitFor(firstCategory), "no category row")
-        firstCategory.tap()
-        // Now the variant list; tap the first exercise row (a button).
-        let firstExercise = app.buttons.matching(identifier: "exercise-*").firstMatch
-        // Fallback: the first button in the list.
-        let row = waitFor(app.buttons.matching(identifier: "exercise-*").firstMatch)
-        row.tap()
-        // Now we are in the active workout with one exercise card.
-        // The RPE column is a button labelled with "RPE" header + a value.
-        // Tap the RPE cell: it's a button whose label contains "RPE".
-        let rpeCell = app.buttons.matching { b in
-            b.label.contains("RPE")
-        }.firstMatch
-        XCTAssertTrue(waitFor(rpeCell), "RPE cell not found")
+        startWorkoutWithOneExercise()
+        // The RPE column: a button whose label contains "RPE".
+        let rpeCell = app.buttons.matching(
+            predicate: NSPredicate(format: "label CONTAINS[c] 'RPE'")
+        ).firstMatch
+        XCTAssertTrue(wait(for: rpeCell), "RPE cell not found")
         rpeCell.tap()
         // RPE sheet: type 8.5 into the field.
-        let field = waitFor(app.textFields["rpe-field"])
+        let field = app.textFields["rpe-field"]
+        XCTAssertTrue(wait(for: field), "RPE field not found")
         field.tap()
         field.typeText("8.5")
-        waitFor(app.buttons["Done"]).tap()
-        // Read it back: the RPE cell should now show 8.5.
-        let rpeValue = app.buttons.matching { b in
-            b.label.contains("8.5") && b.label.contains("RPE")
-        }.firstMatch
-        XCTAssertTrue(waitFor(rpeValue), "RPE 8.5 not shown after entry")
+        let done = app.buttons["Done"]
+        XCTAssertTrue(wait(for: done), "RPE Done not found")
+        done.tap()
+        // Read it back: a button whose label contains both RPE and 8.5.
+        let rpeValue = app.buttons.matching(
+            predicate: NSPredicate(format: "label CONTAINS[c] 'RPE' AND label CONTAINS '8.5'")
+        ).firstMatch
+        XCTAssertTrue(wait(for: rpeValue), "RPE 8.5 not shown after entry")
     }
 
     // MARK: - Exercise search
@@ -83,17 +94,20 @@ final class RepLogUITests: XCTestCase {
     func testExerciseSearchFilters() {
         completeOnboarding()
         app.buttons["plus"].tap()
-        waitFor(app.buttons["New Workout (Today)"]).tap()
-        waitFor(app.buttons["Add Exercise"]).tap()
+        XCTAssertTrue(wait(for: app.buttons["New Workout (Today)"]), "New Workout not found")
+        app.buttons["New Workout (Today)"].tap()
+        XCTAssertTrue(wait(for: app.buttons["Add Exercise"]), "Add Exercise not found")
+        app.buttons["Add Exercise"].tap()
         // Search field.
-        let search = waitFor(app.textFields["exercise-search"])
+        let search = app.textFields["exercise-search"]
+        XCTAssertTrue(wait(for: search), "search field not found")
         search.tap()
         search.typeText("Squat")
         // The list should now show only Squat exercises.
-        let squatRow = app.buttons.matching { b in
-            b.label.localizedCaseInsensitiveContains("Squat")
-        }.firstMatch
-        XCTAssertTrue(waitFor(squatRow), "no Squat result after search")
+        let squatRow = app.buttons.matching(
+            predicate: NSPredicate(format: "label CONTAINS[c] 'Squat'")
+        ).firstMatch
+        XCTAssertTrue(wait(for: squatRow), "no Squat result after search")
     }
 
     // MARK: - Sync URL + token
@@ -103,62 +117,59 @@ final class RepLogUITests: XCTestCase {
         // Profile tab.
         app.tabBars.buttons["Profile"].tap()
         // Open Settings.
-        waitFor(app.buttons["Settings"]).tap()
+        let settingsBtn = app.buttons["Settings"]
+        XCTAssertTrue(wait(for: settingsBtn), "Settings not found")
+        settingsBtn.tap()
         // Scroll to the Sync section.
-        let syncToggle = app.switches.matching { s in
-            s.label.contains("Enable Sync")
-        }.firstMatch
-        scrollSyncIntoView()
-        XCTAssertTrue(waitFor(syncToggle), "Enable Sync toggle not found")
-        syncToggle.tap()
-        // URL field.
-        let url = waitFor(app.textFields["sync-url-field"])
-        url.tap()
-        url.typeText("http://192.168.1.12:8080")
-        // Token field.
-        let token = waitFor(app.secureTextFields["sync-token-field"])
-        token.tap()
-        token.typeText("test-token-123")
-        // Save.
-        waitFor(app.buttons["Done"]).tap()
-    }
-
-    private func scrollSyncIntoView() {
-        // Best-effort scroll; the toggle may already be visible.
-        for _ in 0..<6 {
-            if app.switches.matching { $0.label.contains("Enable Sync") }.firstMatch.exists {
-                return
+        for _ in 0..<8 {
+            let syncToggle = app.switches.matching(
+                predicate: NSPredicate(format: "label CONTAINS[c] 'Enable Sync'")
+            ).firstMatch
+            if wait(for: syncToggle, timeout: 1) {
+                syncToggle.tap()
+                break
             }
             app.swipeUp()
         }
+        // URL field.
+        let url = app.textFields["sync-url-field"]
+        XCTAssertTrue(wait(for: url), "sync URL field not found")
+        url.tap()
+        url.typeText("http://192.168.1.12:8080")
+        // Token field.
+        let token = app.secureTextFields["sync-token-field"]
+        XCTAssertTrue(wait(for: token), "sync token field not found")
+        token.tap()
+        token.typeText("test-token-123")
+        // Save.
+        let done = app.buttons["Done"]
+        XCTAssertTrue(wait(for: done), "Settings Done not found")
+        done.tap()
     }
 
     // MARK: - Set notes
 
     func testSetNoteEntry() {
         completeOnboarding()
-        app.buttons["plus"].tap()
-        waitFor(app.buttons["New Workout (Today)"]).tap()
-        waitFor(app.buttons["Add Exercise"]).tap()
-        let firstCategory = app.tables.firstMatch.cells.firstMatch
-        waitFor(firstCategory).tap()
-        let firstExercise = waitFor(app.buttons.matching(identifier: "exercise-*").firstMatch)
-        firstExercise.tap()
+        startWorkoutWithOneExercise()
         // Tap the Notes column of the first set row.
-        let notesCell = app.buttons.matching { b in
-            b.label.contains("Notes")
-        }.firstMatch
-        XCTAssertTrue(waitFor(notesCell), "Notes cell not found")
+        let notesCell = app.buttons.matching(
+            predicate: NSPredicate(format: "label CONTAINS[c] 'Notes'")
+        ).firstMatch
+        XCTAssertTrue(wait(for: notesCell), "Notes cell not found")
         notesCell.tap()
         // Set note sheet.
-        let field = waitFor(app.textFields.matching { t in
-            t.label.contains("Note for set")
-        }.firstMatch)
+        let field = app.textFields.matching(
+            predicate: NSPredicate(format: "label CONTAINS[c] 'Note for set'")
+        ).firstMatch
+        XCTAssertTrue(wait(for: field), "set note field not found")
         field.tap()
         field.typeText("felt heavy")
-        waitFor(app.buttons["Save"]).tap()
+        let save = app.buttons["Save"]
+        XCTAssertTrue(wait(for: save), "note Save not found")
+        save.tap()
         // The note should render as a second line under the row.
         let noteLine = app.staticTexts["felt heavy"].firstMatch
-        XCTAssertTrue(waitFor(noteLine), "set note not displayed")
+        XCTAssertTrue(wait(for: noteLine), "set note not displayed")
     }
 }
