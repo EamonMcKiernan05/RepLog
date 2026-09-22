@@ -22,8 +22,6 @@ final class DataStore {
 
     var container: ModelContainer {
         if let c = _container { return c }
-        let marker = "container-created inMemory=\(inMemory)\n"
-        try? marker.write(to: FileManager.default.temporaryDirectory.appendingPathComponent("replog-container-created.txt"), atomically: true, encoding: .utf8)
         let c = makeContainer()
         _container = c
         if !inMemory {

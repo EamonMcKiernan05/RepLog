@@ -24,8 +24,6 @@ struct RepLogApp: App {
         _store = State(initialValue: s)
         _settings = State(initialValue: set)
         _syncEngine = State(initialValue: SyncEngine(store: s, settings: set))
-        let diag = "isUnitTestHost=\(isUnitTestHost) envKey=\(ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil)\n"
-        try? diag.write(to: FileManager.default.temporaryDirectory.appendingPathComponent("replog-diag.txt"), atomically: true, encoding: .utf8)
     }
 
     var body: some Scene {
