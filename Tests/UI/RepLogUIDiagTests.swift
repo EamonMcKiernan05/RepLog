@@ -27,15 +27,16 @@ final class RepLogUIDiagTests: XCTestCase {
 
         try? await Task.sleep(nanoseconds: 2_000_000_000)
 
-        print("=== BUTTON IDENTIFIERS ===")
-        for id in app.buttons.allElementsIdentifiers { print("  id: \(id)") }
-        print("=== BUTTON LABELS ===")
-        for l in app.buttons.allLabels { print("  label: \(l)") }
-        print("=== TABBAR BUTTON IDENTIFIERS ===")
-        for id in app.tabBars.buttons.allElementsIdentifiers { print("  id: \(id)") }
-        print("=== TABBAR BUTTON LABELS ===")
-        for l in app.tabBars.buttons.allLabels { print("  label: \(l)") }
-        print("=== STATICTEXT LABELS ===")
-        for l in app.staticTexts.allLabels.prefix(20) { print("  text: \(l)") }
+        print("=== BUTTONS (id | label) ===")
+        app.buttons.enumerate { el, _ in print("  id=\(el.identifier) label=\(el.label)") }
+        print("=== TABBAR BUTTONS (id | label) ===")
+        app.tabBars.buttons.enumerate { el, _ in print("  id=\(el.identifier) label=\(el.label)") }
+        print("=== STATIC TEXT (first 20) ===")
+        var n = 0
+        app.staticTexts.enumerate { el, stop in
+            print("  text=\(el.label)")
+            n += 1
+            if n >= 20 { stop.pointee = true }
+        }
     }
 }
