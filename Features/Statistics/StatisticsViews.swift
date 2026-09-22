@@ -36,6 +36,11 @@ struct StatisticsTabView: View {
             }
             .background(Palette.bg)
             .navigationTitle("Statistics")
+            // Registered at the stack root so the pushed ExerciseStatsList's
+            // value links resolve.
+            .navigationDestination(for: String.self) { name in
+                ExerciseDetailView(exerciseName: name)
+            }
             .sheet(isPresented: $showExport) {
                 ExportSheet()
             }
@@ -294,9 +299,10 @@ struct ExerciseStatsList: View {
         }
         .navigationTitle("Exercises")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: String.self) { name in
-            ExerciseDetailView(exerciseName: name)
-        }
+        // The destination is registered on the TAB ROOT (StatisticsTabView),
+        // not here: a .navigationDestination declared inside a pushed view is
+        // not picked up (the row then highlights and nothing pushes — same
+        // class of bug as the Log rows).
     }
 
     private func setCount(_ name: String) -> Int {
