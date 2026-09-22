@@ -24,9 +24,10 @@ struct RepLogApp: App {
         _store = State(initialValue: s)
         _settings = State(initialValue: set)
         _syncEngine = State(initialValue: SyncEngine(store: s, settings: set))
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-        let line = "isUnitTestHost=\(isUnitTestHost) envKey=\(ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil)\n"
-        try? line.write(to: docs?.appendingPathComponent("replog-diag.txt"), atomically: true, encoding: .utf8)
+        let diag = "isUnitTestHost=\(isUnitTestHost) envKey=\(ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil)\n"
+        for dir in FileManager.default.urls(for: [.documentDirectory, .cachesDirectory, .temporaryDirectory], in: .userDomainMask) {
+            try? diag.write(to: dir.appendingPathComponent("replog-diag.txt"), atomically: true, encoding: .utf8)
+        }
     }
 
     var body: some Scene {
