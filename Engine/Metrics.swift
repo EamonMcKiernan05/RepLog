@@ -67,7 +67,7 @@ enum Metrics {
         singleLimb: (SetEntry) -> Bool = { _ in false },
         includeWarmup: Bool = false
     ) -> Double {
-        sets.lazy
+        sets
             .filter { includeWarmup || !$0.isWarmup }
             .map { s in
                 setVolume(
