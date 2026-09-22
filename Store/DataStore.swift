@@ -22,7 +22,7 @@ final class DataStore {
 
     var container: ModelContainer {
         if let c = _container { return c }
-        FileHandle.standardError.write("DataStore DIAG: container being created (inMemory=\(inMemory))\n".data(using: .utf8)!)
+        try? "inMemory=\(inMemory)\n".write(toFile: "/tmp/replog-container-created.txt", atomically: true, encoding: .utf8)
         let c = makeContainer()
         _container = c
         if !inMemory {
