@@ -23,8 +23,7 @@ final class RepLogUITests: XCTestCase {
     private func wait(for element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
         let exp = NSPredicate(format: "exists == true")
         let ok = expectation(for: exp, evaluatedWith: element, handler: nil)
-        let result = wait(for: [ok], timeout: timeout)
-        return result == .completed
+        return waitForExpectations([ok], timeout: timeout)
     }
 
     /// Walk past onboarding (units -> privacy -> sync) to the Log tab.
@@ -57,7 +56,7 @@ final class RepLogUITests: XCTestCase {
         // Variant list: the first exercise is a button whose label contains
         // the exercise name. Use the first button in the list.
         let firstExercise = app.buttons.matching(
-            predicate: NSPredicate(format: "identifier BEGINSWITH 'exercise-'")
+            NSPredicate(format: "identifier BEGINSWITH 'exercise-'")
         ).firstMatch
         XCTAssertTrue(wait(for: firstExercise), "no exercise row")
         firstExercise.tap()
@@ -70,7 +69,7 @@ final class RepLogUITests: XCTestCase {
         startWorkoutWithOneExercise()
         // The RPE column: a button whose label contains "RPE".
         let rpeCell = app.buttons.matching(
-            predicate: NSPredicate(format: "label CONTAINS[c] 'RPE'")
+            NSPredicate(format: "label CONTAINS[c] 'RPE'")
         ).firstMatch
         XCTAssertTrue(wait(for: rpeCell), "RPE cell not found")
         rpeCell.tap()
@@ -84,7 +83,7 @@ final class RepLogUITests: XCTestCase {
         done.tap()
         // Read it back: a button whose label contains both RPE and 8.5.
         let rpeValue = app.buttons.matching(
-            predicate: NSPredicate(format: "label CONTAINS[c] 'RPE' AND label CONTAINS '8.5'")
+            NSPredicate(format: "label CONTAINS[c] 'RPE' AND label CONTAINS '8.5'")
         ).firstMatch
         XCTAssertTrue(wait(for: rpeValue), "RPE 8.5 not shown after entry")
     }
@@ -105,7 +104,7 @@ final class RepLogUITests: XCTestCase {
         search.typeText("Squat")
         // The list should now show only Squat exercises.
         let squatRow = app.buttons.matching(
-            predicate: NSPredicate(format: "label CONTAINS[c] 'Squat'")
+            NSPredicate(format: "label CONTAINS[c] 'Squat'")
         ).firstMatch
         XCTAssertTrue(wait(for: squatRow), "no Squat result after search")
     }
@@ -123,7 +122,7 @@ final class RepLogUITests: XCTestCase {
         // Scroll to the Sync section.
         for _ in 0..<8 {
             let syncToggle = app.switches.matching(
-                predicate: NSPredicate(format: "label CONTAINS[c] 'Enable Sync'")
+                NSPredicate(format: "label CONTAINS[c] 'Enable Sync'")
             ).firstMatch
             if wait(for: syncToggle, timeout: 1) {
                 syncToggle.tap()
@@ -154,13 +153,13 @@ final class RepLogUITests: XCTestCase {
         startWorkoutWithOneExercise()
         // Tap the Notes column of the first set row.
         let notesCell = app.buttons.matching(
-            predicate: NSPredicate(format: "label CONTAINS[c] 'Notes'")
+            NSPredicate(format: "label CONTAINS[c] 'Notes'")
         ).firstMatch
         XCTAssertTrue(wait(for: notesCell), "Notes cell not found")
         notesCell.tap()
         // Set note sheet.
         let field = app.textFields.matching(
-            predicate: NSPredicate(format: "label CONTAINS[c] 'Note for set'")
+            NSPredicate(format: "label CONTAINS[c] 'Note for set'")
         ).firstMatch
         XCTAssertTrue(wait(for: field), "set note field not found")
         field.tap()
