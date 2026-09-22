@@ -417,10 +417,13 @@ final class RepLogUITests: XCTestCase {
     /// relaunch the app -> service back up -> exactly one upload -> delete ->
     /// tombstone lands -> re-import 409s.
     @MainActor
-    func testOfflineDrill() async throws {
+    func testOfflineDrill() async {
         // 0. Supervisor must be reachable (started by scripts/mac-tests.sh).
         guard await supervisor("/health") != nil else {
-            throw XCTSkip("drill supervisor not running on 127.0.0.1:\(supervisorPort) — start it via scripts/mac-tests.sh")
+            // A skip would let the gate look green while the drill never ran;
+            // the supervisor is mac-tests.sh's job, so its absence is a failure.
+            XCTFail("drill supervisor not running on 127.0.0.1:\(supervisorPort) — start it via scripts/mac-tests.sh")
+            return
         }
         // The service must be down for the offline phase.
         await supervisorJSON("/stop")
@@ -465,7 +468,8 @@ final class RepLogUITests: XCTestCase {
         // 4. Service back up -> the queued session uploads exactly once.
         let started = await supervisorJSON("/start")
         guard let started, started["ok"] as? Bool == true else {
-            throw XCTSkip("drill service failed to start: \(String(describing: started?["error"]))")
+            XCTFail("drill service failed to start: \(String(describing: started?["error"]))")
+            return
         }
         // Give the app's sync a moment (foreground run / path monitor).
         await tapSettled(app.tabBars.buttons.element(boundBy: 3))
