@@ -62,8 +62,8 @@ targets:
     platform: iOS
     sources:
       - path: Tests/Unit
-    resources:
       - path: Tests/Fixtures
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog.tests

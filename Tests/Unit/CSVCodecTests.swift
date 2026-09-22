@@ -131,9 +131,14 @@ struct CSVCodecTests {
     }
 
     private func goldenText() throws -> String {
-        let url = Bundle.module.url(forResource: "golden_session", withExtension: "csv")
+        // Bundle(for:) is the .xctest bundle that xcodegen copies the fixture
+        // into (buildPhase: resources). Bundle.module is SwiftPM-only.
+        let bundle = Bundle(for: BundleMarker.self)
+        let url = bundle.url(forResource: "golden_session", withExtension: "csv")
             ?? Bundle.main.url(forResource: "golden_session", withExtension: "csv")
         guard let url else { throw CSVError.badHeader }
         return try String(contentsOf: url, encoding: .utf8)
     }
+
+    private final class BundleMarker {}
 }
