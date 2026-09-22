@@ -387,12 +387,16 @@ final class RepLogUITests: XCTestCase {
     }
 
     /// Count the rows for one session in the service's CSV (via supervisor).
+    /// `sessionID` is the row's 8-character id prefix (that is all the Log
+    /// exposes); the CSV carries the full session_id, so this is a PREFIX
+    /// match — matching `id + ","` only ever matched the full id and the
+    /// count was therefore always 0.
     @MainActor
     private func drillRows(sessionID: String) async -> Int {
         guard let data = await supervisor("/csv"),
               let text = String(data: data, encoding: .utf8) else { return -1 }
         return text.split(separator: "\n").filter { line in
-            line.hasPrefix(sessionID + ",")
+            line.hasPrefix(sessionID)
         }.count
     }
 
