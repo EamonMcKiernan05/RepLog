@@ -9,8 +9,9 @@ import XCTest
 /// agent-device handles navigation and screenshots; this drives the typing.
 ///
 /// Every element the test touches carries an explicit accessibilityIdentifier
-/// (set in the views), and the test addresses them by identifier subscript —
-/// deterministic, independent of localisation or label composition.
+/// (set in the views), and the test addresses them by identifier subscript.
+/// SwiftUI page/sheet transitions animate, so every tap is followed by a
+/// settle delay (tapSettled) — taps fired mid-animation are dropped.
 final class RepLogUITests: XCTestCase {
 
     private var app: XCUIApplication!
@@ -32,57 +33,73 @@ final class RepLogUITests: XCTestCase {
         return element.exists
     }
 
+    /// Let the UI settle after a transition (page change, sheet, navigation).
+    private func settle(_ seconds: Double = 1.5) {
+        let delay = expectation(description: "settle")
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { delay.fulfill() }
+        wait(for: [delay], timeout: seconds + 5)
+    }
+
+    /// Tap, then settle so the next action sees a stable UI.
+    private func tapSettled(_ element: XCUIElement) {
+        element.tap()
+        settle()
+    }
+
     /// Walk onboarding (units -> privacy -> skip sync) to the Log tab.
-    private func completeOnboarding() {
-        let next = app.buttons["onboarding-next"]
-        XCTAssertTrue(wait(for: next), "onboarding 'Continue' not found")
-        next.tap()
-        XCTAssertTrue(wait(for: app.buttons["onboarding-next"]), "second 'Continue' not found")
-        app.buttons["onboarding-next"].tap()
-        // Third page shows "Get Started" (same identifier).
-        let start = app.buttons["onboarding-next"]
-        XCTAssertTrue(wait(for: start), "'Get Started' not found")
-        start.tap()
+    @MainActor
+    private func completeOnboarding() async {
+        for _ in 0..<3 {
+            let next = app.buttons["onboarding-next"]
+            guard wait(for: next) else { break }
+            next.tap()
+            settle()
+        }
+        // The main app is up: the Log "+" button is present.
+        XCTAssertTrue(wait(for: app.buttons["plus"]), "main app not shown after onboarding")
     }
 
     /// Tap the Log "+" button and start a fresh workout (ActiveWorkoutView).
-    private func startFreshWorkout() {
+    @MainActor
+    private func startFreshWorkout() async {
         let plus = app.buttons["plus"]
         XCTAssertTrue(wait(for: plus), "'plus' toolbar button not found")
-        plus.tap()
+        tapSettled(plus)
         let today = app.buttons["new-workout-today"]
         XCTAssertTrue(wait(for: today), "'New Workout (Today)' not found")
-        today.tap()
+        tapSettled(today)
         XCTAssertTrue(wait(for: app.buttons["add-exercise"]), "Active workout not shown")
     }
 
     /// Add the first exercise of the first category (Abs -> Ab Wheel).
-    private func addFirstExercise() {
-        app.buttons["add-exercise"].tap()
+    @MainActor
+    private func addFirstExercise() async {
+        tapSettled(app.buttons["add-exercise"])
         let absCat = app.buttons["category-Abs"]
         XCTAssertTrue(wait(for: absCat), "'Abs' category not found")
-        absCat.tap()
+        tapSettled(absCat)
         let abWheel = app.buttons["pick-Ab Wheel"]
         XCTAssertTrue(wait(for: abWheel), "'Ab Wheel' not found")
-        abWheel.tap()
+        tapSettled(abWheel)
         XCTAssertTrue(wait(for: app.buttons["rpe-cell"]), "RPE cell not shown after adding exercise")
     }
 
     // MARK: - RPE entry
 
-    func testRPEEntryTypes85AndReadsBack() {
-        completeOnboarding()
-        startFreshWorkout()
-        addFirstExercise()
+    @MainActor
+    func testRPEEntryTypes85AndReadsBack() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
 
-        app.buttons["rpe-cell"].tap()
+        tapSettled(app.buttons["rpe-cell"])
         let field = app.textFields["rpe-field"]
         XCTAssertTrue(wait(for: field), "RPE field not found")
         field.tap()
         field.typeText("8.5")
         let done = app.buttons["done"]
         XCTAssertTrue(wait(for: done), "RPE 'Done' not found")
-        done.tap()
+        tapSettled(done)
 
         // Read it back: the RPE cell now shows 8.5.
         let rpeCell = app.buttons["rpe-cell"]
@@ -93,15 +110,17 @@ final class RepLogUITests: XCTestCase {
 
     // MARK: - Exercise search
 
-    func testExerciseSearchFilters() {
-        completeOnboarding()
-        startFreshWorkout()
-        app.buttons["add-exercise"].tap()
+    @MainActor
+    func testExerciseSearchFilters() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        tapSettled(app.buttons["add-exercise"])
 
         let search = app.textFields["exercise-search"]
         XCTAssertTrue(wait(for: search), "search field not found")
         search.tap()
         search.typeText("Squat")
+        settle(1)
 
         // The category list now shows only "Squats".
         let squats = app.buttons["category-Squats"]
@@ -113,24 +132,26 @@ final class RepLogUITests: XCTestCase {
 
     // MARK: - Sync URL + token
 
-    func testSyncURLAndTokenFields() {
-        completeOnboarding()
+    @MainActor
+    func testSyncURLAndTokenFields() async {
+        await completeOnboarding()
         // Profile tab is the 4th tab (index 3); SwiftUI does not propagate
         // accessibilityIdentifier to .tabItem, so target it positionally.
         let profile = app.tabBars.buttons.element(boundBy: 3)
         XCTAssertTrue(wait(for: profile), "'Profile' tab not found")
-        profile.tap()
+        tapSettled(profile)
         let settings = app.buttons["settings-link"]
         XCTAssertTrue(wait(for: settings), "'Settings' not found in Profile")
-        settings.tap()
+        tapSettled(settings)
 
         // Scroll to the Sync section.
         let toggle = app.switches["enable-sync"]
         for _ in 0..<8 where !toggle.exists {
             app.swipeUp()
+            settle(0.5)
         }
         XCTAssertTrue(toggle.exists, "'Enable Sync' toggle not found")
-        toggle.tap()
+        tapSettled(toggle)
 
         let url = app.textFields["sync-url-field"]
         XCTAssertTrue(wait(for: url), "sync URL field not found")
@@ -144,24 +165,25 @@ final class RepLogUITests: XCTestCase {
 
         let done = app.buttons["done"]
         XCTAssertTrue(wait(for: done), "Settings 'Done' not found")
-        done.tap()
+        tapSettled(done)
     }
 
     // MARK: - Set notes
 
-    func testSetNoteEntry() {
-        completeOnboarding()
-        startFreshWorkout()
-        addFirstExercise()
+    @MainActor
+    func testSetNoteEntry() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
 
-        app.buttons["notes-cell"].tap()
+        tapSettled(app.buttons["notes-cell"])
         let field = app.textFields["set-note-field"]
         XCTAssertTrue(wait(for: field), "set note field not found")
         field.tap()
         field.typeText("felt heavy")
         let save = app.buttons["save-note"]
         XCTAssertTrue(wait(for: save), "note 'Save' not found")
-        save.tap()
+        tapSettled(save)
 
         // The note renders as a second line under the row.
         let noteLine = app.staticTexts["felt heavy"]
