@@ -513,7 +513,7 @@ final class RepLogUITests: XCTestCase {
                       "tombstone event not recorded for \(sid)")
 
         // 6. Re-import the same session -> the server must refuse (409).
-        let status = try await drillReimport(sessionID: sid)
+        let status = (try? await drillReimport(sessionID: sid)) ?? -1
         XCTAssertEqual(status, 409, "re-import of a tombstoned session must 409, got \(status)")
         let rowsAfterReimport = await drillRows(sessionID: sid)
         XCTAssertEqual(rowsAfterReimport, 0, "tombstoned session must not be resurrected")
