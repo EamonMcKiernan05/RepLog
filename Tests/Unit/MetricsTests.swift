@@ -12,10 +12,12 @@ struct MetricsTests {
         #expect(v5 != nil)
         #expect(v4 != nil)
         #expect(v5b != nil)
-        let d5 = abs(v5! - 112.5)
-        let expected4 = 140 * (1 + 4.0 / 30)
+        // Brzycki: weight * 36 / (37 - reps)
+        let expected5 = 100.0 * 36.0 / 32.0   // 112.5
+        let expected4 = 140.0 * 36.0 / 33.0
+        let expected5b = 85.0 * 36.0 / 32.0
+        let d5 = abs(v5! - expected5)
         let d4 = abs(v4! - expected4)
-        let expected5b = 85 * (1 + 5.0 / 30)
         let d5b = abs(v5b! - expected5b)
         #expect(d5 < 0.001)
         #expect(d4 < 0.001)
@@ -100,8 +102,9 @@ struct MetricsTests {
         #expect(b7 == nil)
         #expect(b5 != nil)
         #expect(b3 != nil)
-        let exp5 = 110 * (1 + 5.0 / 30)
-        let exp3 = 90 * (1 + 3.0 / 30)
+        // Brzycki: weight * 36 / (37 - reps)
+        let exp5 = 110.0 * 36.0 / 32.0
+        let exp3 = 90.0 * 36.0 / 34.0
         #expect(abs(b5! - exp5) < 0.001)
         #expect(abs(b3! - exp3) < 0.001)
     }

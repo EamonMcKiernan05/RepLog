@@ -7,10 +7,11 @@ enum Metrics {
 
     // MARK: - e1RM
 
-    /// Brzycki: weight × (1 + reps/30). 100 × 5 → 112.5.
+    /// Brzycki: weight × 36 / (37 − reps). 100 × 5 → 112.5 (RepCount's own
+    /// worked example; §11). Epley would give 116.7 — the plan uses Brzycki.
     static func e1RM(weight: Double, reps: Int) -> Double? {
-        guard reps >= 1, weight > 0 else { return nil }
-        return weight * (1.0 + Double(reps) / 30.0)
+        guard reps >= 1, reps < 37, weight > 0 else { return nil }
+        return weight * 36.0 / (37.0 - Double(reps))
     }
 
     // MARK: - Volume
