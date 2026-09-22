@@ -15,6 +15,12 @@ final class DataStore {
     static var mainContextRef: ModelContext?
 
     init(inMemory: Bool = false) {
+        // DIAGNOSTIC: find a reliable test-host signal at init() time.
+        let env = ProcessInfo.processInfo.environment
+        let sigKeys = ["XCTestConfigurationFilePath", "XCTestBundlePath", "DYLD_INSERT_LIBRARIES"]
+        let found = sigKeys.filter { env[$0] != nil }
+        FileHandle.standardError.write("DataStore DIAG args=\(CommandLine.arguments.prefix(6))\n".data(using: .utf8)!)
+        FileHandle.standardError.write("DataStore DIAG testEnvKeys=\(found)\n".data(using: .utf8)!)
         let schema = Schema([
             Session.self, ExerciseEntry.self, SetEntry.self,
             Routine.self, RoutineExercise.self, Exercise.self,
