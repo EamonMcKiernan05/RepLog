@@ -47,9 +47,12 @@ final class DataStore {
         ])
         let config: ModelConfiguration
         if inMemory {
+            // allowsSave must stay true: with allowsSave:false SwiftData opens
+            // the store read-only, which forces a file URL (it resolves to
+            // /dev/null in the hosted-test context and fails on a cold launch).
             config = ModelConfiguration(
                 "RepLog", schema: schema,
-                isStoredInMemoryOnly: true, allowsSave: false
+                isStoredInMemoryOnly: true, allowsSave: true
             )
         } else {
             // Explicit store URL in Application Support.
@@ -78,7 +81,7 @@ final class DataStore {
         // crashes on a store failure.
         let fallback = ModelConfiguration(
             "RepLog", schema: schema,
-            isStoredInMemoryOnly: true, allowsSave: false
+            isStoredInMemoryOnly: true, allowsSave: true
         )
         for attempt in 0..<4 {
             if let ok = try? ModelContainer(for: schema, configurations: [fallback]) {
