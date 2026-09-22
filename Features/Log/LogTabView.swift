@@ -106,6 +106,7 @@ struct LogTabView: View {
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.circle)
                     .accessibilityIdentifier("plus")
+                    .accessibilityLabel("Add workout")
                 }
             }
             .environment(\.editMode, $editMode)
