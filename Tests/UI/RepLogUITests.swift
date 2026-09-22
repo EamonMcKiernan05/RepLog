@@ -289,56 +289,32 @@ final class RepLogUITests: XCTestCase {
     // MARK: - Offline drill (plan §7.5)
 
     /// The lift-sync service for this drill: a real uvicorn on a private
-    /// port with a private token (no real data, no prod service).
-    private let drillPort = 8391
+    /// port with a private token (no real data, no prod service), controlled
+    /// by scripts/drill_supervisor.py (the test bundle is iOS-compiled and
+    /// cannot spawn processes on the Mac host).
+    private let supervisorPort = 8392
     private let drillToken = "uitest-drill-token"
-    private var drillProc: Process?
-    private var drillDataDir: URL!
+    private var drillGateway = "172.168.100.1"   // simulator -> Mac host
 
-    /// Start the drill service (fresh data dir) and wait for its health.
-    private func startDrillService() throws {
-        drillDataDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("replog-drill-\(UUID().uuidString)")
-        try FileManager.default.createDirectory(at: drillDataDir, withIntermediateDirectories: true)
-
-        let repo = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Documents/RepLog")
-        let proc = Process()
-        proc.executableURL = repo.appendingPathComponent("service/.venv/bin/uvicorn")
-        proc.arguments = ["lift_sync.app:app", "--port", String(drillPort),
-                          "--host", "127.0.0.1", "--log-level", "warning"]
-        proc.environment = ["LIFT_SYNC_DATA_DIR": drillDataDir.path,
-                            "LIFT_SYNC_TOKEN": drillToken,
-                            "PATH": "/usr/bin:/bin"]
-        proc.currentDirectoryURL = repo.appendingPathComponent("service")
-        let err = FileHandle.nullDevice
-        proc.standardError = err
-        proc.standardOutput = err
-        try proc.run()
-        drillProc = proc
-
-        // Wait for the service to come up.
-        let deadline = Date().addingTimeInterval(30)
-        while Date() < deadline {
-            if let ok = try? await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(drillPort)/v1/health")!).response as? HTTPURLResponse,
-               ok.statusCode == 200 {
-                return
-            }
-            try await Task.sleep(nanoseconds: 500_000_000)
-        }
-        XCTFail("drill service did not come up on port \(drillPort)")
+    private func supervisor(_ path: String, method: String = "GET") async -> Data? {
+        var req = URLRequest(url: URL(string: "http://127.0.0.1:\(supervisorPort)\(path)")!)
+        req.httpMethod = method
+        do {
+            let (data, _) = try await URLSession.shared.data(for: req)
+            return data
+        } catch { return nil }
     }
 
-    private func stopDrillService() {
-        drillProc?.terminate()
-        drillProc?.waitUntilExit()
-        drillProc = nil
+    private func supervisorJSON(_ path: String, method: String = "POST") async -> [String: Any]? {
+        guard let data = await supervisor(path, method: method) else { return nil }
+        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
     }
 
-    /// Count the rows for one session in the service's CSV.
-    private func drillRows(sessionID: String) -> Int {
-        let url = drillDataDir.appendingPathComponent("sessions.csv")
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return -1 }
+    /// Count the rows for one session in the service's CSV (via supervisor).
+    @MainActor
+    private func drillRows(sessionID: String) async -> Int {
+        guard let data = await supervisor("/csv"),
+              let text = String(data: data, encoding: .utf8) else { return -1 }
         return text.split(separator: "\n").filter { line in
             line.hasPrefix(sessionID + ",")
         }.count
@@ -351,7 +327,7 @@ final class RepLogUITests: XCTestCase {
             "date": "2026-09-22",
             "sets": [["exercise": "Drill", "set_number": 1, "weight_kg": 100.0, "reps": 5]],
         ]
-        var req = URLRequest(url: URL(string: "http://127.0.0.1:\(drillPort)/v1/sessions")!)
+        var req = URLRequest(url: URL(string: "http://\(drillGateway):8391/v1/sessions")!)
         req.httpMethod = "POST"
         req.setValue("Bearer \(drillToken)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -365,15 +341,12 @@ final class RepLogUITests: XCTestCase {
     /// tombstone lands -> re-import 409s.
     @MainActor
     func testOfflineDrill() async throws {
-        // 0. The drill port must be free (service down for the offline phase).
-        let probe = URL(string: "http://127.0.0.1:\(drillPort)/v1/health")!
-        do {
-            let (_, resp) = try await URLSession.shared.data(from: probe)
-            XCTFail("drill port \(drillPort) is already in use")
-            _ = resp
-        } catch {
-            // Expected: connection refused — the service is down.
+        // 0. Supervisor must be reachable (started by scripts/mac-tests.sh).
+        guard await supervisor("/health") != nil else {
+            throw XCTSkip("drill supervisor not running on 127.0.0.1:\(supervisorPort) — start it via scripts/mac-tests.sh")
         }
+        // The service must be down for the offline phase.
+        await supervisorJSON("/stop")
 
         // 1. Configure sync (URL + token) with the service stopped.
         await completeOnboarding()
@@ -392,7 +365,7 @@ final class RepLogUITests: XCTestCase {
         let urlField = app.textFields["sync-url-field"]
         await expectExists(urlField, "sync URL field not found")
         urlField.tap()
-        urlField.typeText("http://127.0.0.1:\(drillPort)")
+        urlField.typeText("http://\(drillGateway):8391")
         let tokenField = app.secureTextFields["sync-token-field"]
         await expectExists(tokenField, "sync token field not found")
         tokenField.tap()
@@ -407,7 +380,7 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(app.buttons["finish-workout"])
         await settle(3)
 
-        // The session is in the Log, and the Profile status shows it waiting.
+        // The session is in the Log.
         let row = app.buttons["session-row-"]
         await expectExists(row, "session row not shown after offline finish")
         let rowID = (row.identifier as NSString).replacingOccurrences(of: "session-row-", with: "")
@@ -421,7 +394,11 @@ final class RepLogUITests: XCTestCase {
         await settle(3)
 
         // 4. Service back up -> the queued session uploads exactly once.
-        try startDrillService()
+        let started = await supervisorJSON("/start")
+        guard let started, started["ok"] as? Bool == true else {
+            throw XCTSkip("drill service failed to start: \(String(describing: started?["error"]))")
+        }
+        drillGateway = (started["gateway"] as? String) ?? drillGateway
         // Give the app's sync a moment (foreground run / path monitor).
         await tapSettled(app.tabBars.buttons.element(boundBy: 3))
         let syncNow = app.buttons["sync-now"]
@@ -429,10 +406,13 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(syncNow)
         await settle(4)
 
-        XCTAssertEqual(drillRows(sessionID: sid), 1,
-                       "expected exactly the session's one set row, got \(drillRows(sessionID: sid))")
+        XCTAssertEqual(await drillRows(sessionID: sid), 1,
+                       "expected exactly the session's one set row, got \(await drillRows(sessionID: sid))")
         // Exactly one upload: one upsert event for this session in the audit.
-        let audit = try String(contentsOf: drillDataDir.appendingPathComponent("sessions.jsonl"), encoding: .utf8)
+        guard let auditData = await supervisor("/audit"),
+              let audit = String(data: auditData, encoding: .utf8) else {
+            XCTFail("audit log not readable"); return
+        }
         let upserts = audit.components(separatedBy: "\n").filter {
             $0.contains("\"type\":\"upsert\"") && $0.contains(sid)
         }.count
@@ -449,16 +429,19 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(dialogDelete)
         await settle(3)
 
-        XCTAssertEqual(drillRows(sessionID: sid), 0, "session rows should be removed after delete")
-        let jsonl = try String(contentsOf: drillDataDir.appendingPathComponent("sessions.jsonl"), encoding: .utf8)
+        XCTAssertEqual(await drillRows(sessionID: sid), 0, "session rows should be removed after delete")
+        guard let jsonlData = await supervisor("/audit"),
+              let jsonl = String(data: jsonlData, encoding: .utf8) else {
+            XCTFail("audit log not readable"); return
+        }
         XCTAssertTrue(jsonl.contains("\"type\":\"delete\"") && jsonl.contains(sid),
                       "tombstone event not recorded for \(sid)")
 
         // 6. Re-import the same session -> the server must refuse (409).
         let status = await drillReimport(sessionID: sid)
         XCTAssertEqual(status, 409, "re-import of a tombstoned session must 409, got \(status)")
-        XCTAssertEqual(drillRows(sessionID: sid), 0, "tombstoned session must not be resurrected")
+        XCTAssertEqual(await drillRows(sessionID: sid), 0, "tombstoned session must not be resurrected")
 
-        stopDrillService()
+        await supervisorJSON("/stop")
     }
 }
