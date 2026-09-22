@@ -5,7 +5,9 @@ import Foundation
 ///
 /// A plain final class (not an actor): URLSession is thread-safe, and this
 /// keeps the [String: Any] payload out of the Sendable checker.
-final class LiftSyncClient {
+/// @unchecked Sendable: the only mutable state is the config (set on the
+/// main thread) and URLSession, which is itself thread-safe.
+final class LiftSyncClient: @unchecked Sendable {
     struct Config {
         var baseURL: URL
         var token: String

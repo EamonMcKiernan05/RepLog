@@ -4,8 +4,10 @@ import UserNotifications
 
 /// Rest timer (plan §6.8, T6.1). Background-safe: stores a deadline, never a
 /// tick counter, so a 90 s timer survives backgrounding.
+/// @unchecked Sendable: @Observable state is mutated on the main thread; the
+/// tick task only reads/writes the deadline/remaining pair.
 @Observable
-final class RestTimerController {
+final class RestTimerController: @unchecked Sendable {
     private(set) var duration: TimeInterval = 90
     private(set) var remaining: TimeInterval = 90
     private(set) var isRunning = false
