@@ -28,9 +28,10 @@ final class AppRouter {
     /// Set to push the active-workout screen onto the Log tab's stack.
     var activeSession: Session?
 
-    var isOnboarding: Bool {
-        !UserDefaults.standard.bool(forKey: "onboarded")
-    }
+    /// Whether onboarding should show. Stored (not computed) so that setting it
+    /// triggers a re-render of RootTabView — a computed read of UserDefaults is
+    /// not observable, so "Get Started" would never dismiss onboarding in-session.
+    var isOnboarding: Bool = !UserDefaults.standard.bool(forKey: "onboarded")
 
     func startWorkout(session: Session) {
         activeSession = session

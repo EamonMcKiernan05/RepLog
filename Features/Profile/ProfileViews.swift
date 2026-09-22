@@ -217,6 +217,7 @@ struct SettingsView: View {
 /// optional sync. No account, nothing mandatory.
 struct OnboardingView: View {
     @Environment(Settings.self) private var settings
+    @Environment(AppRouter.self) private var router
     @State private var page = 0
     @State private var syncURL = ""
     @State private var syncToken = ""
@@ -312,5 +313,7 @@ struct OnboardingView: View {
             settings.syncEnabled = true
         }
         settings.onboarded = true
+        // Observable flip so RootTabView re-renders to the main app in-session.
+        router.isOnboarding = false
     }
 }

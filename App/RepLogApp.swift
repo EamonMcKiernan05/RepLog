@@ -5,7 +5,7 @@ import SwiftData
 struct RepLogApp: App {
     @State private var store: DataStore
     @State private var settings: Settings
-    @State private var router = AppRouter()
+    @State private var router: AppRouter
     @State private var syncEngine: SyncEngine
 
     /// True when the app process is the host for a *hosted unit-test* bundle.
@@ -21,7 +21,8 @@ struct RepLogApp: App {
     init() {
         // Test hook: -ResetRepLog YES wipes persisted state so UI tests always
         // start at onboarding.
-        if CommandLine.arguments.contains("-ResetRepLog") {
+        let reset = CommandLine.arguments.contains("-ResetRepLog")
+        if reset {
             let bundleID = Bundle.main.bundleIdentifier ?? "im.eamon.replog"
             if let defaults = UserDefaults(suiteName: bundleID) {
                 defaults.removePersistentDomain(forName: bundleID)
@@ -30,8 +31,11 @@ struct RepLogApp: App {
         }
         let s = DataStore()
         let set = Settings()
+        // Created AFTER the reset so isOnboarding reads the wiped state.
+        let r = AppRouter()
         _store = State(initialValue: s)
         _settings = State(initialValue: set)
+        _router = State(initialValue: r)
         _syncEngine = State(initialValue: SyncEngine(store: s, settings: set))
     }
 
