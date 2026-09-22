@@ -7,6 +7,9 @@ import Network
 /// iOS gives no "the moment connectivity returns" trigger, so a queued
 /// session is uploaded on: the next foreground run, a manual "Sync now",
 /// or an opportunistic background refresh. Sessions are never lost.
+///
+/// @MainActor: it is UI-facing (status text) and touches the main context.
+@MainActor
 @Observable
 final class SyncEngine {
     let client = LiftSyncClient()
@@ -18,6 +21,7 @@ final class SyncEngine {
     private(set) var lastSync: Date?
     private(set) var authFailed = false
     private(set) var isSyncing = false
+    private var lastAttempt: [String: Date] = [:]
 
     var statusText: String {
         if authFailed { return "Auth failed — check your token" }
@@ -53,11 +57,13 @@ final class SyncEngine {
         authFailed = false
     }
 
-    func startMonitor() {
+    private func startMonitor() {
         let monitor = NWPathMonitor()
         monitor.pathUpdateHandler = { [weak self] path in
             if path.status == .satisfied {
-                self?.syncNow()
+                Task { @MainActor in
+                    self?.syncNow()
+                }
             }
         }
         let q = DispatchQueue(label: "im.eamon.replog.network")
@@ -83,45 +89,49 @@ final class SyncEngine {
 
     /// Call when a session is deleted on the phone.
     func sessionDeleted(_ session: Session) {
+        let id = session.id
         Task {
-            _ = client.delete(session.id)
-            outbox.delete(session.id)
+            _ = await client.delete(id)
+            outbox.delete(id)
         }
     }
 
     // MARK: - Sync
 
-    @MainActor
     func syncNow() {
         guard !isSyncing else { return }
         guard settings.syncEnabled, !settings.syncURL.isEmpty else { return }
         applyConfig()
         isSyncing = true
-        Task {
-            defer { isSyncing = false }
-            let due = outbox.dueForUpload()
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.isSyncing = false }
+            let due = self.outbox.dueForUpload(now: .now, lastAttempt: self.lastAttempt)
             guard !due.isEmpty else { return }
             for id in due {
-                guard let session = findSession(id) else { continue }
+                guard let session = self.findSession(id) else { continue }
                 let payload = Self.payload(for: session)
-                let result = client.upsert(payload)
+                let result = await self.client.upsert(payload)
                 switch result {
                 case .ok:
-                    outbox.uploadSucceeded(id)
-                    persistState(session)
-                    lastSync = .now
+                    self.outbox.uploadSucceeded(id)
+                    self.lastAttempt[id] = .now
+                    self.persistState(session)
+                    self.lastSync = .now
                 case .authFailed:
-                    authFailed = true
-                    outbox.uploadFailed(id)
-                    persistState(session)
+                    self.authFailed = true
+                    self.outbox.uploadFailed(id)
+                    self.lastAttempt[id] = .now
+                    self.persistState(session)
                     return   // pause retries; a banner is shown
                 case .tombstoned:
                     // The server deleted this; accept it.
-                    outbox.uploadSucceeded(id)
-                    persistState(session)
+                    self.outbox.uploadSucceeded(id)
+                    self.persistState(session)
                 case .serverError, .networkError:
-                    outbox.uploadFailed(id)
-                    persistState(session)
+                    self.outbox.uploadFailed(id)
+                    self.lastAttempt[id] = .now
+                    self.persistState(session)
                 }
             }
         }
@@ -134,8 +144,19 @@ final class SyncEngine {
     }
 
     private func persistState(_ session: Session) {
-        session.syncState = outbox.state(of: session.id)
+        session.syncState = Self.syncState(from: outbox.state(of: session.id))
         store.save()
+    }
+
+    /// Map the outbox state machine onto the model's SyncState.
+    static func syncState(from state: Outbox.State) -> SyncState {
+        switch state {
+        case .local: .local
+        case .queued: .queued
+        case .uploaded: .uploaded
+        case .dirty: .dirty
+        case .failed: .failed
+        }
     }
 
     // MARK: - Payload
