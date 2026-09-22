@@ -16,22 +16,28 @@ final class RepLogUIDiagTests: XCTestCase {
 
     @MainActor
     func testDumpTree() async {
-        // onboarding
+        // Complete onboarding robustly: keep tapping the onboarding button
+        // (id onboarding-next) while it exists, up to 6 times.
         let next = app.buttons["onboarding-next"]
-        if next.waitForExistence(timeout: 10) { next.tap() }
-        if next.waitForExistence(timeout: 5) { next.tap() }
-        if next.waitForExistence(timeout: 5) { next.tap() }
-        // Get Started may reuse onboarding-next id
-        let gs = app.buttons["onboarding-next"]
-        if gs.waitForExistence(timeout: 5) { gs.tap() }
-
+        for _ in 0..<6 {
+            if next.waitForExistence(timeout: 4) {
+                next.tap()
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            } else {
+                break
+            }
+        }
         try? await Task.sleep(nanoseconds: 2_000_000_000)
 
+        print("=== ONBOARDING STILL PRESENT? ===")
+        print("  onboarding-next exists: \(next.exists)")
         print("=== BUTTONS (id | label) ===")
         for el in app.buttons.allElementsBoundByIndex { print("  id=\(el.identifier) label=\(el.label)") }
         print("=== TABBAR BUTTONS (id | label) ===")
         for el in app.tabBars.buttons.allElementsBoundByIndex { print("  id=\(el.identifier) label=\(el.label)") }
-        print("=== STATIC TEXT (first 20) ===")
-        for el in app.staticTexts.allElementsBoundByIndex.prefix(20) { print("  text=\(el.label)") }
+        print("=== NAVBAR BUTTONS (id | label) ===")
+        for el in app.navigationBars.buttons.allElementsBoundByIndex { print("  id=\(el.identifier) label=\(el.label)") }
+        print("=== STATIC TEXT (first 25) ===")
+        for el in app.staticTexts.allElementsBoundByIndex.prefix(25) { print("  text=\(el.label)") }
     }
 }
