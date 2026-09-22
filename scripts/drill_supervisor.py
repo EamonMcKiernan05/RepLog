@@ -36,14 +36,15 @@ TOKEN = "uitest-drill-token"
 
 def gateway_ip() -> str:
     """The Mac's NAT gateway IP, which the iOS simulator routes through to
-    reach host services (the simulator's own loopback is not the Mac's)."""
+    reach host services (the simulator's own loopback is not the Mac's).
+    macOS: `route -n get default` -> the `gateway:` line."""
     try:
         out = subprocess.check_output(
-            ["ip", "route", "get", "8.8.8.8"], text=True, timeout=5
+            ["route", "-n", "get", "default"], text=True, timeout=5
         )
-        for i, tok in enumerate(out.split()):
-            if tok == "via" and i + 1 < len(out.split()):
-                return out.split()[i + 1]
+        for line in out.splitlines():
+            if line.strip().startswith("gateway:"):
+                return line.split(":", 1)[1].strip()
     except Exception:
         pass
     return "172.168.100.1"
