@@ -24,9 +24,16 @@ final class DataStore {
             "RepLog", schema: schema,
             isStoredInMemoryOnly: inMemory, allowsSave: !inMemory
         )
+        if !inMemory {
+            // DIAGNOSTIC: log the store URL the test host / app computes.
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            FileHandle.standardError.write("DataStore DIAG appSupport=\(appSupport.map{ $0.path })\n".data(using: .utf8)!)
+            FileHandle.standardError.write("DataStore DIAG bundleMain=\(Bundle.main.bundlePath)\n".data(using: .utf8)!)
+        }
         do {
             container = try ModelContainer(for: schema, configurations: [config])
         } catch {
+            FileHandle.standardError.write("DataStore DIAG container error: \(error)\n".data(using: .utf8)!)
             fatalError("Failed to create ModelContainer: \(error)")
         }
         if !inMemory {
