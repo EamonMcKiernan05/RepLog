@@ -214,6 +214,7 @@ struct SetNoteSheet: View {
             TextField("Note for set \(set.setNumber)", text: $text, axis: .vertical)
                 .lineLimit(3...6)
                 .padding()
+                .accessibilityIdentifier("set-note-field")
                 .onAppear { text = set.notes }
                 .navigationTitle("Set Note")
                 .navigationBarTitleDisplayMode(.inline)

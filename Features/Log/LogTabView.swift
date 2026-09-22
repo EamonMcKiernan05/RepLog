@@ -105,6 +105,7 @@ struct LogTabView: View {
                     }
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.circle)
+                    .accessibilityIdentifier("plus")
                 }
             }
             .environment(\.editMode, $editMode)

@@ -16,6 +16,7 @@ struct StartWorkoutSheet: View {
                     } label: {
                         Label("New Workout (Today)", systemImage: "plus.circle")
                     }
+                    .accessibilityIdentifier("new-workout-today")
                 }
                 if !store.routines().isEmpty {
                     Section("From a Routine") {

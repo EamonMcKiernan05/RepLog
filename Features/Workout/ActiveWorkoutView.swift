@@ -188,6 +188,7 @@ struct ActiveWorkoutView: View {
             .background(Palette.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
         .padding(.horizontal, 16)
+        .accessibilityIdentifier("add-exercise")
     }
 
     private func infoRow(_ label: String, _ value: String) -> some View {

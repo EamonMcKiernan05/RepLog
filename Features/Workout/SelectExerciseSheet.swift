@@ -76,7 +76,7 @@ struct SelectExerciseSheet: View {
     private var categoryList: some View {
         VStack(spacing: 0) {
             searchField
-            List(store.categories()) { cat in
+            List(filteredCategories) { cat in
                 NavigationLink(value: cat) {
                     HStack {
                         Text(cat.name)
@@ -89,11 +89,25 @@ struct SelectExerciseSheet: View {
                 .accessibilityIdentifier("category-\(cat.name)")
             }
             .listStyle(.plain)
+            if search.isEmpty && filteredCategories.isEmpty {
+                ContentUnavailableView("No categories", systemImage: "list.bullet")
+            }
         }
         .navigationDestination(for: Category.self) { cat in
             categoryDetail(cat)
         }
         }
+
+    /// Categories matching the search: by category name or by any contained
+    /// exercise name, so "Squat" surfaces the "Squats" category.
+    private var filteredCategories: [Category] {
+        let cats = store.categories()
+        guard !search.isEmpty else { return cats }
+        return cats.filter { cat in
+            cat.name.localizedCaseInsensitiveContains(search)
+                || cat.exercises.contains { $0.name.localizedCaseInsensitiveContains(search) }
+        }
+    }
 
     private var searchField: some View {
         HStack {
@@ -160,6 +174,7 @@ struct SelectExerciseSheet: View {
                     }
                 }
             }
+            .accessibilityIdentifier("pick-\(ex.name)")
         }
     }
 

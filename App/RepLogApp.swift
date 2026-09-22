@@ -33,10 +33,6 @@ struct RepLogApp: App {
         _store = State(initialValue: s)
         _settings = State(initialValue: set)
         _syncEngine = State(initialValue: SyncEngine(store: s, settings: set))
-        // DIAGNOSTIC (temporary): record which branch the app took.
-        try? "isUnitTestHost=\(isUnitTestHost)\n".write(
-            to: FileManager.default.temporaryDirectory.appendingPathComponent("replog-branch.txt"),
-            atomically: true, encoding: .utf8)
     }
 
     var body: some Scene {

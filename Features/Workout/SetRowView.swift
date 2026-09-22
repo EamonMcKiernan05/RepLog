@@ -80,6 +80,7 @@ struct SetRowView: View {
                         label: "RPE",
                         value: rpeDisplay,
                         isPlaceholder: set.rpe == nil,
+                        id: "rpe-cell",
                         action: { if isEditing { onRPE(set) } }
                     )
                 }
@@ -88,6 +89,7 @@ struct SetRowView: View {
                     label: "Notes",
                     value: set.notes.isEmpty ? "" : set.notes,
                     isPlaceholder: set.notes.isEmpty,
+                    id: "notes-cell",
                     action: { if isEditing { onNotes(set) } }
                 )
                 .frame(maxWidth: .infinity)
@@ -105,8 +107,6 @@ struct SetRowView: View {
         }
         .padding(.horizontal, 12)
         .contentShape(Rectangle())
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
     }
 
     private var weightDisplay: String {
@@ -136,7 +136,7 @@ struct SetRowView: View {
 
     @ViewBuilder
     private func column(label: String, value: String, isPlaceholder: Bool,
-                        action: @escaping () -> Void) -> some View {
+                        id: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 1) {
                 Text(label)
@@ -150,6 +150,20 @@ struct SetRowView: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEditing)
+        .modifier(ColumnID(id: id))
+    }
+
+    /// Applies an accessibility identifier when present (keeps the call sites
+    /// clean).
+    private struct ColumnID: ViewModifier {
+        let id: String?
+        func body(content: Content) -> some View {
+            if let id {
+                content.accessibilityIdentifier(id)
+            } else {
+                content
+            }
+        }
     }
 
     private var accessibilityText: String {
