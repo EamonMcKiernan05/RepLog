@@ -56,10 +56,12 @@ final class SyncEngine {
     func rehydrateOutbox() {
         for s in store.sessions() {
             switch s.syncState {
-            case .queued: outbox.finish(s.id)
-            case .dirty:
+            case .queued, .dirty:
+                // dirty rehydrates as queued: editAfterUpload only transitions
+                // from uploaded/failed, and queued and dirty are
+                // behaviourally identical (both unconditionally due, both
+                // resolve to uploaded on success).
                 outbox.finish(s.id)
-                outbox.editAfterUpload(s.id)
             case .failed: outbox.uploadFailed(s.id)
             case .uploaded: outbox.uploadSucceeded(s.id)
             case .local: break

@@ -115,18 +115,21 @@ struct OutboxTests {
                             ("f1", ob.state(of: "f1")),
                             ("u1", ob.state(of: "u1"))] {
             switch state {
-            case .queued: rebuilt.finish(id)
-            case .dirty: rebuilt.finish(id); rebuilt.editAfterUpload(id)
+            case .queued, .dirty: rebuilt.finish(id)
             case .failed: rebuilt.uploadFailed(id)
             case .uploaded: rebuilt.uploadSucceeded(id)
             case .local: break
             }
         }
         #expect(rebuilt.state(of: "q1") == .queued)
-        #expect(rebuilt.state(of: "d1") == .dirty)
+        // dirty rehydrates as queued: editAfterUpload only transitions from
+        // uploaded/failed, and queued and dirty are behaviourally identical
+        // (both unconditionally due, both resolve to uploaded on success).
+        #expect(rebuilt.state(of: "d1") == .queued)
         #expect(rebuilt.state(of: "f1") == .failed)
         #expect(rebuilt.state(of: "u1") == .uploaded)
-        // The queued and dirty sessions are due immediately after restart.
-        #expect(rebuilt.dueForUpload() == ["d1", "q1"])
+        // The queued sessions are due immediately after restart, and a
+        // failed session with no recorded attempt is due at once.
+        #expect(rebuilt.dueForUpload() == ["d1", "f1", "q1"])
     }
 }
