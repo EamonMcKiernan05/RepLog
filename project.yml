@@ -79,8 +79,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog.uitests
         GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/RepLog.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RepLog"
-        BUNDLE_LOADER: "$(TEST_HOST)"
     dependencies:
       - target: RepLog
 schemes:
