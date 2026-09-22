@@ -11,6 +11,9 @@ pass covers every screen against the 17 reference screenshots (§4), and the
 Dynamic Type / accessibility checks are in §5. What cannot be shown in a
 simulator is listed as device-only and is never claimed to work (§6).
 
+The commits after `1941ab8` are documentation only (this report, the
+visual-pass doc and the capture files); no code changed after the gate run.
+
 The previous version of this report said 35/35 units and "the Mac lost power
 mid-run"; both were stale and are gone.
 
