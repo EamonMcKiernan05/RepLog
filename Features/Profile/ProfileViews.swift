@@ -83,6 +83,9 @@ struct ProfileTabView: View {
                         Label("Help and Support", systemImage: "questionmark.bubble")
                     }
                 }
+                Section("Data") {
+                    ImportCSVButton()
+                }
                 Section("About") {
                     HStack {
                         Text("RepLog")

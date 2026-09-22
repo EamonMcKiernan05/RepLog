@@ -1,2 +1,127 @@
 # RepLog
-Apple native app to track workouts, and optional self-hosted external database designed for an AI coaching agent to read from.
+
+A native SwiftUI iOS workout tracker — a RepCount clone with an added **RPE
+column** between Reps and Notes — plus a small self-hostable CSV sync
+service. Everything is stored on-device (SwiftData, zero third-party Swift
+dependencies); finished sessions can optionally sync to a flat
+`sessions.csv` that AI agents can read cheaply and unambiguously.
+
+## What it does
+
+- **Log** — history grouped by month, session rows with date badge, routine
+  name, exercise summary and duration.
+- **Active workout** — one screen per workout: session card (start/end,
+  bodyweight, notes), one card per exercise, set rows with weight · reps ·
+  **RPE** · notes, placeholders from your last performance, rest timer with
+  ring + presets.
+- **All eight exercise types** — Strength (weight+reps, weight+time),
+  Bodyweight (BW+, BW−, reps, time), Cardio (time/distance/calories), Other
+  (note per set).
+- **Routines** — create, edit, duplicate, reorder; per-exercise warm-up /
+  working sets and schemes; "Start this Workout".
+- **Exercise library** — 12 categories, 150+ seeded exercises, add/edit,
+  single arm/leg, transfer data.
+- **Statistics** — overall metrics, per-exercise history with volume and
+  e1RM (Brzycki) charts, personal records per rep range, seasonal bests,
+  session records.
+- **Supersets, drop sets, repeat workout**, bodyweight handling
+  (BW+/BW−/multiplier), single arm/leg volume doubling.
+- **kg/lb** global unit with per-exercise override inside a workout.
+- **CSV export** (same bytes the sync service stores) and in-app import to
+  rebuild a fresh phone from a file.
+- **Offline-first** — sync catches up later; the outbox queues finished
+  sessions, retries with backoff, and tombstones deletions.
+
+## The RPE column
+
+Per set, optional, half-point steps 1.0–10.0, displayed as `8` not `8.0`.
+Appears in active-workout rows, completed-session rows, exercise history,
+routine targets and the CSV — immediately after Reps, before Notes.
+
+## The sync service (lift-sync)
+
+A tiny FastAPI service, one Docker image, no database. The phone pushes each
+finished session; the service upserts it into `sessions.csv` behind a single
+writer lock (atomic temp-file + rename), appends to a JSONL audit trail, and
+records tombstones so a deleted session cannot be re-imported.
+
+- `POST /v1/sessions` — upsert by `session_id` (bearer auth)
+- `DELETE /v1/sessions/{id}` — delete + tombstone
+- `GET /v1/health`, `GET /v1/export.csv`
+
+See [`service/README.md`](service/README.md) for running it. The CSV schema
+is frozen in [`docs/PLAN.md`](docs/PLAN.md) §4.4.
+
+## Layout
+
+```
+App/            entry point, router, root tab view, Info.plist
+Models/         SwiftData @Model types + the frozen enums
+Store/          DataStore (container + seeding), Settings, Keychain
+Engine/         Metrics, Targets, CSVCodec, Importer (pure, unit-tested)
+Sync/           SyncEngine, Outbox (state machine), LiftSyncClient
+Features/       Log / Workout / Routines / Exercises / Statistics /
+                Profile / Timer
+DesignSystem/   Palette, Typography (sampled from the reference app)
+Resources/      SeedExercises.json, SeedCategories.json
+Tests/          Unit (swift-testing) + UI (XCUITest) + Fixtures
+service/        lift-sync (FastAPI) + pytest suite + Docker
+scripts/        repcount_import.py, validate_sessions.py, mac-tests.sh
+docs/           PLAN.md (the spec), BUILD-REPORT.md
+```
+
+## Building (on the Mac)
+
+```bash
+cd ~/Documents/RepLog
+xcodegen generate
+xcodebuild -scheme RepLog -destination "platform=iOS Simulator,name=iPhone 17 Pro" build
+```
+
+Or run the whole gate (build + unit + UI tests) from the repo on any host
+that can `ssh mac`:
+
+```bash
+scripts/mac-tests.sh
+```
+
+## Running the service
+
+```bash
+cd service
+uv sync
+export LIFT_SYNC_TOKEN=$(openssl rand -hex 16)
+export LIFT_SYNC_DATA_DIR=./data
+uvicorn lift_sync.app:app --port 8080
+```
+
+In the app: Profile → Settings → Sync → enter the URL
+(`http://192.168.1.12:8080` or your tailnet address) and the token.
+
+## Tests
+
+- **Unit (swift-testing):** metrics (volume per type, bodyweight multiplier,
+  single-arm doubling, Brzycki e1RM, PRs), targets, CSV codec (golden file
+  byte-identical to the Python service + round trip), importer, outbox state
+  machine.
+- **UI (XCUITest):** every text-entry flow (RPE, search, sync URL/token,
+  set notes) — agent-device cannot type into SwiftUI fields.
+- **Service (pytest):** upsert idempotency, two concurrent POSTs,
+  delete/tombstone + no resurrection, atomic rewrite, auth, malformed
+  payloads.
+
+## Migration from RepCount
+
+`scripts/repcount_import.py` converts the legacy 7-column export into the
+new schema, lifting RPE out of the notes prose (bare numbers, `Rpe n`,
+`RIR n` → 10−n, ranges → midpoint, standalone `F` → RPE 10) and writing an
+anomaly report for every row it refused to guess at.
+`scripts/validate_sessions.py` checks data validity only — it never applies
+the coach's 1RM junk filter.
+
+## Notes
+
+- The CSV is not encrypted at rest; it lives on a LAN/tailnet share with
+  bearer auth. Fine for training data, said out loud.
+- No accounts, no paywall, no analytics (the toggle exists for parity and is
+  wired to nothing).

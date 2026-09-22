@@ -53,10 +53,11 @@ enum Targets {
         sessions: [Session]
     ) -> [(weight: Double?, reps: Int?)] {
         // Find the most recent session that contains the exercise.
-        guard let last = sessions
-            .filter { $0.exerciseEntries.contains { $0.exercise?.name == exerciseName } }
-            .max(by: { $0.date < $1.date })
-        else { return [] }
+        // (Temp var: guard conditions cannot contain trailing closures.)
+        let matching = sessions.filter {
+            $0.exerciseEntries.contains { $0.exercise?.name == exerciseName }
+        }
+        guard let last = matching.max(by: { $0.date < $1.date }) else { return [] }
         let sets = last.exerciseEntries
             .filter { $0.exercise?.name == exerciseName }
             .flatMap { $0.setEntries }

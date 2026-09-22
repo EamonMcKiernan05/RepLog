@@ -24,9 +24,9 @@ struct RPEInputSheet: View {
                 HStack(spacing: 10) {
                     ForEach(chips, id: \.self) { chip in
                         Button {
-                            text = format(chip)
+                            text = rpeText(chip)
                         } label: {
-                            Text(format(chip))
+                            Text(rpeText(chip))
                                 .font(Typography.mono(17, .semibold))
                                 .frame(minWidth: 48, minHeight: 44)
                                 .background(
@@ -71,17 +71,20 @@ struct RPEInputSheet: View {
                 }
             }
             .onAppear {
-                text = set.rpe.map(format) ?? ""
+                text = set.rpe.map { rpeText($0) } ?? ""
             }
         }
         .presentationDetents([.medium])
     }
 
     private var display: String {
-        set.rpe.map(format) ?? "—"
+        if let rpe = set.rpe {
+            return rpeText(rpe)
+        }
+        return "—"
     }
 
-    private func format(_ v: Double) -> String {
+    private func rpeText(_ v: Double) -> String {
         let tenths = (v * 10).rounded()
         if tenths.truncatingRemainder(dividingBy: 10) == 0 {
             return String(tenths / 10)
