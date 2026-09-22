@@ -26,24 +26,28 @@ final class RepLogUITests: XCTestCase {
     }
 
     /// Wait until the element exists; returns whether it appeared.
-    private func wait(for element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
-        let exp = NSPredicate(format: "exists == true")
-        let ok = expectation(for: exp, evaluatedWith: element, handler: nil)
-        wait(for: [ok], timeout: timeout)
+    /// Async polling (not waitForExpectations) so it is safe on the main actor.
+    @MainActor
+    private func wait(for element: XCUIElement, timeout: TimeInterval = 10) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.exists { return true }
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
         return element.exists
     }
 
     /// Let the UI settle after a transition (page change, sheet, navigation).
-    private func settle(_ seconds: Double = 1.5) {
-        let delay = expectation(description: "settle")
-        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { delay.fulfill() }
-        wait(for: [delay], timeout: seconds + 5)
+    @MainActor
+    private func settle(_ seconds: Double = 1.5) async {
+        try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
     }
 
     /// Tap, then settle so the next action sees a stable UI.
-    private func tapSettled(_ element: XCUIElement) {
+    @MainActor
+    private func tapSettled(_ element: XCUIElement) async {
         element.tap()
-        settle()
+        await settle()
     }
 
     /// Walk onboarding (units -> privacy -> skip sync) to the Log tab.
@@ -51,37 +55,37 @@ final class RepLogUITests: XCTestCase {
     private func completeOnboarding() async {
         for _ in 0..<3 {
             let next = app.buttons["onboarding-next"]
-            guard wait(for: next) else { break }
+            guard await wait(for: next) else { break }
             next.tap()
-            settle()
+            await settle()
         }
         // The main app is up: the Log "+" button is present.
-        XCTAssertTrue(wait(for: app.buttons["plus"]), "main app not shown after onboarding")
+        XCTAssertTrue(await wait(for: app.buttons["plus"]), "main app not shown after onboarding")
     }
 
     /// Tap the Log "+" button and start a fresh workout (ActiveWorkoutView).
     @MainActor
     private func startFreshWorkout() async {
         let plus = app.buttons["plus"]
-        XCTAssertTrue(wait(for: plus), "'plus' toolbar button not found")
-        tapSettled(plus)
+        XCTAssertTrue(await wait(for: plus), "'plus' toolbar button not found")
+        await tapSettled(plus)
         let today = app.buttons["new-workout-today"]
-        XCTAssertTrue(wait(for: today), "'New Workout (Today)' not found")
-        tapSettled(today)
-        XCTAssertTrue(wait(for: app.buttons["add-exercise"]), "Active workout not shown")
+        XCTAssertTrue(await wait(for: today), "'New Workout (Today)' not found")
+        await tapSettled(today)
+        XCTAssertTrue(await wait(for: app.buttons["add-exercise"]), "Active workout not shown")
     }
 
     /// Add the first exercise of the first category (Abs -> Ab Wheel).
     @MainActor
     private func addFirstExercise() async {
-        tapSettled(app.buttons["add-exercise"])
+        await tapSettled(app.buttons["add-exercise"])
         let absCat = app.buttons["category-Abs"]
-        XCTAssertTrue(wait(for: absCat), "'Abs' category not found")
-        tapSettled(absCat)
+        XCTAssertTrue(await wait(for: absCat), "'Abs' category not found")
+        await tapSettled(absCat)
         let abWheel = app.buttons["pick-Ab Wheel"]
-        XCTAssertTrue(wait(for: abWheel), "'Ab Wheel' not found")
-        tapSettled(abWheel)
-        XCTAssertTrue(wait(for: app.buttons["rpe-cell"]), "RPE cell not shown after adding exercise")
+        XCTAssertTrue(await wait(for: abWheel), "'Ab Wheel' not found")
+        await tapSettled(abWheel)
+        XCTAssertTrue(await wait(for: app.buttons["rpe-cell"]), "RPE cell not shown after adding exercise")
     }
 
     // MARK: - RPE entry
@@ -92,18 +96,18 @@ final class RepLogUITests: XCTestCase {
         await startFreshWorkout()
         await addFirstExercise()
 
-        tapSettled(app.buttons["rpe-cell"])
+        await tapSettled(app.buttons["rpe-cell"])
         let field = app.textFields["rpe-field"]
-        XCTAssertTrue(wait(for: field), "RPE field not found")
+        XCTAssertTrue(await wait(for: field), "RPE field not found")
         field.tap()
         field.typeText("8.5")
         let done = app.buttons["done"]
-        XCTAssertTrue(wait(for: done), "RPE 'Done' not found")
-        tapSettled(done)
+        XCTAssertTrue(await wait(for: done), "RPE 'Done' not found")
+        await tapSettled(done)
 
         // Read it back: the RPE cell now shows 8.5.
         let rpeCell = app.buttons["rpe-cell"]
-        XCTAssertTrue(wait(for: rpeCell), "RPE cell missing after entry")
+        XCTAssertTrue(await wait(for: rpeCell), "RPE cell missing after entry")
         let label = rpeCell.label ?? ""
         XCTAssertTrue(label.contains("8.5"), "RPE cell should read 8.5, got '\(label)'")
     }
@@ -114,17 +118,17 @@ final class RepLogUITests: XCTestCase {
     func testExerciseSearchFilters() async {
         await completeOnboarding()
         await startFreshWorkout()
-        tapSettled(app.buttons["add-exercise"])
+        await tapSettled(app.buttons["add-exercise"])
 
         let search = app.textFields["exercise-search"]
-        XCTAssertTrue(wait(for: search), "search field not found")
+        XCTAssertTrue(await wait(for: search), "search field not found")
         search.tap()
         search.typeText("Squat")
-        settle(1)
+        await settle(1)
 
         // The category list now shows only "Squats".
         let squats = app.buttons["category-Squats"]
-        XCTAssertTrue(wait(for: squats), "'Squats' category not shown after searching 'Squat'")
+        XCTAssertTrue(await wait(for: squats), "'Squats' category not shown after searching 'Squat'")
         // "Abs" should be filtered out.
         let gone = !app.buttons["category-Abs"].exists
         XCTAssertTrue(gone, "'Abs' should be filtered out when searching 'Squat'")
@@ -138,34 +142,34 @@ final class RepLogUITests: XCTestCase {
         // Profile tab is the 4th tab (index 3); SwiftUI does not propagate
         // accessibilityIdentifier to .tabItem, so target it positionally.
         let profile = app.tabBars.buttons.element(boundBy: 3)
-        XCTAssertTrue(wait(for: profile), "'Profile' tab not found")
-        tapSettled(profile)
+        XCTAssertTrue(await wait(for: profile), "'Profile' tab not found")
+        await tapSettled(profile)
         let settings = app.buttons["settings-link"]
-        XCTAssertTrue(wait(for: settings), "'Settings' not found in Profile")
-        tapSettled(settings)
+        XCTAssertTrue(await wait(for: settings), "'Settings' not found in Profile")
+        await tapSettled(settings)
 
         // Scroll to the Sync section.
         let toggle = app.switches["enable-sync"]
         for _ in 0..<8 where !toggle.exists {
             app.swipeUp()
-            settle(0.5)
+            await settle(0.5)
         }
         XCTAssertTrue(toggle.exists, "'Enable Sync' toggle not found")
-        tapSettled(toggle)
+        await tapSettled(toggle)
 
         let url = app.textFields["sync-url-field"]
-        XCTAssertTrue(wait(for: url), "sync URL field not found")
+        XCTAssertTrue(await wait(for: url), "sync URL field not found")
         url.tap()
         url.typeText("http://192.168.1.12:8080")
 
         let token = app.secureTextFields["sync-token-field"]
-        XCTAssertTrue(wait(for: token), "sync token field not found")
+        XCTAssertTrue(await wait(for: token), "sync token field not found")
         token.tap()
         token.typeText("test-token-123")
 
         let done = app.buttons["done"]
-        XCTAssertTrue(wait(for: done), "Settings 'Done' not found")
-        tapSettled(done)
+        XCTAssertTrue(await wait(for: done), "Settings 'Done' not found")
+        await tapSettled(done)
     }
 
     // MARK: - Set notes
@@ -176,17 +180,17 @@ final class RepLogUITests: XCTestCase {
         await startFreshWorkout()
         await addFirstExercise()
 
-        tapSettled(app.buttons["notes-cell"])
+        await tapSettled(app.buttons["notes-cell"])
         let field = app.textFields["set-note-field"]
-        XCTAssertTrue(wait(for: field), "set note field not found")
+        XCTAssertTrue(await wait(for: field), "set note field not found")
         field.tap()
         field.typeText("felt heavy")
         let save = app.buttons["save-note"]
-        XCTAssertTrue(wait(for: save), "note 'Save' not found")
-        tapSettled(save)
+        XCTAssertTrue(await wait(for: save), "note 'Save' not found")
+        await tapSettled(save)
 
         // The note renders as a second line under the row.
         let noteLine = app.staticTexts["felt heavy"]
-        XCTAssertTrue(wait(for: noteLine), "set note 'felt heavy' not displayed")
+        XCTAssertTrue(await wait(for: noteLine), "set note 'felt heavy' not displayed")
     }
 }
