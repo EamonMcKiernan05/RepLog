@@ -109,7 +109,7 @@ struct OutboxTests {
         ob.finish("u1")
         ob.uploadSucceeded("u1")
 
-        let rebuilt = Outbox()
+        var rebuilt = Outbox()
         for (id, state) in [("q1", ob.state(of: "q1")),
                             ("d1", ob.state(of: "d1")),
                             ("f1", ob.state(of: "f1")),
