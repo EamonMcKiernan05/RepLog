@@ -100,26 +100,30 @@ struct CSVCodecTests {
         #expect(dead.notes == "=HYPERLINK(\"x\")")
     }
 
-    @Test("rpe rendering: 8.0 -> 8, 8.5 -> 8.5, nil -> empty") {
+    @Test("rpe rendering: 8.0 -> 8, 8.5 -> 8.5, nil -> empty")
+    func testrpeRendering8088585NilEmpty() {
         #expect(CSVCodec.rpe(8.0) == "8")
         #expect(CSVCodec.rpe(8.5) == "8.5")
         #expect(CSVCodec.rpe(nil) == "")
     }
 
-    @Test("number rendering: no trailing .0") {
+    @Test("number rendering: no trailing .0")
+    func testnumberRenderingNoTrailing0() {
         #expect(CSVCodec.num(100.0) == "100")
         #expect(CSVCodec.num(85.5) == "85.5")
         #expect(CSVCodec.num(nil) == "")
     }
 
-    @Test("field: quotes commas, escapes leading formula chars") {
+    @Test("field: quotes commas, escapes leading formula chars")
+    func testfieldQuotesCommasEscapesLeadingFormulaChars() {
         #expect(CSVCodec.field("a,b") == "\"a,b\"")
         #expect(CSVCodec.field("=SUM(A1)") == " =SUM(A1)")
         #expect(CSVCodec.field("plain") == "plain")
         #expect(CSVCodec.field("") == "")
     }
 
-    @Test("bad header throws") {
+    @Test("bad header throws")
+    func testbadHeaderThrows() {
         let bad = "wrong,header\n1,2\n"
         #expect(throws: CSVError.self) {
             _ = try CSVCodec.parse(bad)
