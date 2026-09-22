@@ -91,11 +91,11 @@ final class RestTimerController {
 
     private func scheduleNotification(after interval: TimeInterval) {
         let center = UNUserNotificationCenter.current()
-        center.removeAllPendingNotificationRequests(withIdentifier: notificationID)
+        center.removeAllPendingNotificationRequests()
         let content = UNMutableNotificationContent()
         content.title = "Rest over"
         content.body = "Time for your next set."
-        content.sound = UNNotificationSound(named: soundName)
+        content.sound = UNNotificationSound(named: UNNotificationSoundName(soundName))
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, interval), repeats: false)
         let req = UNNotificationRequest(identifier: notificationID, content: content, trigger: trigger)
         center.add(req)
@@ -103,7 +103,7 @@ final class RestTimerController {
 
     private func cancelNotification() {
         UNUserNotificationCenter.current()
-            .removeAllPendingNotificationRequests(withIdentifier: notificationID)
+            .removeAllPendingNotificationRequests()
     }
 
     /// Map the settings sound choice to a system sound file name.
