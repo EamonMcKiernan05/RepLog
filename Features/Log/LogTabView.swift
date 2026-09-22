@@ -92,13 +92,24 @@ struct LogTabView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Edit") {
+                    // A .bordered/.capsule toolbar button gets clipped to a
+                    // circle by the iOS 26 toolbar (it renders as a single
+                    // "d") — an explicit capsule label lays out correctly and
+                    // matches the reference screenshot.
+                    Button {
                         withAnimation {
                             editMode = editMode == .active ? .inactive : .active
                         }
+                    } label: {
+                        Text("Edit")
+                            .font(.body)
+                            .foregroundStyle(Palette.textPrimary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(Palette.card, in: Capsule())
                     }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("log-edit")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

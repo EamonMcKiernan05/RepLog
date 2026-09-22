@@ -33,13 +33,21 @@ struct RoutinesTabView: View {
             .navigationTitle("Routines")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Edit") {
+                    // Same iOS 26 toolbar clipping as the Log's Edit button:
+                    // an explicit capsule label, not .bordered + .capsule.
+                    Button {
                         withAnimation {
                             editMode = editMode == .active ? .inactive : .active
                         }
+                    } label: {
+                        Text("Edit")
+                            .font(.body)
+                            .foregroundStyle(Palette.textPrimary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(Palette.card, in: Capsule())
                     }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
+                    .buttonStyle(.plain)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

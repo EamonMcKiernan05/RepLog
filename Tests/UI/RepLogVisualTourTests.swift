@@ -60,6 +60,23 @@ final class RepLogVisualTourTests: XCTestCase {
         try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
     }
 
+    /// Scroll an element into the visible area (an element below the fold has
+    /// a frame outside the screen, so a coordinate tap at its centre lands off
+    /// screen and hits nothing — that is how the add-exercise and Personal
+    /// Records steps silently missed).
+    @MainActor
+    private func bringIntoView(_ element: XCUIElement, maxSwipes: Int = 5) async {
+        var swipes = 0
+        while element.exists, swipes < maxSwipes {
+            let f = element.frame
+            let h = app.frame.height
+            if f.minY >= 130 && f.maxY <= h - 130 { return }
+            if f.maxY > h - 130 { app.swipeUp() } else { app.swipeDown() }
+            await settle(0.9)
+            swipes += 1
+        }
+    }
+
     /// Tap the first of `queries` that exists within the timeout.
     @MainActor
     @discardableResult
@@ -67,6 +84,8 @@ final class RepLogVisualTourTests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             for q in queries where q.exists {
+                await bringIntoView(q)
+                guard q.exists else { continue }
                 // Tap by coordinate: a plain .tap() raises a hard XCTest
                 // failure for a not-hittable element (e.g. a cell half under
                 // the navigation bar) and would abort the whole tour.
@@ -91,9 +110,9 @@ final class RepLogVisualTourTests: XCTestCase {
         return await tapAny([
             app.buttons.matching(exact).firstMatch,
             app.cells.matching(exact).firstMatch,
-            app.staticTexts.matching(exact).firstMatch,
             app.buttons.matching(begins).firstMatch,
             app.cells.matching(begins).firstMatch,
+            app.staticTexts.matching(exact).firstMatch,
         ], label, timeout: timeout)
     }
 
@@ -289,16 +308,25 @@ final class RepLogVisualTourTests: XCTestCase {
             await settle(1.2)
             shot("23-exercise-editor")
             await tapLabel("Cancel")   // editor sheet
-            await settle(0.8)
-            // Dismiss the library sheet (no toolbar button — drag it down).
-            let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.03))
-            let bottom = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92))
-            top.press(forDuration: 0.15, thenDragTo: bottom)
-            await settle(1.2)
+            await settle(1)
+            // Back in the library? Then dismiss it (no toolbar button — drag
+            // it down) and confirm the Profile is showing before the next step.
+            if await waitFor(app.textFields["library-search"], timeout: 4) {
+                let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.03))
+                let bottom = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92))
+                top.press(forDuration: 0.15, thenDragTo: bottom)
+                await settle(1.5)
+            }
+            if !(await waitFor(app.buttons["settings-link"], timeout: 4)) {
+                // Still covered: pull the sheet down once more.
+                let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.05))
+                let bottom = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+                top.press(forDuration: 0.2, thenDragTo: bottom)
+                await settle(1.5)
+            }
             await tapLabel("Edit Categories")
             await settle(1.5)
             shot("24-edit-categories")
-            await tapLabel("Cancel")
         }
 
         print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
