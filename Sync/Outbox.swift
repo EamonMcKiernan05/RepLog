@@ -49,7 +49,7 @@ struct Outbox {
     }
 
     /// Sessions that need an upload now (queued, dirty, or failed-with-backoff-elapsed).
-    mutating func dueForUpload(now: Date = .now, lastAttempt: [String: Date], backoff: (Int) -> TimeInterval = { Foundation.pow(2.0, Double(min($0, 6))) }) -> [String] {
+    mutating func dueForUpload(now: Date = .now, lastAttempt: [String: Date] = [:], backoff: (Int) -> TimeInterval = { Foundation.pow(2.0, Double(min($0, 6))) }) -> [String] {
         states.compactMap { id, state in
             switch state {
             case .queued, .dirty:
