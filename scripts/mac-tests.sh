@@ -39,9 +39,9 @@ run "cd $REPO_DIR && xcodebuild test -scheme RepLog -destination '$DEST' -only-t
 # 3. UI tests (XCUITest — every text-entry flow + the offline drill).
 #    Start the drill supervisor on the Mac first (detached so it survives
 #    this ssh session), wait for it, then run the UI tests.
-ssh "$HOST" "cd $REPO_DIR && setsid nohup python3 scripts/drill_supervisor.py \
+ssh "$HOST" "cd $REPO_DIR && nohup python3 scripts/drill_supervisor.py \
   --repo \$HOME/Documents/RepLog --port $SUPERVISOR_PORT --service-port $SERVICE_PORT \
-  > $SUPERVISOR_LOG 2>&1 < /dev/null &"
+  > $SUPERVISOR_LOG 2>&1 < /dev/null & disown"
 # Wait for the supervisor to answer on the Mac loopback.
 for i in $(seq 1 30); do
   if ssh "$HOST" "curl -s http://127.0.0.1:$SUPERVISOR_PORT/health" 2>/dev/null | grep -q '"ok"'; then
