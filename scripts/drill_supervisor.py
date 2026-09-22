@@ -80,11 +80,14 @@ class Supervisor:
         log = open(os.path.join(self.data_dir, "uvicorn.log"), "ab")
         self.proc = subprocess.Popen(
             [uvicorn, "lift_sync.app:app", "--port", str(self.service_port),
-             "--host", "0.0.0.0", "--log-level", "warning"],
+             "--host", "0.0.0.0", "--log-level", "info"],
             cwd=os.path.join(self.repo, "service"),
             env=env, stdout=log, stderr=log,
             preexec_fn=os.setsid,
         )
+        # Print the data dir (uvicorn's access log lives in it) so a failed
+        # drill can be diagnosed from the supervisor's own log file.
+        print(f"service started, data dir {self.data_dir}", flush=True)
         for _ in range(60):
             if self._health():
                 return {"ok": True, "data_dir": self.data_dir, "token": TOKEN,

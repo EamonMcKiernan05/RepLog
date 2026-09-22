@@ -471,6 +471,14 @@ final class RepLogUITests: XCTestCase {
             XCTFail("drill service failed to start: \(String(describing: started?["error"]))")
             return
         }
+        // The service must be reachable from the simulator before we blame the
+        // upload: this test process and the app share the simulator's network
+        // stack, so a 200 here means the app's POST path is the same.
+        let healthReq = URLRequest(url: URL(string: "\(drillServiceURL)/v1/health")!)
+        let healthResult = try? await URLSession.shared.data(for: healthReq)
+        XCTAssertEqual((healthResult?.1 as? HTTPURLResponse)?.statusCode, 200,
+                       "drill service not reachable from the simulator at \(drillServiceURL)/v1/health")
+
         // Give the app's sync a moment (foreground run / path monitor).
         await tapSettled(app.tabBars.buttons.element(boundBy: 3))
         let syncNow = app.buttons["sync-now"]
