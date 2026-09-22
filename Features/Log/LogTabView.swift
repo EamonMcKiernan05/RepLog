@@ -45,7 +45,7 @@ struct LogTabView: View {
                             .padding(.horizontal, 20)
 
                             VStack(spacing: 0) {
-                                ForEach(Array(month.sessions.enumerated()), id: \\.element.id) { idx, session in
+                                ForEach(Array(month.sessions.enumerated()), id: \.element.id) { idx, session in
                                     // NavigationLink (value-based push) — a
                                     // Button setting the item of
                                     // .navigationDestination(item:) never
