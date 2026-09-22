@@ -37,8 +37,8 @@ enum CSVCodec {
     /// RPE: one decimal max, empty when nil. 8.0 -> "8", 8.5 -> "8.5".
     static func rpe(_ value: Double?) -> String {
         guard let v = value else { return "" }
-        let tenths = (v * 10).rounded()
-        if tenths.truncatingRemainder(dividingBy: 10) == 0 {
+        let tenths = Int((v * 10).rounded())
+        if tenths % 10 == 0 {
             return String(tenths / 10)
         }
         return String(format: "%.1f", v)
