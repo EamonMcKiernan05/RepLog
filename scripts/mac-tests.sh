@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
-# mac-tests.sh — pull the repo on the Mac and run the iOS build plus both
-# test suites over ssh. Exit non-zero on any failure (plan §7.2, T7.3).
+# mac-tests.sh — the full Mac gate, one run: regenerate the project, build the
+# app, run the unit suite, then the UI suite (including the in-simulator
+# offline drill, plan §7.5/T7.3). Everything runs on the Mac over ssh; this
+# script exits non-zero if any step fails.
+#
+# The gate is: ** BUILD SUCCEEDED ** + 36/36 unit + 7/7 UI.
+# The accessibility-audit class is excluded here on purpose (it REPORTS
+# issues instead of gating on them); run it standalone with
+#   -only-testing:RepLogUITests/RepLogAccessibilityTests
 #
 # Usage:
 #   scripts/mac-tests.sh [mac-host]     # default host: mac
@@ -25,34 +32,55 @@ run() {
   ssh "$HOST" "$*"
 }
 
+# Always stop the drill supervisor, however this script exits — an orphan
+# holds 8392 and serves stale state to the next run (which then reads as a
+# flaky test).
+stop_supervisor() {
+  ssh -o ConnectTimeout=10 "$HOST" "pkill -f drill_supervisor.py || true" >/dev/null 2>&1 || true
+}
+trap stop_supervisor EXIT
+
+# 0. Kill any supervisor left over from a previous run, before anything else.
+echo "==> stopping any stale drill supervisor"
+stop_supervisor
+
 run "cd $REPO_DIR && git pull --ff-only"
 
-# 0. Regenerate the Xcode project from project.yml.
+# 1. Regenerate the Xcode project from project.yml.
 run "cd $REPO_DIR && $BREW_BIN/xcodegen generate"
 
-# 1. Build the app.
+# 2. Build the app (plus the RepLogWidget extension).
 run "cd $REPO_DIR && xcodebuild -scheme RepLog -destination '$DEST' build"
 
-# 2. Unit tests (swift-testing).
+# 3. Unit tests (swift-testing).
 run "cd $REPO_DIR && xcodebuild test -scheme RepLog -destination '$DEST' -only-testing:RepLogTests"
 
-# 3. UI tests (XCUITest — every text-entry flow + the offline drill).
+# 4. UI tests (XCUITest — every text-entry flow + the offline drill).
 #    Start the drill supervisor on the Mac first (detached so it survives
-#    this ssh session), wait for it, then run the UI tests.
+#    this ssh session), wait for it, then run the UI suite. The audit class
+#    is excluded; this run must be exactly the 7 gating tests.
 ssh "$HOST" "cd $REPO_DIR && nohup python3 scripts/drill_supervisor.py \
   --repo \$HOME/Documents/RepLog --port $SUPERVISOR_PORT --service-port $SERVICE_PORT \
   > $SUPERVISOR_LOG 2>&1 < /dev/null & disown"
-# Wait for the supervisor to answer on the Mac loopback.
+
+# Wait for the supervisor to answer on the Mac loopback; a missing
+# supervisor must fail the gate (the drill otherwise reports itself as a
+# skip, which is not a pass).
+supervisor_up=""
 for i in $(seq 1 30); do
-  if ssh "$HOST" "curl -s http://127.0.0.1:$SUPERVISOR_PORT/health" 2>/dev/null | grep -q '"ok"'; then
-    echo "==> drill supervisor up"
+  if ssh -o ConnectTimeout=10 "$HOST" "curl -s http://127.0.0.1:$SUPERVISOR_PORT/health" 2>/dev/null | grep -q '"ok"'; then
+    supervisor_up=1
     break
   fi
   sleep 1
 done
-run "cd $REPO_DIR && xcodebuild test -scheme RepLog -destination '$DEST' -only-testing:RepLogUITests"
+if [ -z "$supervisor_up" ]; then
+  echo "ERROR: drill supervisor did not come up on 127.0.0.1:$SUPERVISOR_PORT" >&2
+  exit 1
+fi
+echo "==> drill supervisor up"
 
-# Stop the supervisor (and its service) now that the UI tests are done.
-ssh "$HOST" "pkill -f drill_supervisor.py || true"
+run "cd $REPO_DIR && xcodebuild test -scheme RepLog -destination '$DEST' \
+  -only-testing:RepLogUITests -skip-testing:RepLogUITests/RepLogAccessibilityTests"
 
 echo "All Mac tests passed."

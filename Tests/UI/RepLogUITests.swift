@@ -60,16 +60,53 @@ final class RepLogUITests: XCTestCase {
         XCTAssertTrue(ok, message)
     }
 
-    /// Tap a Form toggle. A SwiftUI Form does not toggle from a label tap,
-    /// and the switch element spans the whole row, so its centre is the
-    /// label. Tap the knob at the right edge of the row (verified: this
-    /// flips the toggle; a centre tap does not).
+    /// Tap a Form toggle, then assert the value actually flipped.
+    ///
+    /// A SwiftUI Form does not toggle from a label tap, and the switch
+    /// element spans the whole row, so both its centre and its top edge are
+    /// the label. Normalised offsets are measured from the element's
+    /// TOP-LEFT — (0,0) is the top-left corner, (1,1) the bottom-right — so
+    /// the knob is at (0.92, 0.5): right edge, vertically centred.
+    /// (Verified 2026-09-22: dx 0.45, dy 0 at the row's top edge is the
+    /// label and flips nothing.)
+    ///
+    /// The value assertion is the point of this helper: if the toggle
+    /// silently fails to flip, the next failure names the toggle instead of
+    /// the URL field that never appeared.
     @MainActor
     private func tapSwitchKnob(_ toggle: XCUIElement) async {
-        // Normalised offset from the element centre: +0.45 dx = the right
-        // edge, where the knob sits.
-        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0)).tap()
-        await settle()
+        let before = (toggle.value as? String) ?? "?"
+        if before != "1" {
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            await settle()
+        }
+        let after = (toggle.value as? String) ?? "?"
+        XCTAssertEqual(after, "1",
+                       "toggle '\(toggle.identifier)' did not flip after a knob tap (value '\(before)' -> '\(after)')")
+    }
+
+    /// The Log's session rows carry `session-row-<first 8 of the id>`
+    /// (SessionRowView.swift), so an exact subscript — `app.buttons["session-row-"]`
+    /// — can never match. A BEGINSWITH predicate query is the only way in.
+    @MainActor
+    private func firstSessionRow() -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'session-row-'")).firstMatch
+    }
+
+    /// Wait for the first session row in the Log. On failure, dump every
+    /// element whose identifier starts with "session-row" so the next run
+    /// says whether the row is a button, an otherElement, or absent.
+    @MainActor
+    @discardableResult
+    private func expectSessionRow(_ message: String, timeout: TimeInterval = 15) async -> XCUIElement {
+        let row = firstSessionRow()
+        if await wait(for: row, timeout: timeout) { return row }
+        let ids = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'session-row'"))
+            .allElementsBoundByIndex
+            .map { "\($0.elementType.rawValue):\($0.identifier)" }
+        XCTFail("\(message) — elements matching 'session-row*': \(ids)")
+        return row
     }
 
     /// Walk onboarding (units -> privacy -> skip sync) to the Log tab.
@@ -205,10 +242,11 @@ final class RepLogUITests: XCTestCase {
         await addFirstExercise()
         await fillFirstSet(weight: "100", reps: "5", rpe: "8")
         await tapSettled(app.buttons["finish-workout"])
-        await settle(2)
-        // Back on the Log tab: the finished session renders as a row.
-        let row = app.buttons["session-row-"]
-        await expectExists(row, "session row not shown in Log after finishing")
+        // Finishing pops the pushed workout (ActiveWorkoutView.finish() ->
+        // dismiss() -> the Log root), so the Log's "+" toolbar button is the
+        // proof we are back on the Log tab before hunting for the row.
+        await expectExists(app.buttons["plus"], "Log tab not shown after finishing")
+        let row = await expectSessionRow("session row not shown in Log after finishing")
 
         // Tap it — the detail view must push.
         await tapSettled(row)
@@ -393,8 +431,7 @@ final class RepLogUITests: XCTestCase {
         await settle(3)
 
         // The session is in the Log.
-        let row = app.buttons["session-row-"]
-        await expectExists(row, "session row not shown after offline finish")
+        let row = await expectSessionRow("session row not shown after offline finish")
         let rowID = (row.identifier as NSString).replacingOccurrences(of: "session-row-", with: "")
         let sid = String(rowID.prefix(8))
 
@@ -433,7 +470,8 @@ final class RepLogUITests: XCTestCase {
 
         // 5. Delete the session in the app -> tombstone lands on the server.
         await tapSettled(app.tabBars.buttons.element(boundBy: 0))
-        await tapSettled(app.buttons["session-row-\(sid)"])
+        let rowToDelete = await expectSessionRow("finished session row missing before delete")
+        await tapSettled(rowToDelete)
         await expectExists(app.buttons["session-detail-menu"], "session detail not open")
         await tapSettled(app.buttons["session-detail-menu"])
         await tapSettled(app.buttons["delete-workout"])
