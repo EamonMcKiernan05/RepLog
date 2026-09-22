@@ -7,8 +7,8 @@ import SwiftData
 @MainActor
 struct ImporterTests {
     /// Build a fresh in-memory store.
-    private func freshStore() -> DataStore {
-        DataStore(inMemory: true)
+    private func freshStore() -> RepLog.DataStore {
+        RepLog.DataStore(inMemory: true)
     }
 
     private func makeSession() -> Session {
