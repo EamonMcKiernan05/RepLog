@@ -124,5 +124,4 @@ struct LogTabView: View {
     }
 }
 
-/// Make Session usable as a navigation item.
-extension Session: Identifiable {}
+/// Make Session usable as a navigation item (id: String).

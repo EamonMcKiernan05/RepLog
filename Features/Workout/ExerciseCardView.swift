@@ -61,9 +61,9 @@ struct ExerciseCardView: View {
                     type: entry.setType,
                     unit: unit,
                     isEditing: isEditing,
-                    onRPE: { rpeSet = set },
+                    onRPE: { _ in rpeSet = set },
                     onNumber: { numberField = $0 },
-                    onNotes: { notesSet = set }
+                    onNotes: { _ in notesSet = set }
                 )
                 Divider()
             }

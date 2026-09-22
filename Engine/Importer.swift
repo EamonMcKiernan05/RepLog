@@ -80,10 +80,10 @@ enum Importer {
                 continue
             }
             let session = Session(id: sid, date: date)
-            if let st = first.startTime, let t = CSVCodec.timeFormat.date(from: st) {
+            if !first.startTime.isEmpty, let t = CSVCodec.timeFormat.date(from: first.startTime) {
                 session.startTime = t
             }
-            if let et = first.endTime, let t = CSVCodec.timeFormat.date(from: et) {
+            if !first.endTime.isEmpty, let t = CSVCodec.timeFormat.date(from: first.endTime) {
                 session.endTime = t
             }
             if let bw = first.bodyweightKg { session.bodyweightKg = bw }

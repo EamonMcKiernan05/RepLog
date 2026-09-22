@@ -35,9 +35,8 @@ final class LiftSyncClient {
     }
 
     private func request(_ method: String, path: String) async -> (Int, Data)? {
-        guard let config, let url = config.baseURL.appendingPathComponent(path) else {
-            return nil
-        }
+        guard let config else { return nil }
+        let url = config.baseURL.appendingPathComponent(path)
         var req = URLRequest(url: url)
         req.httpMethod = method
         req.setValue("Bearer \(config.token)", forHTTPHeaderField: "Authorization")
@@ -53,9 +52,8 @@ final class LiftSyncClient {
 
     /// POST /v1/sessions
     func upsert(_ payload: [String: Any]) async -> Result {
-        guard let config, let url = config.baseURL.appendingPathComponent("v1/sessions") else {
-            return .networkError
-        }
+        guard let config else { return .networkError }
+        let url = config.baseURL.appendingPathComponent("v1/sessions")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(config.token)", forHTTPHeaderField: "Authorization")

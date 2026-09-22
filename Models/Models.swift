@@ -252,6 +252,26 @@ final class RoutineExercise {
     }
 }
 
+// MARK: - Identifiable for SwiftUI ForEach / navigation
+// SwiftData's PersistentModel does not conform to Identifiable in this SDK,
+// so the views need an explicit id. Session already has `var id: String`.
+extension Session: Identifiable {}
+extension Exercise: Identifiable {
+    public var id: PersistentIdentifier { persistentModelID }
+}
+extension Category: Identifiable {
+    public var id: PersistentIdentifier { persistentModelID }
+}
+extension Routine: Identifiable {
+    public var id: PersistentIdentifier { persistentModelID }
+}
+extension RoutineExercise: Identifiable {
+    public var id: PersistentIdentifier { persistentModelID }
+}
+extension SetEntry: Identifiable {
+    public var id: PersistentIdentifier { persistentModelID }
+}
+
 // MARK: - Bodyweight history
 
 @Model

@@ -29,14 +29,8 @@ struct SelectExerciseSheet: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if let cat = selectedCategory {
-                    categoryDetail(cat)
-                } else {
-                    categoryList
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
+            categoryList
+                .safeAreaInset(edge: .bottom) {
                 if allowSuperset {
                     Picker("Mode", selection: $mode) {
                         ForEach(Mode.allCases, id: \.self) { m in
@@ -97,9 +91,9 @@ struct SelectExerciseSheet: View {
             .listStyle(.plain)
         }
         .navigationDestination(for: Category.self) { cat in
-            selectedCategory = cat
+            categoryDetail(cat)
         }
-    }
+        }
 
     private var searchField: some View {
         HStack {

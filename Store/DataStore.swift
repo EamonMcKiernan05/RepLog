@@ -3,6 +3,8 @@ import SwiftData
 import SwiftUI
 
 /// All model mutation goes through DataStore (plan §4.1).
+/// MainActor-isolated: it wraps the main context and is only used from views.
+@MainActor
 @Observable
 final class DataStore {
     let container: ModelContainer
@@ -10,9 +12,6 @@ final class DataStore {
 
     /// Static reference to the live main context, so value-type bindings
     /// (bodyweight) can record history without a view in scope.
-    /// MainActor-isolated: the main context is only touched on the main
-    /// thread in this app.
-    @MainActor
     static var mainContextRef: ModelContext?
 
     init(inMemory: Bool = false) {
@@ -32,9 +31,7 @@ final class DataStore {
         }
         if !inMemory {
             // App.init runs on the main thread.
-            MainActor.assumeIsolated {
-                DataStore.mainContextRef = container.mainContext
-            }
+            DataStore.mainContextRef = container.mainContext
         }
         seedIfNeeded()
     }

@@ -7,6 +7,7 @@ struct RootTabView: View {
     @Environment(Settings.self) private var settings
 
     var body: some View {
+        @Bindable var router = router
         if router.isOnboarding {
             OnboardingView()
         } else {

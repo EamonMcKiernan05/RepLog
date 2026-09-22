@@ -185,7 +185,7 @@ struct SettingsView: View {
                         Button("Test Connection") {
                             Task {
                                 sync.applyConfig()
-                                _ = sync.client.health()
+                                _ = await sync.client.health()
                             }
                         }
                         .disabled(settings.syncURL.isEmpty)

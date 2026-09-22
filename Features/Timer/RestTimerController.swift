@@ -95,7 +95,7 @@ final class RestTimerController {
         let content = UNMutableNotificationContent()
         content.title = "Rest over"
         content.body = "Time for your next set."
-        content.sound = UNNotificationSound(named: UNNotificationSoundName(settingsSoundName))
+        content.sound = UNNotificationSound(named: soundName)
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, interval), repeats: false)
         let req = UNNotificationRequest(identifier: notificationID, content: content, trigger: trigger)
         center.add(req)
@@ -106,13 +106,13 @@ final class RestTimerController {
             .removeAllPendingNotificationRequests(withIdentifier: notificationID)
     }
 
-    /// Map the settings sound choice to a system sound name.
-    private var settingsSoundName: UNNotificationSoundName {
+    /// Map the settings sound choice to a system sound file name.
+    private var soundName: String {
         switch UserDefaults.standard.string(forKey: "timer.sound") ?? "default" {
-        case "bell": return .init("bell.caf")
-        case "horn": return .init("horn.caf")
-        case "alarm": return .init("alarm.caf")
-        default: return .default
+        case "bell": return "bell.caf"
+        case "horn": return "horn.caf"
+        case "alarm": return "alarm.caf"
+        default: return "default.caf"
         }
     }
 
