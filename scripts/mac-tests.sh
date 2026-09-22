@@ -9,6 +9,9 @@ set -euo pipefail
 HOST="${1:-mac}"
 DEST="platform=iOS Simulator,name=iPhone 17 Pro"
 REPO_DIR="~/Documents/RepLog"
+# xcodegen + agent-device live in Homebrew, which is not on the
+# non-interactive SSH PATH.
+BREW_BIN="/opt/homebrew/bin"
 
 run() {
   echo "==> $*"
@@ -16,6 +19,9 @@ run() {
 }
 
 run "cd $REPO_DIR && git pull --ff-only"
+
+# 0. Regenerate the Xcode project from project.yml.
+run "cd $REPO_DIR && $BREW_BIN/xcodegen generate"
 
 # 1. Build the app.
 run "cd $REPO_DIR && xcodebuild -scheme RepLog -destination '$DEST' build"

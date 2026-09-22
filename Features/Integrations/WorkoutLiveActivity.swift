@@ -22,7 +22,7 @@ enum WorkoutLiveActivityController {
         Task {
             do {
                 try await Activity.request(
-                    attrs,
+                    attributes: attrs,
                     content: .init(state: state, staleDate: nil),
                     pushType: nil
                 )
@@ -37,7 +37,7 @@ enum WorkoutLiveActivityController {
     static func end() {
         Task {
             for a in Activity<WorkoutAttributes>.activities {
-                a.end(at: .now, dismissalPolicy: .immediate)
+                await a.end(nil, dismissalPolicy: .immediate, timestamp: .now)
             }
         }
     }
