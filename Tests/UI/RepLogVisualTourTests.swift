@@ -67,7 +67,12 @@ final class RepLogVisualTourTests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             for q in queries where q.exists {
-                q.tap()
+                // Tap by coordinate: a plain .tap() raises a hard XCTest
+                // failure for a not-hittable element (e.g. a cell half under
+                // the navigation bar) and would abort the whole tour.
+                let frame = q.frame
+                guard frame.width > 0, frame.height > 0 else { continue }
+                q.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 await settle()
                 return true
             }
@@ -171,10 +176,23 @@ final class RepLogVisualTourTests: XCTestCase {
             shot("08-select-exercise")
             await tapAny([app.buttons["category-Chest"], app.buttons["category-Bench Press"]], "category drill-in")
             shot("09-select-exercise-category")
+            // The sheet's Cancel lives on its ROOT screen; the drill-in has a
+            // back button first.
+            await tapAny([app.navigationBars.buttons.element(boundBy: 0)], "back from category")
+            await settle(1)
             await tapLabel("Cancel")
-            await settle(0.8)
+            await settle(1)
 
-            // RPE sheet, then a note on the same set.
+            // RPE sheet, then a note on the same set. The first RPE cell can
+            // sit half under the navigation bar, so nudge the content up
+            // first (a small drag, not a full swipe).
+            let rpeCell = app.buttons["rpe-cell"].firstMatch
+            if rpeCell.exists, rpeCell.frame.minY < 200 {
+                let dragStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62))
+                let dragEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                dragStart.press(forDuration: 0.05, thenDragTo: dragEnd)
+                await settle(1)
+            }
             await tapAny([app.buttons["rpe-cell"].firstMatch], "rpe cell")
             await settle(1)
             shot("10-rpe-sheet")
