@@ -1,48 +1,17 @@
 import ActivityKit
-import SwiftUI
+import Foundation
 
-/// Live Activity for the active workout (plan §3.1 line 20): Dynamic Island +
-/// lock screen while a workout is in progress. Started when the workout
-/// begins, ended on finish.
-struct WorkoutAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        var elapsedSeconds: Int
-        var exerciseCount: Int
-    }
-
-    var workoutName: String
-    var startDate: Date
-}
-
-/// The lock-screen / Dynamic Island view for an in-progress workout.
-struct WorkoutLiveActivity: View {
-    var activity: Activity<WorkoutAttributes>
-
-    private var elapsed: String {
-        let s = max(0, activity.content.state.elapsedSeconds)
-        return String(format: "%02d:%02d", s / 60, s % 60)
-    }
-
-    var body: some View {
-        VStack(spacing: 4) {
-            HStack {
-                Image(systemName: "figure.strengthtraining.traditional")
-                    .foregroundStyle(.teal)
-                Text(activity.attributes.workoutName.isEmpty ? "Workout" : activity.attributes.workoutName)
-                    .font(.headline)
-                Spacer()
-                Text(elapsed)
-                    .font(.system(.title3, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-            Text("\(activity.content.state.exerciseCount) exercise\(activity.content.state.exerciseCount == 1 ? "" : "s")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 4)
-    }
-}
-
+/// App-side controller for the workout Live Activity (plan §3.1 line 20).
+///
+/// Only `ActivityKit` lives here — the `ActivityConfiguration`, `DynamicIsland`
+/// and `DynamicIslandExpanded*` types are WidgetKit types and only exist
+/// inside the RepLogWidget extension target, so the views and Dynamic Island
+/// layout live in `Widget/WorkoutLiveActivityWidget.swift`. The shared
+/// `WorkoutAttributes` type is compiled into both targets.
+///
+/// The app declares the activity via `NSSupportsLiveActivities`; the system
+/// renders it from the widget extension. Started when the workout begins,
+/// ended on finish.
 enum WorkoutLiveActivityController {
     /// Begin the Live Activity for a workout. No-op if unsupported or already running.
     @MainActor
@@ -50,39 +19,13 @@ enum WorkoutLiveActivityController {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         let attrs = WorkoutAttributes(workoutName: workoutName, startDate: startDate)
         let state = WorkoutAttributes.ContentState(elapsedSeconds: 0, exerciseCount: exerciseCount)
-        let config = ActivityConfiguration(
-            liveActivity: { activity in
-                WorkoutLiveActivity(activity: activity)
-            },
-            dynamicIsland: { activity in
-                DynamicIsland {
-                    DynamicIslandExpandedHeader {
-                        Text(activity.attributes.workoutName.isEmpty ? "Workout" : activity.attributes.workoutName)
-                            .font(.headline)
-                    }
-                    DynamicIslandExpandedCenter {
-                        Text("\(activity.content.state.exerciseCount) exercise\(activity.content.state.exerciseCount == 1 ? "" : "s")")
-                            .font(.caption)
-                    }
-                    DynamicIslandExpandedFooter {
-                        Text(activity.attributes.startDate, style: .time)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                } compactLeading: {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .foregroundStyle(.teal)
-                } compactTrailing: {
-                    Text(activity.content.state.exerciseCount)
-                        .font(.caption.monospacedDigit())
-                } minimal: {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                }
-            }
-        )
         Task {
             do {
-                try await Activity.request(attributes: attrs, content: .init(state: state, staleDate: nil), configuration: config)
+                try await Activity.request(
+                    attrs,
+                    content: .init(state: state, staleDate: nil),
+                    pushType: nil
+                )
             } catch {
                 // Live Activities are best-effort; never block the workout on them.
             }

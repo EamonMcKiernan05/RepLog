@@ -26,6 +26,7 @@ struct SessionRowView: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
+        .accessibilityIdentifier("session-row-\(session.id.prefix(8))")
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
     }

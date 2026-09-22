@@ -41,6 +41,7 @@ struct SetRowView: View {
                         label: unit == .kg ? "Kg" : "Lb",
                         value: weightDisplay,
                         isPlaceholder: weightDisplay.isEmpty,
+                        id: "weight-cell",
                         action: { onNumber(.weight(set)) }
                     )
                 }
@@ -49,6 +50,7 @@ struct SetRowView: View {
                         label: "Reps",
                         value: set.reps.map(String.init) ?? "",
                         isPlaceholder: set.reps == nil,
+                        id: "reps-cell",
                         action: { onNumber(.reps(set)) }
                     )
                 }
@@ -127,8 +129,8 @@ struct SetRowView: View {
 
     private var rpeDisplay: String {
         guard let rpe = set.rpe else { return "" }
-        let tenths = (rpe * 10).rounded()
-        if tenths.truncatingRemainder(dividingBy: 10) == 0 {
+        let tenths = Int((rpe * 10).rounded())
+        if tenths % 10 == 0 {
             return String(tenths / 10)
         }
         return String(format: "%.1f", rpe)

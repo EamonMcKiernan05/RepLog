@@ -20,7 +20,8 @@ struct RPEInputSheet: View {
                     .foregroundStyle(set.rpe == nil ? Palette.textSecondary : Palette.textPrimary)
                     .contentTransition(.numericText())
 
-                // Quick chips
+                // Quick chips (plan §3.2: 6, 7, 7.5, 8, 8.5, 9 — whole values
+                // display as "8", not "8.0").
                 HStack(spacing: 10) {
                     ForEach(chips, id: \.self) { chip in
                         Button {
@@ -38,6 +39,7 @@ struct RPEInputSheet: View {
                                 )
                                 .foregroundStyle(set.rpe == chip ? .black : Palette.textPrimary)
                         }
+                        .accessibilityIdentifier("rpe-chip-\(rpeText(chip))")
                     }
                 }
 
@@ -86,8 +88,8 @@ struct RPEInputSheet: View {
     }
 
     private func rpeText(_ v: Double) -> String {
-        let tenths = (v * 10).rounded()
-        if tenths.truncatingRemainder(dividingBy: 10) == 0 {
+        let tenths = Int((v * 10).rounded())
+        if tenths % 10 == 0 {
             return String(tenths / 10)
         }
         return String(format: "%.1f", v)
@@ -148,6 +150,7 @@ struct NumberInputSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { save(); dismiss() }
                         .fontWeight(.semibold)
+                        .accessibilityIdentifier("done")
                 }
             }
             .onAppear { text = currentText }

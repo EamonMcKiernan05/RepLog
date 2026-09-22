@@ -34,8 +34,10 @@ struct SessionDetailView: View {
                     } label: {
                         Label("Delete Workout", systemImage: "trash")
                     }
+                    .accessibilityIdentifier("delete-workout")
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .accessibilityIdentifier("session-detail-menu")
                 }
             }
         }

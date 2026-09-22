@@ -60,6 +60,7 @@ struct ActiveWorkoutView: View {
                         .background(Circle().fill(Palette.accent))
                 }
                 .accessibilityLabel("Finish workout")
+                .accessibilityIdentifier("finish-workout")
             }
             ToolbarItem(placement: .principal) {
                 Text(session.date.formatted(.dateTime.day().month(.abbreviated)))
@@ -243,11 +244,14 @@ struct ActiveWorkoutView: View {
                 e.setEntries.map { ($0.weightKg, $0.reps, $0.rpe, e.session?.routineName) }
             }
             .reversed()
+        // .reversed() yields a ReversedCollection; Targets.placeholder wants
+        // an Array (no implicit conversion at a call site, only at a typed
+        // return).
         let ph = Targets.placeholder(
             mode: .latest,
             routineName: session.routineName,
             setIndex: set.setNumber - 1,
-            history: history
+            history: Array(history)
         )
         if ph.weight != nil { set.weightKg = ph.weight }
         if ph.reps != nil { set.reps = ph.reps }

@@ -105,7 +105,9 @@ final class Session {
     /// Up to three "Nx Exercise" summary lines for the Log row.
     var summaryLines: [String] {
         exerciseEntries.prefix(3).map { entry in
-            let n = entry.sets.count
+            // setEntries is the relationship the app populates (entry.sets is
+            // a dead duplicate array that is never written to).
+            let n = entry.setEntries.count
             return "\(n)x \(entry.exercise?.name ?? "Exercise")"
         }
     }

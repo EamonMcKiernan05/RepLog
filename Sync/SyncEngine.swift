@@ -43,8 +43,28 @@ final class SyncEngine {
     }
 
     func start() {
+        rehydrateOutbox()
         applyConfig()
         startMonitor()
+    }
+
+    /// Rebuild the in-memory outbox from the persisted per-session state.
+    /// The outbox itself is not persisted (it is a pure state machine), so a
+    /// process restart would otherwise drop every queued/failed session and
+    /// the offline queue would never flush (plan §4.3: "the queue grows,
+    /// nothing is lost"). `syncStateRaw` on the model is the source of truth.
+    func rehydrateOutbox() {
+        for s in store.sessions() {
+            switch s.syncState {
+            case .queued: outbox.finish(s.id)
+            case .dirty:
+                outbox.finish(s.id)
+                outbox.editAfterUpload(s.id)
+            case .failed: outbox.uploadFailed(s.id)
+            case .uploaded: outbox.uploadSucceeded(s.id)
+            case .local: break
+            }
+        }
     }
 
     func applyConfig() {

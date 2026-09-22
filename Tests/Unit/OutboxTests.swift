@@ -90,4 +90,43 @@ struct OutboxTests {
         #expect(ob.state(of: "ghost") == .local)
         #expect(ob.dueForUpload().isEmpty)
     }
+
+    @Test("rehydration: a fresh outbox rebuilt from persisted states is due")
+    func rehydration() {
+        // The outbox is in-memory; after a process restart it is rebuilt from
+        // each session's persisted syncState (SyncEngine.rehydrateOutbox).
+        var ob = Outbox()
+        // queued -> finish
+        ob.finish("q1")
+        // dirty -> finish + editAfterUpload
+        ob.finish("d1")
+        ob.uploadSucceeded("d1")
+        ob.editAfterUpload("d1")
+        // failed -> uploadFailed
+        ob.finish("f1")
+        ob.uploadFailed("f1")
+        // uploaded -> uploadSucceeded
+        ob.finish("u1")
+        ob.uploadSucceeded("u1")
+
+        let rebuilt = Outbox()
+        for (id, state) in [("q1", ob.state(of: "q1")),
+                            ("d1", ob.state(of: "d1")),
+                            ("f1", ob.state(of: "f1")),
+                            ("u1", ob.state(of: "u1"))] {
+            switch state {
+            case .queued: rebuilt.finish(id)
+            case .dirty: rebuilt.finish(id); rebuilt.editAfterUpload(id)
+            case .failed: rebuilt.uploadFailed(id)
+            case .uploaded: rebuilt.uploadSucceeded(id)
+            case .local: break
+            }
+        }
+        #expect(rebuilt.state(of: "q1") == .queued)
+        #expect(rebuilt.state(of: "d1") == .dirty)
+        #expect(rebuilt.state(of: "f1") == .failed)
+        #expect(rebuilt.state(of: "u1") == .uploaded)
+        // The queued and dirty sessions are due immediately after restart.
+        #expect(rebuilt.dueForUpload() == ["d1", "q1"])
+    }
 }

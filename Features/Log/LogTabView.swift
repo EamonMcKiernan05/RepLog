@@ -7,7 +7,6 @@ struct LogTabView: View {
     @State private var editMode: EditMode = .inactive
     @State private var showStartSheet = false
     @State private var showRepeatSheet = false
-    @State private var detailSession: Session?
 
     private var sessions: [Session] { store.sessions() }
 
@@ -46,10 +45,13 @@ struct LogTabView: View {
                             .padding(.horizontal, 20)
 
                             VStack(spacing: 0) {
-                                ForEach(Array(month.sessions.enumerated()), id: \.element.id) { idx, session in
-                                    Button {
-                                        detailSession = session
-                                    } label: {
+                                ForEach(Array(month.sessions.enumerated()), id: \\.element.id) { idx, session in
+                                    // NavigationLink (value-based push) — a
+                                    // Button setting the item of
+                                    // .navigationDestination(item:) never
+                                    // pushed (verified: the tap registered but
+                                    // the push never fired).
+                                    NavigationLink(value: session.id) {
                                         SessionRowView(session: session)
                                     }
                                     .buttonStyle(.plain)
@@ -98,8 +100,10 @@ struct LogTabView: View {
                 }
             }
             .environment(\.editMode, $editMode)
-            .navigationDestination(item: $detailSession) { session in
-                SessionDetailView(session: session)
+            .navigationDestination(for: String.self) { id in
+                if let session = sessions.first(where: { $0.id == id }) {
+                    SessionDetailView(session: session)
+                }
             }
             .navigationDestination(item: $router.activeSession) { session in
                 ActiveWorkoutView(session: session)

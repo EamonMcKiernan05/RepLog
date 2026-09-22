@@ -57,6 +57,31 @@ targets:
         com.apple.developer.healthkit.access: []
         com.apple.security.application-groups:
           - group.im.eamon.replog
+  RepLogWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget
+      - path: Features/Integrations/WorkoutAttributes.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog.widget
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: YES
+    info:
+      path: Widget/RepLogWidget-Info.plist
+      properties:
+        CFBundleDisplayName: RepLog Widget
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSSupportsLiveActivities: true
+    entitlements:
+      path: Widget/RepLogWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.im.eamon.replog
   RepLogTests:
     type: bundle.unit-test
     platform: iOS
@@ -86,6 +111,7 @@ schemes:
     build:
       targets:
         RepLog: all
+        RepLogWidget: all
     run:
       config: Debug
     test:

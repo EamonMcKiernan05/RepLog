@@ -144,6 +144,7 @@ struct ExerciseCardView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
+        .accessibilityIdentifier("add-set")
     }
 
     private var iconRow: some View {
@@ -180,7 +181,7 @@ struct ExerciseCardView: View {
             mode: .latest,
             routineName: entry.session?.routineName ?? "",
             setIndex: set.setNumber - 1,
-            history: history
+            history: Array(history)
         )
         if ph.weight != nil { set.weightKg = ph.weight }
         if ph.reps != nil { set.reps = ph.reps }

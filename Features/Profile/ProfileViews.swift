@@ -39,6 +39,7 @@ struct ProfileTabView: View {
                                 .frame(width: 8, height: 8)
                             Text(sync.statusText)
                                 .font(.subheadline)
+                                .accessibilityIdentifier("sync-status")
                         }
                         if settings.syncEnabled {
                             HStack {
@@ -54,6 +55,7 @@ struct ProfileTabView: View {
                             sync.syncNow()
                         }
                         .disabled(!settings.syncEnabled)
+                        .accessibilityIdentifier("sync-now")
                         Button {
                             showExport = true
                         } label: {
@@ -191,6 +193,7 @@ struct SettingsView: View {
                             }
                         }
                         .disabled(settings.syncURL.isEmpty)
+                        .accessibilityIdentifier("test-connection")
                     }
                     Text("RepLog talks to your lift-sync server over plain HTTP on your local network or tailnet. The token is stored in the Keychain.")
                         .font(.caption)
