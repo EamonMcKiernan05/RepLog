@@ -499,14 +499,25 @@ final class RepLogUITests: XCTestCase {
         XCTAssertEqual((healthResult?.1 as? HTTPURLResponse)?.statusCode, 200,
                        "drill service not reachable from the simulator at \(drillServiceURL)/v1/health")
 
-        // Give the app's sync a moment (foreground run / path monitor).
-        await tapSettled(app.tabBars.buttons.element(boundBy: 3))
-        let syncNow = app.buttons["sync-now"]
-        await expectExists(syncNow, "'Sync now' not found")
-        await tapSettled(syncNow)
-        await settle(4)
-
-        let rows = await drillRows(sessionID: sid)
+        // Poll the service for the upload. The app syncs on launch (start()
+        // rehydrates the outbox and the path monitor fires), so no tap is
+        // needed — and tapping "Sync now" is actively risky: its neighbouring
+        // row is "Export CSV", and that sheet then blocks every later tap
+        // (found in the 2026-09-22 run). "Sync now" is only nudged if the
+        // launch sync has not landed after a few seconds.
+        var rows = await drillRows(sessionID: sid)
+        var attempt = 0
+        while rows != 1 && attempt < 15 {
+            if attempt == 5 {
+                let profileTab = app.tabBars.buttons.element(boundBy: 3)
+                if profileTab.exists { await tapSettled(profileTab) }
+                let syncNow = app.buttons["sync-now"]
+                if await wait(for: syncNow, timeout: 5) { await tapSettled(syncNow) }
+            }
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            rows = await drillRows(sessionID: sid)
+            attempt += 1
+        }
         XCTAssertEqual(rows, 1,
                        "expected exactly the session's one set row, got \(rows)")
         // Read the full session id now — the delete below removes the row.
@@ -522,6 +533,10 @@ final class RepLogUITests: XCTestCase {
         XCTAssertEqual(upserts, 1, "expected exactly one upload, got \(upserts) upsert events")
 
         // 5. Delete the session in the app -> tombstone lands on the server.
+        //    Close a stray Export CSV sheet first if one opened.
+        if app.navigationBars["Export CSV"].exists {
+            await tapSettled(app.buttons["Done"])
+        }
         await tapSettled(app.tabBars.buttons.element(boundBy: 0))
         // The tab tap can be swallowed while the Profile screen settles; the
         // Log's "+" is the proof we are on the Log before hunting for the row.
