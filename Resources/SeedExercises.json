@@ -1,0 +1,1234 @@
+[
+  {
+    "name": "3 Count Pause Bench",
+    "category": "Bench Press",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Ab Wheel",
+    "category": "Abs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Alternating  decline curls",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Assault Bike",
+    "category": "Cardio",
+    "type": "cardio",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Assisted Pull Up",
+    "category": "Back",
+    "type": "bw_weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Back Forearm Curls",
+    "category": "Forearms",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Bar Pushdowns",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Barbell Bicep Curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Barbell Curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Barbell Row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Barbell Wrist Curl",
+    "category": "Forearms",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Belt-less Paused LB Squat",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Box Squat",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Cable Crunch",
+    "category": "Abs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Cable Curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Cable EZ bar curls",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Cable Fly",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Cable Flys",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Cable Pushdown",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Cable Row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Calf Raise",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Chest Press Machine",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Chin Up",
+    "category": "Back",
+    "type": "bw_weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Close Grip Bench",
+    "category": "Bench Press",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Competition Bench",
+    "category": "Bench Press",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Concentration Curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Conventional Deadlifts",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dead Bug",
+    "category": "Abs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Deficit Bench",
+    "category": "Bench Press",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Deficit Deadlifts",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dips",
+    "category": "Triceps",
+    "type": "bw_weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dumbbell Bench Press",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dumbbell Bicep Curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dumbbell Curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dumbbell Lateral Raises",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dumbbell Press",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dumbbell Row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dumbbell Split Squats",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Dumbbell Wrist Curl",
+    "category": "Forearms",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "EZ bar curls",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Face away cable curls",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Face Pull",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Face pulls",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Farmer's Carry",
+    "category": "Forearms",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Fixed Pulldown",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Flat Dumbbell Press",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Front forearm curls",
+    "category": "Forearms",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Front Raise",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Front Squat",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Glute Bridge",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Glute Drive",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Hack Squat",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Hammer Curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Hanging Leg Raise",
+    "category": "Abs",
+    "type": "bw_weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "High Bar Squat",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Hip Thrust",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Incline Curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Incline Curls",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Incline Dumbbell Press",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Incline Smith",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Incline Walk",
+    "category": "Cardio",
+    "type": "cardio",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Jump Rope",
+    "category": "Cardio",
+    "type": "cardio",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Lat Pulldown",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Lat Pulldowns",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Lateral Raise",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Leg Curl",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Leg Extension",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Leg Extensions",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Leg extention dropset",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Leg Press",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Legs Up Bench Press",
+    "category": "Bench Press",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Low Bar Squat",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Low Cable Row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Lying Leg Curl",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Machine Dips",
+    "category": "Triceps",
+    "type": "bw_weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Machine good mornings",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Machine Hammer Curls",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Machine Lateral Raise",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Machine Preacher Curls",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Machine row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Mag Grip Pulldown",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Neutral grip pulldowns",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "One Arm Row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "yes",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Overhead Extension",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Overhead Extentions",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Overhead Press",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Pause Bench",
+    "category": "Bench Press",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Pause Squat",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Paused LB Squats",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Paused Sumo Deadlifts",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Pec Deck",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Pec Fly Machine",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Plank",
+    "category": "Abs",
+    "type": "bw_weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Plate loaded Low Row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Plate loaded preacher curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Plate loaded pulldown machine",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Preacher Curl",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Pull Up",
+    "category": "Back",
+    "type": "bw_weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Push Up",
+    "category": "Chest",
+    "type": "bw_weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Pushdown and overhead superset",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Rack Pulls",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "RDL",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Rear Delt Fly",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Rear delt flys",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Rear Delt Flys",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Reverse Curl",
+    "category": "Forearms",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Romanian Deadlifts",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Rope Pushdown",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Rowing Machine",
+    "category": "Cardio",
+    "type": "cardio",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Russian Twist",
+    "category": "Abs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Safety Bar Squat",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Seated Cable Row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Seated Calf Raises",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Seated Dumbbell Press",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Seated Leg Curls",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Seated one arm row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "yes",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Seated Straight Bar Row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Shoulder Dumbbell Press",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Shrug",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Side Plank",
+    "category": "Abs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Single Arm Lat Pulldown",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "yes",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Single arm rope push down",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "yes",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Skull Crusher",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Smith machine row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Smith Machine Split Squats",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Smith Machine Squat",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Spider curls",
+    "category": "Biceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Split Squat",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Squat (Powerlifting)",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Stair Climber",
+    "category": "Cardio",
+    "type": "cardio",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Standing Calf Raises",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Stiff Leg Deadlifts",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Straight Arm Pulldown",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Straight bar row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Sumo Deadlift",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Sumo Deadlifts",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Technique Deadlifts",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Tempo Bench",
+    "category": "Bench Press",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Tempo Deadlifts",
+    "category": "Deadlift",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Tempo Squats",
+    "category": "Squats",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Touch and Go Bench",
+    "category": "Bench Press",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Towel Hang",
+    "category": "Forearms",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Treadmill",
+    "category": "Cardio",
+    "type": "cardio",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Triceps Rope push down",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Two Rope Pushdown",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Unilateral Cable Lateral Raise",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "yes",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Upright Row",
+    "category": "Shoulders",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "V-Bar Row",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Vulken rope pushdown",
+    "category": "Triceps",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Walking Lunge",
+    "category": "Legs",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Weighted Pull Up",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Weighted Push Up",
+    "category": "Chest",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Wide Grip Bench",
+    "category": "Bench Press",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  },
+  {
+    "name": "Wide neutral grip upper back pulldown",
+    "category": "Back",
+    "type": "weight_reps",
+    "singleLimb": "default_no",
+    "builtin": false,
+    "bodyweightMultiplier": 1.0
+  }
+]

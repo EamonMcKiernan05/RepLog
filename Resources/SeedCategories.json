@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Abs",
+    "sortOrder": 0
+  },
+  {
+    "name": "Back",
+    "sortOrder": 1
+  },
+  {
+    "name": "Bench Press",
+    "sortOrder": 2
+  },
+  {
+    "name": "Biceps",
+    "sortOrder": 3
+  },
+  {
+    "name": "Cardio",
+    "sortOrder": 4
+  },
+  {
+    "name": "Chest",
+    "sortOrder": 5
+  },
+  {
+    "name": "Deadlift",
+    "sortOrder": 6
+  },
+  {
+    "name": "Forearms",
+    "sortOrder": 7
+  },
+  {
+    "name": "Legs",
+    "sortOrder": 8
+  },
+  {
+    "name": "Shoulders",
+    "sortOrder": 9
+  },
+  {
+    "name": "Squats",
+    "sortOrder": 10
+  },
+  {
+    "name": "Triceps",
+    "sortOrder": 11
+  }
+]

@@ -1,0 +1,9 @@
+session_id,date,start_time,end_time,bodyweight_kg,exercise,category,exercise_type,superset_id,set_number,weight_kg,reps,rpe,duration_s,distance_m,kcal,set_type,notes
+8f2c1d90abcd,2026-09-21,06:04,07:43,100,Low Bar Squat,Squats,weight_reps,,1,160,1,8,,,,working,"felt heavy, good speed"
+8f2c1d90abcd,2026-09-21,06:04,07:43,100,Low Bar Squat,Squats,weight_reps,,2,140,4,7,,,,working,
+8f2c1d90abcd,2026-09-21,06:04,07:43,100,Competition Bench,Bench Press,weight_reps,,1,100,1,8.5,,,,working,
+8f2c1d90abcd,2026-09-21,06:04,07:43,100,Dips,Chest,bw_weight_reps,,1,10,8,7.5,,,,working,
+8f2c1d90abcd,2026-09-21,06:04,07:43,100,Treadmill,Cardio,cardio,,1,,,,2100,5000,320,working,
+8f2c1d90abcd,2026-09-21,06:04,07:43,100,Leg Extensions,Legs,weight_reps,,1,60,15,,,,,drop,Dropset
+8f2c1d90abcd,2026-09-21,06:04,07:43,100,Sumo Deadlifts,Deadlift,weight_reps,,1,180,1,7.5,,,,working," =HYPERLINK(""x"")"
+8f2c1d90abcd,2026-09-21,06:04,07:43,100,Plank,Abs,bw_time,,1,,,,90,,,working,

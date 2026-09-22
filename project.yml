@@ -1,0 +1,99 @@
+name: RepLog
+options:
+  bundleIdPrefix: im.eamon
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    GENERATE_INFOPLIST_FILE: NO
+targets:
+  RepLog:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Models
+      - Store
+      - Engine
+      - Sync
+      - Features
+      - DesignSystem
+      - Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        ENABLE_PREVIEWS: YES
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: RepLog
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: "RepLog talks to your lift-sync server on your local network or tailnet over plain HTTP to sync finished workouts."
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - im.eamon.replog.sync
+        NSSupportsLiveActivities: true
+        NSHealthShareUsageDescription: "RepLog reads your bodyweight from Apple Health so bodyweight exercises and volume maths are accurate."
+        NSHealthUpdateUsageDescription: "RepLog writes your workouts and bodyweight to Apple Health."
+    entitlements:
+      path: App/RepLog.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+        com.apple.security.application-groups:
+          - group.im.eamon.replog
+  RepLogTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/Unit
+    resources:
+      - path: Tests/Fixtures
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: RepLog
+  RepLogUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/UI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/RepLog.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RepLog"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+    dependencies:
+      - target: RepLog
+schemes:
+  RepLog:
+    build:
+      targets:
+        RepLog: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - RepLogTests
+        - RepLogUITests
+    profile:
+      config: Release
