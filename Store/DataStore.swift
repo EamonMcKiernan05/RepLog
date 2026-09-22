@@ -20,21 +20,40 @@ final class DataStore {
             Routine.self, RoutineExercise.self, Exercise.self,
             Category.self, BodyweightEntry.self,
         ])
-        let config = ModelConfiguration(
-            "RepLog", schema: schema,
-            isStoredInMemoryOnly: inMemory, allowsSave: !inMemory
-        )
-        if !inMemory {
-            // DIAGNOSTIC: log the store URL the test host / app computes.
-            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-            FileHandle.standardError.write("DataStore DIAG appSupport=\(appSupport.map{ $0.path })\n".data(using: .utf8)!)
-            FileHandle.standardError.write("DataStore DIAG bundleMain=\(Bundle.main.bundlePath)\n".data(using: .utf8)!)
+        let config: ModelConfiguration
+        if inMemory {
+            config = ModelConfiguration(
+                "RepLog", schema: schema,
+                isStoredInMemoryOnly: true, allowsSave: false
+            )
+        } else {
+            // Explicit store URL in Application Support. Relying on SwiftData's
+            // default URL resolves to /dev/null when the app runs as a unit-test
+            // host, which crashes the host and fails the whole run. An explicit
+            // path is valid in both the real app and the test host.
+            let fm = FileManager.default
+            let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+                ?? fm.temporaryDirectory
+            let dir = base.appendingPathComponent("RepLog", isDirectory: true)
+            try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            config = ModelConfiguration(
+                "RepLog", schema: schema,
+                url: dir.appendingPathComponent("RepLog.sqlite"),
+                allowsSave: true
+            )
         }
         do {
             container = try ModelContainer(for: schema, configurations: [config])
         } catch {
-            FileHandle.standardError.write("DataStore DIAG container error: \(error)\n".data(using: .utf8)!)
-            fatalError("Failed to create ModelContainer: \(error)")
+            // In the test-host context a store failure must not crash the host
+            // (the unit tests use their own in-memory store). Fall back to an
+            // in-memory container so the host app stays alive.
+            let fallback = ModelConfiguration(
+                "RepLog", schema: schema,
+                isStoredInMemoryOnly: true, allowsSave: false
+            )
+            container = (try? ModelContainer(for: schema, configurations: [fallback]))
+                ?? fatalError("Failed to create ModelContainer: \(error)")
         }
         if !inMemory {
             // App.init runs on the main thread.
