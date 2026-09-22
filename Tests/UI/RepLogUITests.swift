@@ -306,6 +306,7 @@ final class RepLogUITests: XCTestCase {
     private let drillToken = "uitest-drill-token"
     private var drillGateway = "172.168.100.1"   // simulator -> Mac host
 
+    @MainActor
     private func supervisor(_ path: String, method: String = "GET") async -> Data? {
         var req = URLRequest(url: URL(string: "http://127.0.0.1:\(supervisorPort)\(path)")!)
         req.httpMethod = method
@@ -315,6 +316,7 @@ final class RepLogUITests: XCTestCase {
         } catch { return nil }
     }
 
+    @MainActor
     private func supervisorJSON(_ path: String, method: String = "POST") async -> [String: Any]? {
         guard let data = await supervisor(path, method: method) else { return nil }
         return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
@@ -331,6 +333,7 @@ final class RepLogUITests: XCTestCase {
     }
 
     /// POST the same session payload again (the resurrection attempt).
+    @MainActor
     private func drillReimport(sessionID: String) async throws -> Int {
         let body: [String: Any] = [
             "session_id": sessionID,
