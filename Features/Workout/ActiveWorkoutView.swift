@@ -15,6 +15,7 @@ struct ActiveWorkoutView: View {
     @State private var showSessionNotes = false
     @State private var confirmFinish = false
     @State private var timer = RestTimerController()
+    @State private var health = HealthService()
 
     var body: some View {
         ScrollView {
@@ -33,6 +34,20 @@ struct ActiveWorkoutView: View {
         }
         .background(Palette.bg)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            // Live Activity for the in-progress workout (Dynamic Island + lock
+            // screen). Best-effort; no-op if unsupported.
+            WorkoutLiveActivityController.start(
+                workoutName: session.routineName,
+                startDate: session.startTime ?? session.date,
+                exerciseCount: session.exerciseEntries.count
+            )
+            // Ask for Health permissions once, when a workout is active and
+            // Health is enabled (so the prompt is contextual, not at launch).
+            if settings.healthEnabled {
+                Task { await health.requestAuthorization() }
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
@@ -254,6 +269,19 @@ struct ActiveWorkoutView: View {
         store.save()
         timer.stop()
         sync.sessionFinished(session)
+        // End the Live Activity for this workout.
+        WorkoutLiveActivityController.end()
+        // Write to Apple Health (workout + bodyweight) when enabled.
+        if settings.healthEnabled {
+            let h = health
+            let s = session
+            Task {
+                await h.saveWorkout(session: s)
+                if let bw = s.bodyweightKg, bw > 0 {
+                    await h.saveBodyweight(kg: bw)
+                }
+            }
+        }
         dismiss()
     }
 }
