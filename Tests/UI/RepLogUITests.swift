@@ -400,6 +400,22 @@ final class RepLogUITests: XCTestCase {
         }.count
     }
 
+    /// The full session_id (the CSV carries it) for a row's 8-character
+    /// prefix. Needed by the re-import step: the Log only exposes the prefix,
+    /// and re-posting the PREFIX would create a different session instead of
+    /// hitting the tombstone. Call it while the row still exists (before the
+    /// delete removes it from the CSV).
+    @MainActor
+    private func fullSessionID(prefix: String) async -> String? {
+        guard let data = await supervisor("/csv"),
+              let text = String(data: data, encoding: .utf8) else { return nil }
+        for line in text.split(separator: "\n").dropFirst() {
+            let id = line.split(separator: ",", maxSplits: 1).first.map(String.init) ?? ""
+            if id.hasPrefix(prefix) { return id }
+        }
+        return nil
+    }
+
     /// POST the same session payload again (the resurrection attempt).
     @MainActor
     private func drillReimport(sessionID: String) async throws -> Int {
@@ -493,6 +509,8 @@ final class RepLogUITests: XCTestCase {
         let rows = await drillRows(sessionID: sid)
         XCTAssertEqual(rows, 1,
                        "expected exactly the session's one set row, got \(rows)")
+        // Read the full session id now — the delete below removes the row.
+        let fullID = await fullSessionID(prefix: sid) ?? sid
         // Exactly one upload: one upsert event for this session in the audit.
         guard let auditData = await supervisor("/audit"),
               let audit = String(data: auditData, encoding: .utf8) else {
@@ -525,7 +543,7 @@ final class RepLogUITests: XCTestCase {
                       "tombstone event not recorded for \(sid)")
 
         // 6. Re-import the same session -> the server must refuse (409).
-        let status = (try? await drillReimport(sessionID: sid)) ?? -1
+        let status = (try? await drillReimport(sessionID: fullID)) ?? -1
         XCTAssertEqual(status, 409, "re-import of a tombstoned session must 409, got \(status)")
         let rowsAfterReimport = await drillRows(sessionID: sid)
         XCTAssertEqual(rowsAfterReimport, 0, "tombstoned session must not be resurrected")
