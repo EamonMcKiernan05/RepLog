@@ -1,5 +1,6 @@
 import XCTest
 import SwiftUI
+import CoreGraphics
 
 /// XCUITest covers every text-entry flow, because agent-device's keystroke
 /// injection does not update SwiftUI @State bindings (plan §7.3):
@@ -65,7 +66,9 @@ final class RepLogUITests: XCTestCase {
     /// flips the toggle; a centre tap does not).
     @MainActor
     private func tapSwitchKnob(_ toggle: XCUIElement) async {
-        toggle.tap(at: UnitPoint(x: 0.95, y: 0.5))
+        // Normalised offset from the element centre: +0.45 dx = the right
+        // edge, where the knob sits.
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0)).tap()
         await settle()
     }
 
