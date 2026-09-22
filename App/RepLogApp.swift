@@ -34,7 +34,10 @@ struct RepLogApp: App {
         // Test hook: -DemoData seeds a small synthetic history (no real
         // training data) so the visual pass can capture populated screens.
         if CommandLine.arguments.contains("-DemoData") {
-            seedDemoData(store: s, settings: set)
+            // App.init runs on the main thread at launch.
+            MainActor.assumeIsolated {
+                seedDemoData(store: s, settings: set)
+            }
         }
         // Created AFTER the reset so isOnboarding reads the wiped state.
         let r = AppRouter()
@@ -73,6 +76,7 @@ struct RepLogApp: App {
 /// can capture populated screens: a routine, three sessions this month with
 /// sets/RPE/notes, and a bodyweight entry. Driven by the -DemoData launch
 /// argument; never used in tests or on a real device.
+@MainActor
 private func seedDemoData(store: DataStore, settings: Settings) {
     let ctx = store.context
     settings.onboarded = true
@@ -84,11 +88,11 @@ private func seedDemoData(store: DataStore, settings: Settings) {
     }
 
     // Routine with a scheme.
-    let bench = ctx.fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.name == "Competition Bench" })).first
+    let bench = (try? ctx.fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.name == "Competition Bench" })))?.first
         ?? Exercise(name: "Competition Bench", type: .weightReps, builtin: true)
-    let squat = ctx.fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.name == "Low Bar Squat" })).first
+    let squat = (try? ctx.fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.name == "Low Bar Squat" })))?.first
         ?? Exercise(name: "Low Bar Squat", type: .weightReps, builtin: true)
-    let dips = ctx.fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.name == "Dips" })).first
+    let dips = (try? ctx.fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.name == "Dips" })))?.first
         ?? Exercise(name: "Dips", type: .bwWeightReps, builtin: true)
 
     let routine = Routine(name: "Push Day", sortOrder: 0)
@@ -102,7 +106,8 @@ private func seedDemoData(store: DataStore, settings: Settings) {
     ctx.insert(routine)
 
     // Three sessions, newest first.
-    let mkSession: (Int, String, [[(Double, Int, Double?)]], Double?) -> Session = { offset, name, exSets, bw in
+    func mkSession(offset: Int, name: String,
+                   exSets: [(Exercise, [(Double, Int, Double?)])], bw: Double?) -> Session {
         let s = Session(date: day(offset, hour: 7, minute: 0), routineName: name)
         s.startTime = day(offset, hour: 7, minute: 5)
         s.endTime = day(offset, hour: 7, minute: 5) + 5400
@@ -111,11 +116,11 @@ private func seedDemoData(store: DataStore, settings: Settings) {
         var order = 0
         for (ex, sets) in exSets {
             let entry = ExerciseEntry(exercise: ex, sortOrder: order)
-            for (i, (w, r, rpe)) in sets.enumerated() {
+            for (i, tuple) in sets.enumerated() {
                 let set = SetEntry(setNumber: i + 1)
-                set.weightKg = w
-                set.reps = r
-                set.rpe = rpe
+                set.weightKg = tuple.0
+                set.reps = tuple.1
+                set.rpe = tuple.2
                 entry.setEntries.append(set)
             }
             s.exerciseEntries.append(entry)
@@ -125,14 +130,14 @@ private func seedDemoData(store: DataStore, settings: Settings) {
         return s
     }
 
-    _ = mkSession(2, "Push Day",
-                  [(bench, [(100, 5, 7), (110, 4, 7.5), (120, 3, 8)]),
-                   (dips, [(10, 8, 7), (12.5, 8, 7.5), (15, 6, 8.5)])], 101.0)
-    _ = mkSession(1, "Legs",
-                  [(squat, [(160, 1, 8), (140, 4, 7), (140, 4, 7.5), (140, 4, 8)])], 101.5)
-    _ = mkSession(0, "Push Day",
-                  [(bench, [(100, 5, 7.5), (110, 4, 8), (120, 3, 8.5), (125, 2, 9)]),
-                   (dips, [(10, 8, 7), (12.5, 8, 8), (15, 6, 8.5)])], 102.0)
+    _ = mkSession(offset: 2, name: "Push Day",
+                  exSets: [(bench, [(100, 5, 7), (110, 4, 7.5), (120, 3, 8)]),
+                           (dips, [(10, 8, 7), (12.5, 8, 7.5), (15, 6, 8.5)])], bw: 101.0)
+    _ = mkSession(offset: 1, name: "Legs",
+                  exSets: [(squat, [(160, 1, 8), (140, 4, 7), (140, 4, 7.5), (140, 4, 8)])], bw: 101.5)
+    _ = mkSession(offset: 0, name: "Push Day",
+                  exSets: [(bench, [(100, 5, 7.5), (110, 4, 8), (120, 3, 8.5), (125, 2, 9)]),
+                           (dips, [(10, 8, 7), (12.5, 8, 8), (15, 6, 8.5)])], bw: 102.0)
 
     ctx.insert(BodyweightEntry(date: cal.startOfDay(for: .now), weightKg: 102.0))
     store.save()
