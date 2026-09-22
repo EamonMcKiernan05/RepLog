@@ -92,12 +92,14 @@ struct LogTabView: View {
                         } label: {
                             Label("New Workout", systemImage: "plus")
                         }
+                        .accessibilityIdentifier("menu-new-workout")
                         if !sessions.isEmpty {
                             Button {
                                 showRepeatSheet = true
                             } label: {
                                 Label("Repeat Last Workout", systemImage: "arrow.clockwise")
                             }
+                            .accessibilityIdentifier("menu-repeat")
                         }
                     } label: {
                         Image(systemName: "plus")

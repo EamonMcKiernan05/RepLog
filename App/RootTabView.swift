@@ -24,6 +24,7 @@ struct RootTabView: View {
                 ProfileTabView()
                     .tabItem { Label(AppRouter.Tab.profile.rawValue, systemImage: AppRouter.Tab.profile.icon) }
                     .tag(AppRouter.Tab.profile)
+                    .accessibilityIdentifier("tab-profile")
             }
         }
     }

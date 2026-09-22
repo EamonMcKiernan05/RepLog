@@ -68,6 +68,7 @@ struct RPEInputSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { save(); dismiss() }
                         .fontWeight(.semibold)
+                        .accessibilityIdentifier("done")
                 }
             }
             .onAppear {
@@ -229,6 +230,7 @@ struct SetNoteSheet: View {
                             dismiss()
                         }
                         .fontWeight(.semibold)
+                        .accessibilityIdentifier("save-note")
                     }
                 }
         }

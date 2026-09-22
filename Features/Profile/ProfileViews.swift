@@ -28,6 +28,7 @@ struct ProfileTabView: View {
                             Text("Settings")
                         }
                     }
+                    .accessibilityIdentifier("settings-link")
                 }
                 Section("Sync") {
                     VStack(alignment: .leading, spacing: 8) {
@@ -172,6 +173,7 @@ struct SettingsView: View {
                 }
                 Section("Sync") {
                     Toggle("Enable Sync", isOn: $settings.syncEnabled)
+                        .accessibilityIdentifier("enable-sync")
                     if settings.syncEnabled {
                         TextField("Server URL", text: $settings.syncURL)
                             .keyboardType(.URL)
@@ -204,6 +206,7 @@ struct SettingsView: View {
                         dismiss()
                     }
                     .fontWeight(.semibold)
+                    .accessibilityIdentifier("done")
                 }
             }
         }
@@ -298,6 +301,7 @@ struct OnboardingView: View {
             .buttonStyle(.borderedProminent)
             .tint(Palette.accent)
             .padding()
+            .accessibilityIdentifier("onboarding-next")
         }
     }
 
