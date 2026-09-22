@@ -523,6 +523,12 @@ final class RepLogUITests: XCTestCase {
 
         // 5. Delete the session in the app -> tombstone lands on the server.
         await tapSettled(app.tabBars.buttons.element(boundBy: 0))
+        // The tab tap can be swallowed while the Profile screen settles; the
+        // Log's "+" is the proof we are on the Log before hunting for the row.
+        if !(await wait(for: app.buttons["plus"], timeout: 6)) {
+            await tapSettled(app.tabBars.buttons.element(boundBy: 0))
+        }
+        await expectExists(app.buttons["plus"], "Log tab not shown before delete")
         let rowToDelete = await expectSessionRow("finished session row missing before delete")
         await tapSettled(rowToDelete)
         await expectExists(app.buttons["session-detail-menu"], "session detail not open")
