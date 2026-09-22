@@ -386,32 +386,25 @@ final class RepLogUITests: XCTestCase {
         return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
     }
 
-    /// Count the rows for one session in the service's CSV (via supervisor).
-    /// `sessionID` is the row's 8-character id prefix (that is all the Log
-    /// exposes); the CSV carries the full session_id, so this is a PREFIX
-    /// match — matching `id + ","` only ever matched the full id and the
-    /// count was therefore always 0.
+    /// Data rows in the service's CSV (header excluded). The drill's service
+    /// always starts in a FRESH data dir, so any row here was written by this
+    /// run — that is what makes "exactly one upload" checkable without
+    /// guessing which Log row is the new session.
     @MainActor
-    private func drillRows(sessionID: String) async -> Int {
+    private func drillCSVDataRows() async -> Int {
         guard let data = await supervisor("/csv"),
               let text = String(data: data, encoding: .utf8) else { return -1 }
-        return text.split(separator: "\n").filter { line in
-            line.hasPrefix(sessionID)
-        }.count
+        return max(0, text.split(separator: "\n").count - 1)
     }
 
-    /// The full session_id (the CSV carries it) for a row's 8-character
-    /// prefix. Needed by the re-import step: the Log only exposes the prefix,
-    /// and re-posting the PREFIX would create a different session instead of
-    /// hitting the tombstone. Call it while the row still exists (before the
-    /// delete removes it from the CSV).
+    /// The session_id of the CSV's first data row (the uploaded session).
     @MainActor
-    private func fullSessionID(prefix: String) async -> String? {
+    private func drillCSVFirstSessionID() async -> String? {
         guard let data = await supervisor("/csv"),
               let text = String(data: data, encoding: .utf8) else { return nil }
         for line in text.split(separator: "\n").dropFirst() {
             let id = line.split(separator: ",", maxSplits: 1).first.map(String.init) ?? ""
-            if id.hasPrefix(prefix) { return id }
+            if !id.isEmpty { return id }
         }
         return nil
     }
@@ -469,10 +462,10 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(app.buttons["finish-workout"])
         await settle(3)
 
-        // The session is in the Log.
-        let row = await expectSessionRow("session row not shown after offline finish")
-        let rowID = (row.identifier as NSString).replacingOccurrences(of: "session-row-", with: "")
-        let sid = String(rowID.prefix(8))
+        // The session is in the Log. (Its id is NOT read from here: the Log
+        // holds earlier sessions too, and "the first row" is not reliably the
+        // new one — the service's fresh CSV is the source of truth below.)
+        await expectSessionRow("session row not shown after offline finish")
 
         // 3. Relaunch the app (queue must survive the restart). -ResetRepLog NO
         // keeps the persisted state; the sync args are re-applied so the
@@ -505,30 +498,35 @@ final class RepLogUITests: XCTestCase {
         // row is "Export CSV", and that sheet then blocks every later tap
         // (found in the 2026-09-22 run). "Sync now" is only nudged if the
         // launch sync has not landed after a few seconds.
-        var rows = await drillRows(sessionID: sid)
+        var rows = await drillCSVDataRows()
         var attempt = 0
-        while rows != 1 && attempt < 15 {
-            if attempt == 5 {
+        while rows != 1 && attempt < 20 {
+            if attempt == 6 {
                 let profileTab = app.tabBars.buttons.element(boundBy: 3)
                 if profileTab.exists { await tapSettled(profileTab) }
                 let syncNow = app.buttons["sync-now"]
                 if await wait(for: syncNow, timeout: 5) { await tapSettled(syncNow) }
             }
             try? await Task.sleep(nanoseconds: 1_000_000_000)
-            rows = await drillRows(sessionID: sid)
+            rows = await drillCSVDataRows()
             attempt += 1
         }
         XCTAssertEqual(rows, 1,
-                       "expected exactly the session's one set row, got \(rows)")
-        // Read the full session id now — the delete below removes the row.
-        let fullID = await fullSessionID(prefix: sid) ?? sid
+                       "expected exactly one uploaded row (the service starts empty), got \(rows)")
+        // The CSV (not the Log) names the session — and the delete below
+        // removes that row, so keep the id.
+        guard let fullID = await drillCSVFirstSessionID() else {
+            XCTFail("uploaded session id not readable from the service CSV")
+            return
+        }
+        let sid = String(fullID.prefix(8))
         // Exactly one upload: one upsert event for this session in the audit.
         guard let auditData = await supervisor("/audit"),
               let audit = String(data: auditData, encoding: .utf8) else {
             XCTFail("audit log not readable"); return
         }
         let upserts = audit.components(separatedBy: "\n").filter {
-            $0.contains("\"type\":\"upsert\"") && $0.contains(sid)
+            $0.contains("\"type\":\"upsert\"") && $0.contains(fullID)
         }.count
         XCTAssertEqual(upserts, 1, "expected exactly one upload, got \(upserts) upsert events")
 
@@ -544,7 +542,8 @@ final class RepLogUITests: XCTestCase {
             await tapSettled(app.tabBars.buttons.element(boundBy: 0))
         }
         await expectExists(app.buttons["plus"], "Log tab not shown before delete")
-        let rowToDelete = await expectSessionRow("finished session row missing before delete")
+        let rowToDelete = app.buttons["session-row-\(sid)"]
+        await expectExists(rowToDelete, "uploaded session's row (session-row-\(sid)) not in the Log")
         await tapSettled(rowToDelete)
         await expectExists(app.buttons["session-detail-menu"], "session detail not open")
         await tapSettled(app.buttons["session-detail-menu"])
@@ -554,7 +553,7 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(dialogDelete)
         await settle(3)
 
-        let rowsAfterDelete = await drillRows(sessionID: sid)
+        let rowsAfterDelete = await drillCSVDataRows()
         XCTAssertEqual(rowsAfterDelete, 0, "session rows should be removed after delete")
         guard let jsonlData = await supervisor("/audit"),
               let jsonl = String(data: jsonlData, encoding: .utf8) else {
@@ -566,7 +565,7 @@ final class RepLogUITests: XCTestCase {
         // 6. Re-import the same session -> the server must refuse (409).
         let status = (try? await drillReimport(sessionID: fullID)) ?? -1
         XCTAssertEqual(status, 409, "re-import of a tombstoned session must 409, got \(status)")
-        let rowsAfterReimport = await drillRows(sessionID: sid)
+        let rowsAfterReimport = await drillCSVDataRows()
         XCTAssertEqual(rowsAfterReimport, 0, "tombstoned session must not be resurrected")
 
         await supervisorJSON("/stop")

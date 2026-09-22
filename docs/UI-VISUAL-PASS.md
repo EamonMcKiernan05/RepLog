@@ -1,116 +1,99 @@
-# RepLog — UI / visual verification handoff
+# RepLog — UI / visual pass: how it was run and where the evidence is
 
-Owner: Eamon or senior (handed off by the coder, 2026-09-22).
-Everything below is ready to run: the app builds, the automated gate
-(build + unit + XCUITest incl. the offline drill) is in
-`scripts/mac-tests.sh`, and the simulator app carries a `-DemoData`
-launch hook that seeds a small **synthetic** history (routine + 3 sessions
-with sets/RPE/notes + bodyweight) so every screen can be captured
-populated. No real training data is involved.
+This file records the mechanics of the dark-mode visual pass and the
+accessibility checks, so the numbers in `docs/BUILD-REPORT.md` §4/§5 can be
+re-checked without re-running anything. The full screen-by-screen comparison
+and the 1:1 reference mapping live in `docs/BUILD-REPORT.md`.
 
-## What is already verified (do not re-do)
+## What was captured
 
-- Build: `** BUILD SUCCEEDED **` (app + RepLogWidget extension), iPhone 17 Pro sim.
-- Unit tests: 36/36 (swift-testing).
-- XCUITest: 7 tests — RPE entry (types 8.5, reads back), RPE chip labels
-  (6/7/8/9 render without ".0"; 7.5/8.5 keep the decimal; tapping the "8"
-  chip stores 8 and the cell shows "8"), session-row navigation (tap row →
-  detail pushes), exercise search, sync URL+token (knob tap), set notes,
-  and the in-simulator offline drill (plan §7.5: service down → finish →
-  relaunch → service up → exactly one upload → delete → tombstone →
-  re-import 409s).
-- Service: 55/55 pytest; service-side offline drill; 6,524-row migration.
-- Dark mode works: `xcrun simctl ui <udid> appearance dark` then relaunch
-  (NOT `defaults write` on a shut-down simulator — that is why the earlier
-  "appearance switch did not take effect" note was wrong).
+Dark mode, iPhone 17 Pro simulator, app built from this repo with the
+`-DemoData` launch hook (synthetic history only — routine, three sessions
+with sets/RPE/notes, bodyweight; never real training data).
 
-## What this pass must do
+Final committed set: `docs/visual/` — one file per screen, plus
+`docs/visual/dynamic-type/` for the Dynamic Type captures.
 
-1. **Dark-mode capture of every screen** (the references are dark mode).
-   With the app in dark mode and `-DemoData` seeded, capture each screen
-   below and compare it against the matching reference in
-   `"/mnt/hermes-shared/RepCount Screenshots/"` (17 files, IMG_8144…IMG_8160).
-   Record every comparison (match / difference / why) in
-   `docs/BUILD-REPORT.md` §4. Only two were ever compared so far (Log tab,
-   active workout).
+| File | Screen |
+|---|---|
+| 01-onboarding-units.png | Onboarding page 1 (kg/lb) |
+| 02-onboarding-privacy.png | Onboarding page 2 (data stays on the phone) |
+| 03-onboarding-sync.png | Onboarding page 3 (optional sync) |
+| 04-log.png | Log tab, populated |
+| 05-start-workout-sheet.png | Start Workout sheet |
+| 06-repeat-workout-sheet.png | Repeat Workout sheet |
+| 07-active-workout.png | Active workout, routine course loaded |
+| 08-select-exercise.png | Select Exercise sheet (categories) |
+| 09-select-exercise-category.png | Select Exercise, category drill-in |
+| 10-rpe-sheet.png | RPE input sheet (chips 6/7/7.5/8/8.5/9) |
+| 11-active-workout-populated.png | Active workout with RPE + a set note |
+| 12-rest-timer.png | Rest timer sheet |
+| 13-session-detail.png | Completed-session detail |
+| 14-routines-list.png | Routines list |
+| 15-routine-detail.png | Routine detail |
+| 16-routine-exercise-editor.png | Routine exercise editor |
+| 17-statistics-hub.png | Statistics hub |
+| 18-chart-screen.png | Per-exercise charts (Volume + e1RM) |
+| 18b-overall-volume-chart.png | Overall-metric chart screen |
+| 19-personal-records.png | Personal Records sheet |
+| 20-profile.png | Profile |
+| 21-settings.png | Settings (top) |
+| 21b-settings-scrolled.png | Settings (timer/privacy) |
+| 24-edit-categories.png | Edit Categories |
+| 25-export-csv-sheet.png | Export CSV sheet |
+| 22-exercise-library.png | Edit Exercises (library) |
+| 23-exercise-editor.png | Edit Exercise sheet |
+| 26-exercise-history.png | Per-exercise history |
+| 28-active-workout-foreground.png | Live Activity attempt: workout running |
+| 29-home-dynamic-island.png | Live Activity attempt: app sent home |
 
-2. **Screens to capture** (RepLog → likely reference):
-   - Log tab (history, month sections, session rows) → IMG_8144
-   - Active workout (populated: session card + exercise cards + set rows
-     with RPE) → IMG_8156
-   - Session detail (tap a session row) → one of IMG_8145/8146/8147
-   - Routines list → IMG_8148/8149
-   - Routine detail (Start this Workout, target mode, exercise list)
-   - Select Exercise sheet (search + categories)
-   - Exercise library (Edit Exercises / Edit Categories)
-   - Statistics hub + a chart screen (populated)
-   - Personal records
-   - Profile (sync status, Export CSV, …)
-   - Settings (all sections)
-   - Onboarding (3 pages)
-   - RPE input sheet (chips 6/7/7.5/8/8.5/9)
-   - Rest timer sheet
-   - Repeat Workout sheet
-   The exact 1:1 mapping was not finished — identify it from the images
-   themselves (they are labelled in order; IMG_8144 = Log, IMG_8156 =
-   active workout are known).
+## How it was captured
 
-3. **Known intended differences** (not bugs): RepLog adds the RPE column
-   between Reps and Notes; RepLog's Profile has a Sync section where
-   RepCount has an account block; RepLog ships no Premium upsell.
+1. `xcrun simctl ui <udid> appearance dark` — the working switch. (`defaults
+   write` does nothing to a booted simulator and produced the earlier
+   mislabelled "dark" set that was actually light.)
+2. A fresh install (`xcrun simctl uninstall`) so `-DemoData` seeds once, then
+   a scripted XCUITest tour (`Tests/UI/RepLogVisualTourTests.swift`) drives
+   every screen and attaches a full-resolution `XCUIScreen` screenshot per
+   screen. XCUITest is used for the tour because the populated screens need
+   real typing (a set's weight/reps/RPE and a note) and agent-device
+   keystrokes do not update SwiftUI bindings.
+3. Attachments are exported with
+   `xcrun xcresulttool export attachments --path <bundle> --output-path <dir>`
+   and renamed by their attachment name (the export appends `_0_<uuid>.png`).
+4. The screens the tour could not land (statistics drill-ins, scrolled
+   settings, the export sheet, exercise history, the Live Activity attempt)
+   were captured with `xcrun simctl io booted screenshot` while navigating
+   with agent-device taps — the same images the tour produces, from the same
+   framebuffer.
+5. Every image was inspected against the references with vision, one screen
+   at a time; the comparison lines are in `docs/BUILD-REPORT.md` §4.
 
-## Exact commands (run from the fleet host or the Mac)
+### Why not agent-device for everything
 
-```bash
-# 1. Full automated gate first (build + 36 unit + 7 UI incl. offline drill):
-scripts/mac-tests.sh
+`agent-device type` / `fill` inject keystrokes at the OS level and SwiftUI
+`@State` bindings do not receive them, so anything that types (the RPE sheet,
+set notes, the sync fields) has to be driven by XCUITest. Navigation taps work
+fine in both.
 
-# 2. Boot the simulator and set dark mode (simctl ui — not defaults write):
-ssh mac 'UDID=$(xcrun simctl list devices available | grep "iPhone 17 Pro" | head -1 | sed "s/.*(\\(.*\\))$/\\1/"); \
-  xcrun simctl boot "$UDID"; \
-  xcrun simctl ui "$UDID" appearance dark'
+### Traps this pass hit (now encoded in the tour)
 
-# 3. Build + install the app with demo data, launch:
-ssh mac 'cd ~/Documents/RepLog && xcodebuild -scheme RepLog \
-  -destination "platform=iOS Simulator,name=iPhone 17 Pro" build 2>&1 | tail -2 && \
-  APP=$(find ~/Library/Developer/Xcode/DerivedData -name "RepLog.app" -path "*Debug-iphonesimulator*" | head -1) && \
-  xcrun simctl install booted "$APP" && \
-  xcrun simctl launch booted im.eamon.replog -ResetRepLog YES -DemoData YES'
-# (onboarding shows once; tap Continue/Get Started three times, or pass
-#  -ResetRepLog NO on subsequent launches to keep the seeded data)
-
-# 4. Drive + capture (agent-device lives in Homebrew):
-ssh mac 'eval "$(/opt/homebrew/bin/brew shellenv)" && agent-device screenshot /tmp/replog-<screen>.png'
-# Navigation taps that do NOT type: agent-device click <x y> works.
-# Anything that types (sync URL/token, notes, RPE) is already covered by
-# XCUITest — do not try to type via agent-device (it does not update
-# SwiftUI bindings).
-
-# 5. Copy captures to the fleet host for comparison:
-scp mac:/tmp/replog-*.png /tmp/replog-shots/
-# References: "/mnt/hermes-shared/RepCount Screenshots/IMG_81*.png"
-
-# 6. Record each comparison in docs/BUILD-REPORT.md §4 (screen, reference,
-#    verdict, differences). Commit + push.
-```
-
-## Notes / pitfalls
-
-- The app's dark palette is semantic (systemBackground/systemGray6 + teal
-  accent), so it should render dark-first like the references — but verify
-  per screen, do not assume.
-- `-DemoData` seeds: routine "Push Day" (Competition Bench 1x1+4, Dips 3),
-  sessions on today, -1d, -2d with 3–4 sets each (RPE 7–9, one note),
-  bodyweight 101–102 kg. Enough to populate Log, detail, statistics,
-  routines; not enough for PR tables (fine — capture the empty state too).
-- The RPE chips and set-cell formatting were fixed this pass ("8" not
-  "8.0"); the XCUITest asserts it, but the visual pass should confirm the
-  sheet looks right against the references.
-- If a screen genuinely cannot be captured (e.g. Live Activity/Dynamic
-  Island on the simulator — it renders on the lock screen, capture via
-  `xcrun simctl io` after `xcrun simctl spawn booted ...` or just note it
-  as unverified-device), say so in the report. Do not claim it works.
-- The widget extension (RepLogWidget) exists and compiles; the Live
-  Activity is started when a workout begins and ended on finish. Visual
-  verification of the Dynamic Island is a device/lock-screen task — mark
-  unverified if not done.
+- A row tap in a `ScrollView` with `.buttonStyle(.plain)` only lands on the
+  label's CONTENT shape — taps in the gaps (under a `Spacer`, between text
+  lines) do nothing. Rows now carry `.contentShape(Rectangle())`.
+- An element below the fold has a frame outside the screen, so a coordinate
+  tap lands off-screen and silently misses. The tour scrolls a target into
+  view before tapping it.
+- Tapping a `staticText` inside a `List` row does not activate the row's
+  link; tap the row cell/button instead.
+- A `.navigationDestination(for:)` share with an item-based destination on the
+  same view, or declared inside a pushed view, silently fails to push. The Log
+  keeps its two destinations on different views; the statistics list uses
+  view-based links.
+- An iOS 26 toolbar clips a `.bordered` + `.capsule` text button to a circle
+  showing one letter; an explicit capsule label with `.fixedSize()` renders
+  correctly (this is what the Edit buttons use now).
+- iOS's "Save Password?" AutoFill prompt appears after typing into the sync
+  token field and swallows every later tap. The offline drill configures sync
+  through launch arguments (`-SyncURL` / `-SyncToken`) instead, and the sync
+  form test dismisses the prompt.
