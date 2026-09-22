@@ -94,8 +94,9 @@ final class RepLogUITests: XCTestCase {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let labels = ["Not Now", "Never for This Website", "Not now", "Later"]
         let deadline = Date().addingTimeInterval(8)
+        let hosts: [XCUIApplication] = [app, springboard]
         while Date() < deadline {
-            for host in [app, springboard] {
+            for host in hosts {
                 for label in labels where host.buttons[label].exists {
                     host.buttons[label].tap()
                     await settle()
@@ -364,7 +365,10 @@ final class RepLogUITests: XCTestCase {
     /// cannot spawn processes on the Mac host).
     private let supervisorPort = 8392
     private let drillToken = "uitest-drill-token"
-    private var drillGateway = "172.168.100.1"   // simulator -> Mac host
+    /// The simulator shares the Mac's network stack, so the Mac's loopback is
+    /// reachable directly (proven: the supervisor calls to 127.0.0.1:8392
+    /// succeed from the simulator).
+    private let drillServiceURL = "http://127.0.0.1:8391"
 
     @MainActor
     private func supervisor(_ path: String, method: String = "GET") async -> Data? {
@@ -400,7 +404,7 @@ final class RepLogUITests: XCTestCase {
             "date": "2026-09-22",
             "sets": [["exercise": "Drill", "set_number": 1, "weight_kg": 100.0, "reps": 5]],
         ]
-        var req = URLRequest(url: URL(string: "http://\(drillGateway):8391/v1/sessions")!)
+        var req = URLRequest(url: URL(string: "\(drillServiceURL)/v1/sessions")!)
         req.httpMethod = "POST"
         req.setValue("Bearer \(drillToken)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -428,7 +432,7 @@ final class RepLogUITests: XCTestCase {
         // testSyncURLAndTokenFields. The service is stopped for this phase.
         app.terminate()
         app.launchArguments = ["-ResetRepLog", "YES",
-                               "-SyncURL", "http://\(drillGateway):8391",
+                               "-SyncURL", drillServiceURL,
                                "-SyncToken", drillToken]
         app.launch()
         await settle(2)
@@ -453,7 +457,7 @@ final class RepLogUITests: XCTestCase {
         app.terminate()
         await settle(1)
         app.launchArguments = ["-ResetRepLog", "NO",
-                               "-SyncURL", "http://\(drillGateway):8391",
+                               "-SyncURL", drillServiceURL,
                                "-SyncToken", drillToken]
         app.launch()
         await settle(3)
@@ -463,7 +467,6 @@ final class RepLogUITests: XCTestCase {
         guard let started, started["ok"] as? Bool == true else {
             throw XCTSkip("drill service failed to start: \(String(describing: started?["error"]))")
         }
-        drillGateway = (started["gateway"] as? String) ?? drillGateway
         // Give the app's sync a moment (foreground run / path monitor).
         await tapSettled(app.tabBars.buttons.element(boundBy: 3))
         let syncNow = app.buttons["sync-now"]
