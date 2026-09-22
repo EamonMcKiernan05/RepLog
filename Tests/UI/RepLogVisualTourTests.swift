@@ -222,10 +222,13 @@ final class RepLogVisualTourTests: XCTestCase {
             await tapLabel("Competition Bench")
             await settle(1.2)
             shot("16-routine-exercise-editor")
-            await tapAny([app.navigationBars.buttons.element(boundBy: 0)], "back from editor")
-            await settle(0.8)
+            // The exercise editor is a sheet (Done/Cancel), the routine detail
+            // is a push (back button) — try both shapes.
+            await tapAny([app.buttons["Done"], app.buttons["Cancel"],
+                          app.navigationBars.buttons.element(boundBy: 0)], "close routine editor")
+            await settle(1)
             await tapAny([app.navigationBars.buttons.element(boundBy: 0)], "back to routines")
-            await settle(0.8)
+            await settle(1)
         }
 
         // Statistics hub.
