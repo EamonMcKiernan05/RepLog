@@ -19,6 +19,15 @@ struct RepLogApp: App {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 
     init() {
+        // Test hook: -ResetRepLog YES wipes persisted state so UI tests always
+        // start at onboarding.
+        if CommandLine.arguments.contains("-ResetRepLog") {
+            let bundleID = Bundle.main.bundleIdentifier ?? "im.eamon.replog"
+            if let defaults = UserDefaults(suiteName: bundleID) {
+                defaults.removePersistentDomain(forName: bundleID)
+            }
+            UserDefaults.standard.removePersistentDomain(forName: bundleID)
+        }
         let s = DataStore()
         let set = Settings()
         _store = State(initialValue: s)
