@@ -171,6 +171,7 @@ struct RoutineDetailView: View {
                             }
                             .padding(.horizontal)
                             .padding(.vertical, 10)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         if idx < exercises.count - 1 {
@@ -189,6 +190,7 @@ struct RoutineDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                         .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }

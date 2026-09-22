@@ -111,6 +111,15 @@ final class Session {
             return "\(n)x \(entry.exercise?.name ?? "Exercise")"
         }
     }
+
+    /// Accessibility label for the Log row. It belongs on the row BUTTON
+    /// (LogTabView), never combined inside the button's label view — see
+    /// SessionRowView for why.
+    var rowAccessibilityText: String {
+        let dateText = date.formatted(.dateTime.weekday(.wide).day().month())
+        let name = routineName.isEmpty ? "Workout" : routineName
+        return "\(dateText), \(name), \(summaryLines.joined(separator: ", ")), \(durationText)"
+    }
 }
 
 @Model

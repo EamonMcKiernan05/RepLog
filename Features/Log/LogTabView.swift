@@ -46,15 +46,19 @@ struct LogTabView: View {
 
                             VStack(spacing: 0) {
                                 ForEach(Array(month.sessions.enumerated()), id: \.element.id) { idx, session in
-                                    // NavigationLink (value-based push) — a
-                                    // Button setting the item of
-                                    // .navigationDestination(item:) never
-                                    // pushed (verified: the tap registered but
-                                    // the push never fired).
+                                    // The AX identifier/label must sit on the
+                                    // LINK, not inside its label: the row view
+                                    // used to carry
+                                    // .accessibilityElement(children: .combine),
+                                    // which made the row swallow its own taps
+                                    // (present in the AX tree, taps dead). The
+                                    // combine modifier now lives nowhere.
                                     NavigationLink(value: session.id) {
                                         SessionRowView(session: session)
                                     }
                                     .buttonStyle(.plain)
+                                    .accessibilityIdentifier("session-row-\(session.id.prefix(8))")
+                                    .accessibilityLabel(session.rowAccessibilityText)
                                     if idx < month.sessions.count - 1 {
                                         Divider().padding(.leading, 76)
                                     }
@@ -73,6 +77,15 @@ struct LogTabView: View {
                     }
                 }
                 .padding(.vertical, 8)
+                // Value-based destination for the session rows below
+                // (NavigationLink(value: session.id)). It must NOT share a
+                // view with the item-based destination further down or SwiftUI
+                // silently drops it and the row taps do nothing.
+                .navigationDestination(for: String.self) { id in
+                    if let session = sessions.first(where: { $0.id == id }) {
+                        SessionDetailView(session: session)
+                    }
+                }
             }
             .background(Palette.bg)
             .navigationTitle("Log")
@@ -100,11 +113,10 @@ struct LogTabView: View {
                 }
             }
             .environment(\.editMode, $editMode)
-            .navigationDestination(for: String.self) { id in
-                if let session = sessions.first(where: { $0.id == id }) {
-                    SessionDetailView(session: session)
-                }
-            }
+            // The item-based destination (active workout) lives here; the
+            // value-based one (session detail) is on the content VStack above.
+            // Kept on separate views deliberately: one destination modifier per
+            // view is the documented, unambiguous shape.
             .navigationDestination(item: $router.activeSession) { session in
                 ActiveWorkoutView(session: session)
             }

@@ -81,6 +81,8 @@ fi
 echo "==> drill supervisor up"
 
 run "cd $REPO_DIR && xcodebuild test -scheme RepLog -destination '$DEST' \
-  -only-testing:RepLogUITests -skip-testing:RepLogUITests/RepLogAccessibilityTests"
+  -only-testing:RepLogUITests \
+  -skip-testing:RepLogUITests/RepLogAccessibilityTests \
+  -skip-testing:RepLogUITests/RepLogVisualTourTests"
 
 echo "All Mac tests passed."

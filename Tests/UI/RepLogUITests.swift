@@ -85,6 +85,23 @@ final class RepLogUITests: XCTestCase {
                        "toggle '\(toggle.identifier)' did not flip after a knob tap (value '\(before)' -> '\(after)')")
     }
 
+    /// iOS offers to save the password after typing into the token's
+    /// SecureField ("Save Password?"). It is a system alert: while it is up,
+    /// every tap in the app is swallowed and the test stalls with a misleading
+    /// failure (found in the 2026-09-22 run: the alert was up over the Log).
+    @MainActor
+    private func dismissSavePasswordPrompt() async {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for label in ["Not Now", "Never for This Website", "Not now"] {
+            let button = springboard.buttons[label]
+            if button.waitForExistence(timeout: 4) {
+                button.tap()
+                await settle()
+                return
+            }
+        }
+    }
+
     /// The Log's session rows carry `session-row-<first 8 of the id>`
     /// (SessionRowView.swift), so an exact subscript — `app.buttons["session-row-"]`
     /// — can never match. A BEGINSWITH predicate query is the only way in.
@@ -310,6 +327,7 @@ final class RepLogUITests: XCTestCase {
         let done = app.buttons["done"]
         await expectExists(done, "Settings 'Done' not found")
         await tapSettled(done)
+        await dismissSavePasswordPrompt()
     }
 
     // MARK: - Set notes
@@ -421,6 +439,12 @@ final class RepLogUITests: XCTestCase {
         tokenField.tap()
         tokenField.typeText(drillToken)
         await tapSettled(app.buttons["done"])   // applies config + syncNow (fails: service down)
+        // Settings must be gone before the next navigation: a tap fired
+        // while the sheet is still animating away lands on nothing.
+        await expectExists(app.buttons["settings-link"], "Settings did not dismiss after Done")
+        // ...and iOS's "Save Password?" prompt must be dismissed or it eats
+        // every later tap (that is what stalled this test on 2026-09-22).
+        await dismissSavePasswordPrompt()
 
         // 2. Finish a session while the service is stopped -> queued offline.
         await tapSettled(app.tabBars.buttons.element(boundBy: 0))
