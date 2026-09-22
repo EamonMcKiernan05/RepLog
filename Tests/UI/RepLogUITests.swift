@@ -23,7 +23,8 @@ final class RepLogUITests: XCTestCase {
     private func wait(for element: XCUIElement, timeout: TimeInterval = 8) -> Bool {
         let exp = NSPredicate(format: "exists == true")
         let ok = expectation(for: exp, evaluatedWith: element, handler: nil)
-        return waitForExpectations([ok], timeout: timeout)
+        waitForExpectations([ok], timeout: timeout)
+        return element.exists
     }
 
     /// Walk past onboarding (units -> privacy -> sync) to the Log tab.
