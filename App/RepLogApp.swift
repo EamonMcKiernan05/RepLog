@@ -8,13 +8,13 @@ struct RepLogApp: App {
     @State private var router = AppRouter()
     @State private var syncEngine: SyncEngine
 
-    /// True when running as the host for a unit-test bundle. The unit tests are
-    /// pure logic (metrics, codec, targets, outbox, importer) and create their
-    /// own in-memory stores; they never look at the app UI. In that context the
-    /// simulator's data container is not ready at app launch, so creating a
-    /// SwiftData store (even in-memory) fails. Rendering a placeholder instead
-    /// of the real UI means the store is never touched and the host does not
-    /// crash.
+    /// True when the app process is the host for a *hosted unit-test* bundle.
+    /// In that context the app's UI is never looked at (the unit tests are pure
+    /// logic and use their own in-memory stores), and the simulator data
+    /// container is not ready at app launch, so creating the app's store would
+    /// crash the host. Rendering a placeholder instead of the real UI keeps the
+    /// store untouched. UI tests launch the app normally (no test bundle loaded
+    /// into the app process), so this is false there and the real UI shows.
     private let isUnitTestHost: Bool =
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 
@@ -24,13 +24,16 @@ struct RepLogApp: App {
         _store = State(initialValue: s)
         _settings = State(initialValue: set)
         _syncEngine = State(initialValue: SyncEngine(store: s, settings: set))
+        // DIAGNOSTIC (temporary): record which branch the app took.
+        try? "isUnitTestHost=\(isUnitTestHost)\n".write(
+            to: FileManager.default.temporaryDirectory.appendingPathComponent("replog-branch.txt"),
+            atomically: true, encoding: .utf8)
     }
 
     var body: some Scene {
         WindowGroup {
             if isUnitTestHost {
                 // Deliberately inert: nothing here may touch the store.
-                try? "placeholder-rendered\n".write(to: FileManager.default.temporaryDirectory.appendingPathComponent("replog-placeholder.txt"), atomically: true, encoding: .utf8)
                 Color.clear
             } else {
                 RootTabView()
