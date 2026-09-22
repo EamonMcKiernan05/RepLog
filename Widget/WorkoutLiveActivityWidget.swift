@@ -5,6 +5,13 @@ import ActivityKit
 /// The lock-screen / Dynamic Island views for an in-progress workout.
 /// Lives in the RepLogWidget extension (WidgetKit types are not available
 /// in the app target).
+///
+/// SDK notes (verified against the Xcode 26.5 SDK, 2026-09-22):
+///  - The expanded Dynamic Island content is built from
+///    `DynamicIslandExpandedRegion(.center)` / `.bottom` (there are no
+///    `DynamicIslandExpandedHeader/Center/Footer` types).
+///  - `ActivityViewContext` exposes `state` (not `content.state`) and
+///    `attributes`.
 struct WorkoutLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutAttributes.self) { context in
@@ -12,19 +19,19 @@ struct WorkoutLiveActivityWidget: Widget {
                 .widgetAccentable()
         } dynamicIsland: { context in
             DynamicIsland {
-                DynamicIslandExpandedHeader {
-                    Text(context.attributes.workoutName.isEmpty ? "Workout" : context.attributes.workoutName)
-                        .font(.headline)
-                }
-                DynamicIslandExpandedCenter {
+                DynamicIslandExpandedRegion(.center) {
                     VStack(spacing: 2) {
-                        Image(systemName: "figure.strengthtraining.traditional")
-                            .foregroundStyle(.teal)
-                        Text("\(context.content.state.exerciseCount) exercise\(context.content.state.exerciseCount == 1 ? "" : "s")")
-                            .font(.caption)
+                        Text(context.attributes.workoutName.isEmpty ? "Workout" : context.attributes.workoutName)
+                            .font(.headline)
+                        HStack(spacing: 6) {
+                            Image(systemName: "figure.strengthtraining.traditional")
+                                .foregroundStyle(.teal)
+                            Text("\(context.state.exerciseCount) exercise\(context.state.exerciseCount == 1 ? "" : "s")")
+                                .font(.caption)
+                        }
                     }
                 }
-                DynamicIslandExpandedFooter {
+                DynamicIslandExpandedRegion(.bottom) {
                     Text(context.attributes.startDate, style: .time)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -42,7 +49,7 @@ struct WorkoutLiveActivityWidget: Widget {
     }
 
     private static func elapsed(_ context: ActivityViewContext<WorkoutAttributes>) -> String {
-        let s = max(0, context.content.state.elapsedSeconds)
+        let s = max(0, context.state.elapsedSeconds)
         return String(format: "%02d:%02d", s / 60, s % 60)
     }
 }
@@ -63,7 +70,7 @@ struct WorkoutLiveActivityView: View {
                     .font(.system(.title3, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
-            Text("\(context.content.state.exerciseCount) exercise\(context.content.state.exerciseCount == 1 ? "" : "s")")
+            Text("\(context.state.exerciseCount) exercise\(context.state.exerciseCount == 1 ? "" : "s")")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -71,7 +78,7 @@ struct WorkoutLiveActivityView: View {
     }
 
     private static func elapsed(_ context: ActivityViewContext<WorkoutAttributes>) -> String {
-        let s = max(0, context.content.state.elapsedSeconds)
+        let s = max(0, context.state.elapsedSeconds)
         return String(format: "%02d:%02d", s / 60, s % 60)
     }
 }
