@@ -30,6 +30,7 @@ struct RepLogApp: App {
         WindowGroup {
             if isUnitTestHost {
                 // Deliberately inert: nothing here may touch the store.
+                try? "placeholder-rendered\n".write(to: FileManager.default.temporaryDirectory.appendingPathComponent("replog-placeholder.txt"), atomically: true, encoding: .utf8)
                 Color.clear
             } else {
                 RootTabView()
