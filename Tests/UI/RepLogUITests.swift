@@ -50,7 +50,6 @@ final class RepLogUITests: XCTestCase {
         await settle()
     }
 
-
     /// Wait for an element and assert it appeared (autoclosures can't await).
     @MainActor
     private func expectExists(_ element: XCUIElement, _ message: String, timeout: TimeInterval = 10) async {
@@ -68,19 +67,19 @@ final class RepLogUITests: XCTestCase {
             await settle()
         }
         // The main app is up: the Log "+" button is present.
-        await expectExists(app.buttons["plus"]), "main app not shown after onboarding")
+        await expectExists(app.buttons["plus"], "main app not shown after onboarding")
     }
 
     /// Tap the Log "+" button and start a fresh workout (ActiveWorkoutView).
     @MainActor
     private func startFreshWorkout() async {
         let plus = app.buttons["plus"]
-        await expectExists(plus), "'plus' toolbar button not found")
+        await expectExists(plus, "'plus' toolbar button not found")
         await tapSettled(plus)
         let today = app.buttons["new-workout-today"]
-        await expectExists(today), "'New Workout (Today)' not found")
+        await expectExists(today, "'New Workout (Today)' not found")
         await tapSettled(today)
-        await expectExists(app.buttons["add-exercise"]), "Active workout not shown")
+        await expectExists(app.buttons["add-exercise"], "Active workout not shown")
     }
 
     /// Add the first exercise of the first category (Abs -> Ab Wheel).
@@ -88,12 +87,12 @@ final class RepLogUITests: XCTestCase {
     private func addFirstExercise() async {
         await tapSettled(app.buttons["add-exercise"])
         let absCat = app.buttons["category-Abs"]
-        await expectExists(absCat), "'Abs' category not found")
+        await expectExists(absCat, "'Abs' category not found")
         await tapSettled(absCat)
         let abWheel = app.buttons["pick-Ab Wheel"]
-        await expectExists(abWheel), "'Ab Wheel' not found")
+        await expectExists(abWheel, "'Ab Wheel' not found")
         await tapSettled(abWheel)
-        await expectExists(app.buttons["rpe-cell"]), "RPE cell not shown after adding exercise")
+        await expectExists(app.buttons["rpe-cell"], "RPE cell not shown after adding exercise")
     }
 
     // MARK: - RPE entry
@@ -106,16 +105,16 @@ final class RepLogUITests: XCTestCase {
 
         await tapSettled(app.buttons["rpe-cell"])
         let field = app.textFields["rpe-field"]
-        await expectExists(field), "RPE field not found")
+        await expectExists(field, "RPE field not found")
         field.tap()
         field.typeText("8.5")
         let done = app.buttons["done"]
-        await expectExists(done), "RPE 'Done' not found")
+        await expectExists(done, "RPE 'Done' not found")
         await tapSettled(done)
 
         // Read it back: the RPE cell now shows 8.5.
         let rpeCell = app.buttons["rpe-cell"]
-        await expectExists(rpeCell), "RPE cell missing after entry")
+        await expectExists(rpeCell, "RPE cell missing after entry")
         let label = rpeCell.label ?? ""
         XCTAssertTrue(label.contains("8.5"), "RPE cell should read 8.5, got '\(label)'")
     }
@@ -129,14 +128,14 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(app.buttons["add-exercise"])
 
         let search = app.textFields["exercise-search"]
-        await expectExists(search), "search field not found")
+        await expectExists(search, "search field not found")
         search.tap()
         search.typeText("Squat")
         await settle(1)
 
         // The category list now shows only "Squats".
         let squats = app.buttons["category-Squats"]
-        await expectExists(squats), "'Squats' category not shown after searching 'Squat'")
+        await expectExists(squats, "'Squats' category not shown after searching 'Squat'")
         // "Abs" should be filtered out.
         let gone = !app.buttons["category-Abs"].exists
         XCTAssertTrue(gone, "'Abs' should be filtered out when searching 'Squat'")
@@ -150,10 +149,10 @@ final class RepLogUITests: XCTestCase {
         // Profile tab is the 4th tab (index 3); SwiftUI does not propagate
         // accessibilityIdentifier to .tabItem, so target it positionally.
         let profile = app.tabBars.buttons.element(boundBy: 3)
-        await expectExists(profile), "'Profile' tab not found")
+        await expectExists(profile, "'Profile' tab not found")
         await tapSettled(profile)
         let settings = app.buttons["settings-link"]
-        await expectExists(settings), "'Settings' not found in Profile")
+        await expectExists(settings, "'Settings' not found in Profile")
         await tapSettled(settings)
 
         // Scroll to the Sync section.
@@ -166,17 +165,17 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(toggle)
 
         let url = app.textFields["sync-url-field"]
-        await expectExists(url), "sync URL field not found")
+        await expectExists(url, "sync URL field not found")
         url.tap()
         url.typeText("http://192.168.1.12:8080")
 
         let token = app.secureTextFields["sync-token-field"]
-        await expectExists(token), "sync token field not found")
+        await expectExists(token, "sync token field not found")
         token.tap()
         token.typeText("test-token-123")
 
         let done = app.buttons["done"]
-        await expectExists(done), "Settings 'Done' not found")
+        await expectExists(done, "Settings 'Done' not found")
         await tapSettled(done)
     }
 
@@ -190,15 +189,15 @@ final class RepLogUITests: XCTestCase {
 
         await tapSettled(app.buttons["notes-cell"])
         let field = app.textFields["set-note-field"]
-        await expectExists(field), "set note field not found")
+        await expectExists(field, "set note field not found")
         field.tap()
         field.typeText("felt heavy")
         let save = app.buttons["save-note"]
-        await expectExists(save), "note 'Save' not found")
+        await expectExists(save, "note 'Save' not found")
         await tapSettled(save)
 
         // The note renders as a second line under the row.
         let noteLine = app.staticTexts["felt heavy"]
-        await expectExists(noteLine), "set note 'felt heavy' not displayed")
+        await expectExists(noteLine, "set note 'felt heavy' not displayed")
     }
 }
