@@ -43,6 +43,7 @@ struct RoutinesTabView: View {
                         Text("Edit")
                             .font(.body)
                             .foregroundStyle(Palette.textPrimary)
+                            .fixedSize()
                             .padding(.horizontal, 14)
                             .padding(.vertical, 7)
                             .background(Palette.card, in: Capsule())
