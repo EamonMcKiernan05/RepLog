@@ -10,6 +10,9 @@ final class DataStore {
 
     /// Static reference to the live main context, so value-type bindings
     /// (bodyweight) can record history without a view in scope.
+    /// MainActor-isolated: the main context is only touched on the main
+    /// thread in this app.
+    @MainActor
     static var mainContextRef: ModelContext?
 
     init(inMemory: Bool = false) {
@@ -28,7 +31,10 @@ final class DataStore {
             fatalError("Failed to create ModelContainer: \(error)")
         }
         if !inMemory {
-            DataStore.mainContextRef = container.mainContext
+            // App.init runs on the main thread.
+            MainActor.assumeIsolated {
+                DataStore.mainContextRef = container.mainContext
+            }
         }
         seedIfNeeded()
     }

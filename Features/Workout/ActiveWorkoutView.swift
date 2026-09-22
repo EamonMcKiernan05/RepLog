@@ -141,7 +141,10 @@ struct ActiveWorkoutView: View {
         HStack {
             Text("Bodyweight (kg)")
             Spacer()
-            TextField("kg", value: BWBinding(session: session), format: .number)
+            TextField("kg", value: Binding(
+                get: { session.bodyweightKg ?? 0 },
+                set: { v in setBodyweight(v) }
+            ), format: .number)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 80)
@@ -150,6 +153,24 @@ struct ActiveWorkoutView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
+    }
+
+    private func setBodyweight(_ v: Double) {
+        session.bodyweightKg = v > 0 ? v : nil
+        // Record in bodyweight history (deduped by date).
+        if v > 0, let ctx = DataStore.mainContextRef {
+            let cal = Calendar.current
+            let today = cal.startOfDay(for: .now)
+            var d = FetchDescriptor<BodyweightEntry>(
+                predicate: #Predicate { $0.date == today }
+            )
+            if let existing = try? ctx.fetch(d).first {
+                existing.weightKg = v
+            } else {
+                ctx.insert(BodyweightEntry(date: today, weightKg: v))
+            }
+            try? ctx.save()
+        }
     }
 
     private var addExerciseButton: some View {
@@ -204,33 +225,6 @@ struct ActiveWorkoutView: View {
         timer.stop()
         sync.sessionFinished(session)
         dismiss()
-    }
-}
-
-/// Binding that writes the session bodyweight and records a history entry.
-struct BWBinding: Binding<Double> {
-    let session: Session
-    init(session: Session) {
-        self.session = session
-        self.wrappedValue = session.bodyweightKg ?? 0
-    }
-    func get() -> Double { session.bodyweightKg ?? 0 }
-    func set(_ v: Double) {
-        session.bodyweightKg = v > 0 ? v : nil
-        // Record in bodyweight history (deduped by date).
-        if v > 0, let ctx = DataStore.mainContextRef {
-            let cal = Calendar.current
-            let today = cal.startOfDay(for: .now)
-            var d = FetchDescriptor<BodyweightEntry>(
-                predicate: #Predicate { $0.date == today }
-            )
-            if let existing = try? ctx.fetch(d).first {
-                existing.weightKg = v
-            } else {
-                ctx.insert(BodyweightEntry(date: today, weightKg: v))
-            }
-            try? ctx.save()
-        }
     }
 }
 
