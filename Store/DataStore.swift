@@ -4,29 +4,47 @@ import SwiftUI
 
 /// All model mutation goes through DataStore (plan §4.1).
 /// MainActor-isolated: it wraps the main context and is only used from views.
+///
+/// The container is created lazily on first access, not in init(). Creating it
+/// in init() (i.e. at app launch) fails in the unit-test host context even for
+/// an in-memory store; by the time the first view accesses it the app is fully
+/// launched and creation succeeds. In the test host the UI is not exercised, so
+/// it is never created there and the host app does not crash.
 @MainActor
 @Observable
 final class DataStore {
-    let container: ModelContainer
-    var context: ModelContext { container.mainContext }
+    @ObservationIgnored private var _container: ModelContainer?
+    @ObservationIgnored private let inMemory: Bool
 
     /// Static reference to the live main context, so value-type bindings
     /// (bodyweight) can record history without a view in scope.
     static var mainContextRef: ModelContext?
 
+    var container: ModelContainer {
+        if let c = _container { return c }
+        let c = makeContainer()
+        _container = c
+        if !inMemory {
+            DataStore.mainContextRef = c.mainContext
+        }
+        seedIfNeeded(with: c.mainContext)
+        return c
+    }
+
+    var context: ModelContext { container.mainContext }
+
     init(inMemory: Bool = false) {
-        // In the unit-test host the app's UI is not exercised (the unit tests
-        // are pure logic + their own in-memory stores). Disk stores resolve to
-        // /dev/null in that context, so use an in-memory store there.
-        let isTestHost = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        self.inMemory = inMemory
+    }
+
+    private func makeContainer() -> ModelContainer {
         let schema = Schema([
             Session.self, ExerciseEntry.self, SetEntry.self,
             Routine.self, RoutineExercise.self, Exercise.self,
             Category.self, BodyweightEntry.self,
         ])
-        let useMemory = inMemory || isTestHost
         let config: ModelConfiguration
-        if useMemory {
+        if inMemory {
             config = ModelConfiguration(
                 "RepLog", schema: schema,
                 isStoredInMemoryOnly: true, allowsSave: false
@@ -44,31 +62,19 @@ final class DataStore {
                 allowsSave: true
             )
         }
-        do {
-            container = try ModelContainer(for: schema, configurations: [config])
-            FileHandle.standardError.write("DataStore DIAG container OK (memory=\(useMemory))\n".data(using: .utf8)!)
-        } catch {
-            FileHandle.standardError.write("DataStore DIAG container FAILED (memory=\(useMemory)): \(error)\n".data(using: .utf8)!)
-            // Last resort: an in-memory container so the host app never crashes.
-            let fallback = ModelConfiguration(
-                "RepLog", schema: schema,
-                isStoredInMemoryOnly: true, allowsSave: false
-            )
-            if let mem = try? ModelContainer(for: schema, configurations: [fallback]) {
-                container = mem
-            } else {
-                fatalError("Failed to create ModelContainer: \(error)")
-            }
+        if let ok = try? ModelContainer(for: schema, configurations: [config]) {
+            return ok
         }
-        if !inMemory {
-            // App.init runs on the main thread.
-            DataStore.mainContextRef = container.mainContext
-        }
-        seedIfNeeded()
+        // Last resort: an in-memory container so the app never crashes.
+        let fallback = ModelConfiguration(
+            "RepLog", schema: schema,
+            isStoredInMemoryOnly: true, allowsSave: false
+        )
+        return (try? ModelContainer(for: schema, configurations: [fallback]))!
     }
 
     /// Load the exercise library from the bundled JSON on first run.
-    private func seedIfNeeded() {
+    private func seedIfNeeded(with context: ModelContext) {
         let count = (try? context.fetchCount(FetchDescriptor<Exercise>())) ?? 0
         guard count == 0 else { return }
 

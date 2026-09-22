@@ -68,6 +68,13 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog.tests
         GENERATE_INFOPLIST_FILE: YES
+        # Host-less: the unit tests are pure logic (metrics, codec, targets,
+        # outbox, importer) and create their own in-memory stores. Hosting the
+        # app launches it, and its SwiftData store resolves to /dev/null in the
+        # hosted-test context, crashing the host. Linking without a host avoids
+        # the launch entirely.
+        TEST_HOST: ""
+        BUNDLE_LOADER: ""
     dependencies:
       - target: RepLog
   RepLogUITests:
