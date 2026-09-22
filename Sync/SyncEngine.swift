@@ -110,8 +110,10 @@ final class SyncEngine {
             guard !due.isEmpty else { return }
             for id in due {
                 guard let session = self.findSession(id) else { continue }
-                let payload = Self.payload(for: session)
-                let result = await self.client.upsert(payload)
+                // Encode on the main actor; pass Sendable Data across the
+                // async boundary.
+                let payload = Self.payloadData(for: session)
+                let result = await self.client.upsert(data: payload)
                 switch result {
                 case .ok:
                     self.outbox.uploadSucceeded(id)
@@ -193,5 +195,11 @@ final class SyncEngine {
         if let et = session.endTime { p["end_time"] = CSVCodec.time(et) }
         if let bw = session.bodyweightKg { p["bodyweight_kg"] = bw }
         return p
+    }
+
+    /// Pre-encoded JSON body (Sendable) for the client.
+    static func payloadData(for session: Session) -> Data {
+        (try? JSONSerialization.data(withJSONObject: payload(for: session)))
+            ?? Data("{}".utf8)
     }
 }

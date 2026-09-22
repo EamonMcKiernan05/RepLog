@@ -52,15 +52,16 @@ final class LiftSyncClient: @unchecked Sendable {
         }
     }
 
-    /// POST /v1/sessions
-    func upsert(_ payload: [String: Any]) async -> Result {
+    /// POST /v1/sessions. Takes pre-encoded JSON so the non-Sendable
+    /// [String: Any] payload never crosses an async boundary.
+    func upsert(data: Data) async -> Result {
         guard let config else { return .networkError }
         let url = config.baseURL.appendingPathComponent("v1/sessions")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("Bearer \(config.token)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+        req.httpBody = data
         do {
             let (data, response) = try await session.data(for: req)
             guard let http = response as? HTTPURLResponse else { return .networkError }
