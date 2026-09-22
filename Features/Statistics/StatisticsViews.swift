@@ -36,11 +36,6 @@ struct StatisticsTabView: View {
             }
             .background(Palette.bg)
             .navigationTitle("Statistics")
-            // Registered at the stack root so the pushed ExerciseStatsList's
-            // value links resolve.
-            .navigationDestination(for: String.self) { name in
-                ExerciseDetailView(exerciseName: name)
-            }
             .sheet(isPresented: $showExport) {
                 ExportSheet()
             }
@@ -287,7 +282,13 @@ struct ExerciseStatsList: View {
     var body: some View {
         List {
             ForEach(names, id: \.self) { name in
-                NavigationLink(value: name) {
+                // View-based link on purpose: this stack mixes view-based
+                // pushes (the hub's "Exercises"/"Categories" rows) with the
+                // value-based session detail in the Log tab, and a value-based
+                // push here popped straight back to the list.
+                NavigationLink {
+                    ExerciseDetailView(exerciseName: name)
+                } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(name)
                         Text("\(setCount(name)) sets · \(String(format: "%.0f", volume(name))) kg")
@@ -299,10 +300,6 @@ struct ExerciseStatsList: View {
         }
         .navigationTitle("Exercises")
         .navigationBarTitleDisplayMode(.inline)
-        // The destination is registered on the TAB ROOT (StatisticsTabView),
-        // not here: a .navigationDestination declared inside a pushed view is
-        // not picked up (the row then highlights and nothing pushes — same
-        // class of bug as the Log rows).
     }
 
     private func setCount(_ name: String) -> Int {
