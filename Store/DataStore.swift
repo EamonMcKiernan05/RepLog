@@ -55,6 +55,12 @@ final class DataStore {
             if let mem = try? ModelContainer(for: schema, configurations: [fallback]) {
                 container = mem
             } else {
+                // DIAGNOSTIC: capture the in-memory error specifically.
+                do {
+                    _ = try ModelContainer(for: schema, configurations: [fallback])
+                } catch {
+                    FileHandle.standardError.write("DataStore DIAG in-memory also failed: \(error)\n".data(using: .utf8)!)
+                }
                 fatalError("Failed to create ModelContainer: \(error)")
             }
         }
