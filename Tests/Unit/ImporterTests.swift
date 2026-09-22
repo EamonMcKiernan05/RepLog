@@ -44,11 +44,14 @@ struct ImporterTests {
         #expect(imported.id == "import-test-1")
         #expect(imported.bodyweightKg == 90)
         #expect(imported.exerciseEntries.count == 1)
-        #expect(imported.exerciseEntries[0].exercise?.name == "Squat")
-        #expect(imported.exerciseEntries[0].setEntries.count == 2)
-        #expect(imported.exerciseEntries[0].setEntries[0].weightKg == 100)
-        #expect(imported.exerciseEntries[0].setEntries[0].rpe == 8)
-        #expect(imported.exerciseEntries[0].setEntries[1].reps == 3)
+        let entry = imported.exerciseEntries[0]
+        #expect(entry.exercise?.name == "Squat")
+        // setEntries is an unordered SwiftData relationship — sort by setNumber.
+        let sets = entry.setEntries.sorted(by: { $0.setNumber < $1.setNumber })
+        #expect(sets.count == 2)
+        #expect(sets[0].weightKg == 100)
+        #expect(sets[0].rpe == 8)
+        #expect(sets[1].reps == 3)
     }
 
     @Test("unknown exercises are created, not dropped")
