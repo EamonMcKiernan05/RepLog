@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 
 /// XCUITest covers every text-entry flow, because agent-device's keystroke
 /// injection does not update SwiftUI @State bindings (plan §7.3):
@@ -60,18 +61,12 @@ final class RepLogUITests: XCTestCase {
 
     /// Tap a Form toggle. A SwiftUI Form does not toggle from a label tap,
     /// and the switch element spans the whole row, so its centre is the
-    /// label. Tap the knob: the switch's trailing subelement, or the right
-    /// edge of the row if no subelement is exposed (verified: this flips the
-    /// toggle; a centre tap does not).
+    /// label. Tap the knob at the right edge of the row (verified: this
+    /// flips the toggle; a centre tap does not).
     @MainActor
     private func tapSwitchKnob(_ toggle: XCUIElement) async {
-        let knob = toggle.otherElements.lastMatch
-        if knob.exists {
-            await tapSettled(knob)
-        } else {
-            toggle.tap(at: UnitPoint(x: 0.95, y: 0.5))
-            await settle()
-        }
+        toggle.tap(at: UnitPoint(x: 0.95, y: 0.5))
+        await settle()
     }
 
     /// Walk onboarding (units -> privacy -> skip sync) to the Log tab.
