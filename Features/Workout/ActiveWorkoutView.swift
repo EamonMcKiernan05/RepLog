@@ -205,8 +205,37 @@ struct ActiveWorkoutView: View {
     private func addExercise(_ exercise: Exercise) {
         let next = (session.exerciseEntries.map { $0.sortOrder }.max() ?? -1) + 1
         let entry = ExerciseEntry(exercise: exercise, sortOrder: next)
+        // Seed a first set row prefilled from the last time this exercise was
+        // done (plan §3.1 line 3 / T2.4: "placeholders from your last
+        // performance"). Without this the card shows no rows and the RPE /
+        // notes columns can't be reached until the user taps "Add Set".
+        let first = SetEntry(setNumber: 1)
+        entry.setEntries.append(first)   // establishes first.exerciseEntry == entry
+        applyPlaceholder(to: first)      // now the back-reference resolves the name
         session.exerciseEntries.append(entry)
         store.save()
+    }
+
+    /// Fill a fresh set's weight/reps from the last time this exercise was
+    /// done (Targets, Latest mode) — same rule "Add Set" uses.
+    private func applyPlaceholder(to set: SetEntry) {
+        let name = set.exerciseEntry?.exercise?.name ?? ""
+        let history = store.sessions()
+            .filter { $0.id != session.id }
+            .flatMap { $0.exerciseEntries }
+            .filter { $0.exercise?.name == name }
+            .flatMap { e in
+                e.setEntries.map { ($0.weightKg, $0.reps, $0.rpe, e.session?.routineName) }
+            }
+            .reversed()
+        let ph = Targets.placeholder(
+            mode: .latest,
+            routineName: session.routineName,
+            setIndex: set.setNumber - 1,
+            history: history
+        )
+        if ph.weight != nil { set.weightKg = ph.weight }
+        if ph.reps != nil { set.reps = ph.reps }
     }
 
     private func addSuperset(_ exercises: [Exercise]) {

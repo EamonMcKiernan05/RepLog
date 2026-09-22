@@ -2,10 +2,15 @@ import Foundation
 import SwiftUI
 
 /// App settings backed by UserDefaults (plan §3.1 #22, §6.4).
+///
+/// Every setting is a *stored* property (so `@Observable` tracks it and views
+/// re-render when it changes) exposed through a computed accessor that also
+/// persists to UserDefaults. The previous version used computed properties
+/// that read UserDefaults directly; `@Observable` does not track those, so a
+/// toggle or picker updated the store but never re-rendered the UI (e.g. the
+/// Sync URL field never appeared after enabling sync).
 @Observable
 final class Settings {
-    private let d = UserDefaults.standard
-
     private enum Key {
         static let unit = "unit"
         static let showActualData = "charts.showActual"
@@ -25,109 +30,135 @@ final class Settings {
         static let syncEnabled = "sync.enabled"
         static let syncURL = "sync.url"
         static let onboarded = "onboarded"
+        static let singleLimbDefault = "singleLimbDefault"
     }
+
+    // MARK: Backing stored properties (observed), initialised from UserDefaults.
+
+    private var _unit: WeightUnit =
+        WeightUnit(rawValue: UserDefaults.standard.string(forKey: Key.unit) ?? "") ?? .kg
+    private var _showActualData: Bool =
+        UserDefaults.standard.object(forKey: Key.showActualData) as? Bool ?? true
+    private var _showTrend: Bool =
+        UserDefaults.standard.object(forKey: Key.showTrend) as? Bool ?? true
+    private var _includeWarmup: Bool =
+        UserDefaults.standard.object(forKey: Key.includeWarmup) as? Bool ?? false
+    private var _countSingleLimbTwice: Bool =
+        UserDefaults.standard.object(forKey: Key.countSingleLimbTwice) as? Bool ?? false
+    private var _dbLanguage: String =
+        UserDefaults.standard.string(forKey: Key.dbLanguage) ?? "English"
+    private var _healthEnabled: Bool =
+        UserDefaults.standard.object(forKey: Key.healthEnabled) as? Bool ?? false
+    private var _autofillWeight: Bool =
+        UserDefaults.standard.object(forKey: Key.autofillWeight) as? Bool ?? true
+    private var _autocorrectNotes: Bool =
+        UserDefaults.standard.object(forKey: Key.autocorrectNotes) as? Bool ?? true
+    private var _timerSound: String =
+        UserDefaults.standard.string(forKey: Key.timerSound) ?? "default"
+    private var _autoStartTimer: Bool =
+        UserDefaults.standard.object(forKey: Key.autoStartTimer) as? Bool ?? false
+    private var _keepScreenOn: Bool =
+        UserDefaults.standard.object(forKey: Key.keepScreenOn) as? Bool ?? true
+    private var _perSecondBuzz: Bool =
+        UserDefaults.standard.object(forKey: Key.perSecondBuzz) as? Bool ?? false
+    private var _finishReminder: String =
+        UserDefaults.standard.string(forKey: Key.finishReminder) ?? "off"
+    private var _analytics: Bool =
+        UserDefaults.standard.object(forKey: Key.analytics) as? Bool ?? true
+    private var _syncEnabled: Bool =
+        UserDefaults.standard.object(forKey: Key.syncEnabled) as? Bool ?? false
+    private var _syncURL: String =
+        UserDefaults.standard.string(forKey: Key.syncURL) ?? ""
+    private var _onboarded: Bool =
+        UserDefaults.standard.object(forKey: Key.onboarded) as? Bool ?? false
+    private var _singleLimbDefault: Bool =
+        UserDefaults.standard.object(forKey: Key.singleLimbDefault) as? Bool ?? false
+
+    // MARK: Persisting accessors
 
     var unit: WeightUnit {
-        get { WeightUnit(rawValue: d.string(forKey: Key.unit) ?? "") ?? .kg }
-        set { d.set(newValue.rawValue, forKey: Key.unit) }
+        get { _unit }
+        set { _unit = newValue; UserDefaults.standard.set(newValue.rawValue, forKey: Key.unit) }
     }
-
     var showActualData: Bool {
-        get { d.object(forKey: Key.showActualData) as? Bool ?? true }
-        set { d.set(newValue, forKey: Key.showActualData) }
+        get { _showActualData }
+        set { _showActualData = newValue; UserDefaults.standard.set(newValue, forKey: Key.showActualData) }
     }
-
     var showTrend: Bool {
-        get { d.object(forKey: Key.showTrend) as? Bool ?? true }
-        set { d.set(newValue, forKey: Key.showTrend) }
+        get { _showTrend }
+        set { _showTrend = newValue; UserDefaults.standard.set(newValue, forKey: Key.showTrend) }
     }
-
     var includeWarmup: Bool {
-        get { d.object(forKey: Key.includeWarmup) as? Bool ?? false }
-        set { d.set(newValue, forKey: Key.includeWarmup) }
+        get { _includeWarmup }
+        set { _includeWarmup = newValue; UserDefaults.standard.set(newValue, forKey: Key.includeWarmup) }
     }
-
     var countSingleLimbTwice: Bool {
-        get { d.object(forKey: Key.countSingleLimbTwice) as? Bool ?? false }
-        set { d.set(newValue, forKey: Key.countSingleLimbTwice) }
+        get { _countSingleLimbTwice }
+        set { _countSingleLimbTwice = newValue; UserDefaults.standard.set(newValue, forKey: Key.countSingleLimbTwice) }
     }
-
     var dbLanguage: String {
-        get { d.string(forKey: Key.dbLanguage) ?? "English" }
-        set { d.set(newValue, forKey: Key.dbLanguage) }
+        get { _dbLanguage }
+        set { _dbLanguage = newValue; UserDefaults.standard.set(newValue, forKey: Key.dbLanguage) }
     }
-
     var healthEnabled: Bool {
-        get { d.object(forKey: Key.healthEnabled) as? Bool ?? false }
-        set { d.set(newValue, forKey: Key.healthEnabled) }
+        get { _healthEnabled }
+        set { _healthEnabled = newValue; UserDefaults.standard.set(newValue, forKey: Key.healthEnabled) }
     }
-
     var autofillWeight: Bool {
-        get { d.object(forKey: Key.autofillWeight) as? Bool ?? true }
-        set { d.set(newValue, forKey: Key.autofillWeight) }
+        get { _autofillWeight }
+        set { _autofillWeight = newValue; UserDefaults.standard.set(newValue, forKey: Key.autofillWeight) }
     }
-
     var autocorrectNotes: Bool {
-        get { d.object(forKey: Key.autocorrectNotes) as? Bool ?? true }
-        set { d.set(newValue, forKey: Key.autocorrectNotes) }
+        get { _autocorrectNotes }
+        set { _autocorrectNotes = newValue; UserDefaults.standard.set(newValue, forKey: Key.autocorrectNotes) }
     }
-
     var timerSound: String {
-        get { d.string(forKey: Key.timerSound) ?? "default" }
-        set { d.set(newValue, forKey: Key.timerSound) }
+        get { _timerSound }
+        set { _timerSound = newValue; UserDefaults.standard.set(newValue, forKey: Key.timerSound) }
     }
-
     var autoStartTimer: Bool {
-        get { d.object(forKey: Key.autoStartTimer) as? Bool ?? false }
-        set { d.set(newValue, forKey: Key.autoStartTimer) }
+        get { _autoStartTimer }
+        set { _autoStartTimer = newValue; UserDefaults.standard.set(newValue, forKey: Key.autoStartTimer) }
     }
-
     var keepScreenOn: Bool {
-        get { d.object(forKey: Key.keepScreenOn) as? Bool ?? true }
-        set { d.set(newValue, forKey: Key.keepScreenOn) }
+        get { _keepScreenOn }
+        set { _keepScreenOn = newValue; UserDefaults.standard.set(newValue, forKey: Key.keepScreenOn) }
     }
-
     var perSecondBuzz: Bool {
-        get { d.object(forKey: Key.perSecondBuzz) as? Bool ?? false }
-        set { d.set(newValue, forKey: Key.perSecondBuzz) }
+        get { _perSecondBuzz }
+        set { _perSecondBuzz = newValue; UserDefaults.standard.set(newValue, forKey: Key.perSecondBuzz) }
     }
-
     var finishReminder: String {
-        get { d.string(forKey: Key.finishReminder) ?? "off" }
-        set { d.set(newValue, forKey: Key.finishReminder) }
+        get { _finishReminder }
+        set { _finishReminder = newValue; UserDefaults.standard.set(newValue, forKey: Key.finishReminder) }
     }
-
     /// Toggle stays (plan: wired to nothing — nothing is sent).
     var analytics: Bool {
-        get { d.object(forKey: Key.analytics) as? Bool ?? true }
-        set { d.set(newValue, forKey: Key.analytics) }
+        get { _analytics }
+        set { _analytics = newValue; UserDefaults.standard.set(newValue, forKey: Key.analytics) }
     }
-
     var syncEnabled: Bool {
-        get { d.object(forKey: Key.syncEnabled) as? Bool ?? false }
-        set { d.set(newValue, forKey: Key.syncEnabled) }
+        get { _syncEnabled }
+        set { _syncEnabled = newValue; UserDefaults.standard.set(newValue, forKey: Key.syncEnabled) }
     }
-
     var syncURL: String {
-        get { d.string(forKey: Key.syncURL) ?? "" }
-        set { d.set(newValue, forKey: Key.syncURL) }
+        get { _syncURL }
+        set { _syncURL = newValue; UserDefaults.standard.set(newValue, forKey: Key.syncURL) }
     }
-
     var onboarded: Bool {
-        get { d.bool(forKey: Key.onboarded) }
-        set { d.set(newValue, forKey: Key.onboarded) }
+        get { _onboarded }
+        set { _onboarded = newValue; UserDefaults.standard.set(newValue, forKey: Key.onboarded) }
+    }
+    /// Global single-arm/leg default (article 46).
+    var singleLimbDefault: Bool {
+        get { _singleLimbDefault }
+        set { _singleLimbDefault = newValue; UserDefaults.standard.set(newValue, forKey: Key.singleLimbDefault) }
     }
 
     /// The sync token lives in the Keychain, never UserDefaults.
     var syncToken: String {
         get { Keychain.get("syncToken") ?? "" }
         set { Keychain.set(newValue, "syncToken") }
-    }
-
-    /// Global single-arm/leg default (article 46).
-    var singleLimbDefault: Bool {
-        get { d.object(forKey: "singleLimbDefault") as? Bool ?? false }
-        set { d.set(newValue, forKey: "singleLimbDefault") }
     }
 }
 
