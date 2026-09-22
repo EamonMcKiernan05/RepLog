@@ -52,8 +52,11 @@ final class DataStore {
                 "RepLog", schema: schema,
                 isStoredInMemoryOnly: true, allowsSave: false
             )
-            container = (try? ModelContainer(for: schema, configurations: [fallback]))
-                ?? fatalError("Failed to create ModelContainer: \(error)")
+            if let mem = try? ModelContainer(for: schema, configurations: [fallback]) {
+                container = mem
+            } else {
+                fatalError("Failed to create ModelContainer: \(error)")
+            }
         }
         if !inMemory {
             // App.init runs on the main thread.
