@@ -11,17 +11,14 @@ import HealthKit
 /// SDK notes (verified against the Xcode 26.5 SDK, 2026-09-22):
 ///  - The strength-training activity type is `.functionalStrengthTraining`
 ///    (there is no `.strengthTraining` case).
-///  - The async sample query is `HKSampleQueryDescriptor` with `predicates:`
-///    (plural, `[HKSamplePredicate<HKSample>]`) and `SortDescriptor` — not the
-///    older `predicate:`/`NSSortDescriptor` pair.
-///  - `HKQuantityType(.bodyMass)` and `HKUnit.gramUnit(with: .kilo)` need an
-///    explicit contextual type at the call site.
-///  - The `HKWorkout` initialiser takes (activityType, start, end,
-///    totalDistance, totalEnergyBurned, totalAscent, totalDescent,
-///    numberOfPullUps, numberOfPushUps, numberOfSitUps,
-///    numberOfFlightsClimbed, route, totalSwimmingStrokeCount, device,
-///    workoutEvents, metadata, activities) — `workoutEvents` and `metadata`
-///    are required.
+///  - `HKWorkoutType()` is unavailable — use `HKObjectType.workoutType()`.
+///  - The async sample query is `HKSampleQueryDescriptor<HKQuantitySample>`
+///    with `predicates:` (plural, `[HKSamplePredicate<HKQuantitySample>]`
+///    built via `.quantitySample(type:predicate:)`) and `SortDescriptor`;
+///    `result(for:)` returns the sample array directly.
+///  - The `HKWorkout(...)` initialiser is deprecated (iOS 17) — workouts are
+///    built with `HKWorkoutBuilder` (beginCollection -> endCollection ->
+///    finishWorkout).
 @MainActor
 final class HealthService {
     private let store = HKHealthStore()
@@ -38,7 +35,7 @@ final class HealthService {
     private var writeTypes: Set<HKSampleType> {
         [
             HKQuantityType(.bodyMass) as HKSampleType,
-            HKWorkoutType() as HKSampleType,
+            HKObjectType.workoutType() as HKSampleType,
         ]
     }
 
@@ -57,18 +54,18 @@ final class HealthService {
     func latestBodyweightKg() async -> Double? {
         guard isAvailable else { return nil }
         let type: HKQuantityType = HKQuantityType(.bodyMass)
-        let predicates: [HKSamplePredicate<HKSample>] = [
-            .samples(with: type, predicate: HKQuery.predicateForSamples(withStart: .distantPast, end: nil)),
+        let predicates: [HKSamplePredicate<HKQuantitySample>] = [
+            .quantitySample(type: type, predicate: HKQuery.predicateForSamples(withStart: .distantPast, end: nil)),
         ]
-        let sort = SortDescriptor(\HKSample.endDate, order: .reverse)
-        let descriptor = HKSampleQueryDescriptor(
+        let sort = SortDescriptor(\HKQuantitySample.endDate, order: .reverse)
+        let descriptor = HKSampleQueryDescriptor<HKQuantitySample>(
             predicates: predicates,
             sortDescriptors: [sort],
             limit: 1
         )
         do {
-            let result = try await descriptor.result(for: store)
-            guard let sample = result.samples.first as? HKQuantitySample else { return nil }
+            let samples = try await descriptor.result(for: store)
+            guard let sample = samples.first else { return nil }
             let unit: HKUnit = .gramUnit(with: .kilo)
             return sample.quantity.doubleValue(for: unit)
         } catch {
@@ -98,53 +95,34 @@ final class HealthService {
         let end = session.endTime ?? .now
         guard end > start else { return false }
 
-        let activities: [HKWorkoutActivityType] = workoutActivities(for: session)
-        let workout = HKWorkout(
-            activityType: .other,
-            start: start,
-            end: end,
-            totalDistance: nil,
-            totalEnergyBurned: nil,   // active-energy estimate is out of scope
-            totalAscent: nil,
-            totalDescent: nil,
-            numberOfPullUps: nil,
-            numberOfPushUps: nil,
-            numberOfSitUps: nil,
-            numberOfFlightsClimbed: nil,
-            route: nil,
-            totalSwimmingStrokeCount: nil,
-            device: nil,
-            workoutEvents: [],
-            metadata: nil,
-            activities: activities
-        )
+        let config = HKWorkoutConfiguration()
+        config.activityType = workoutActivityType(for: session)
+        let builder = HKWorkoutBuilder(healthStore: store, configuration: config, device: nil)
         do {
-            try await store.save(workout)
+            try await builder.beginCollection(at: start)
+            try await builder.endCollection(at: end)
+            _ = try await builder.finishWorkout()
             return true
         } catch {
             return false
         }
     }
 
-    /// Map the session's exercise names to a small set of workout activity
-    /// types (best-effort; Health groups the workout under these).
-    private func workoutActivities(for session: Session) -> [HKWorkoutActivityType] {
+    /// Map the session's exercise names to a workout activity type
+    /// (best-effort; Health groups the workout under it).
+    private func workoutActivityType(for session: Session) -> HKWorkoutActivityType {
         var names = Set<String>()
         for entry in session.exerciseEntries {
             if let n = entry.exercise?.name { names.insert(n.lowercased()) }
         }
-        var result: [HKWorkoutActivityType] = []
-        func add(_ t: HKWorkoutActivityType, _ keywords: [String]) {
-            if names.contains(where: { n in keywords.contains(where: { n.contains($0) }) }) {
-                result.append(t)
-            }
+        func has(_ keywords: [String]) -> Bool {
+            names.contains { n in keywords.contains { n.contains($0) } }
         }
-        add(.running, ["run", "sprint", "treadmill"])
-        add(.cycling, ["bike", "cycle", "cycling"])
-        add(.swimming, ["swim"])
-        add(.yoga, ["yoga"])
-        add(.coreTraining, ["abs", "core", "plank", "crunch"])
-        add(.functionalStrengthTraining, ["squat", "bench", "deadlift", "press", "curl", "row", "pulldown", "dip", "leg", "shoulder", "fly", "raise", "extension", "triceps", "bicep"])
-        return result.isEmpty ? [.functionalStrengthTraining] : result
+        if has(["run", "sprint", "treadmill"]) { return .running }
+        if has(["bike", "cycle", "cycling"]) { return .cycling }
+        if has(["swim"]) { return .swimming }
+        if has(["yoga"]) { return .yoga }
+        if has(["abs", "core", "plank", "crunch"]) { return .coreTraining }
+        return .functionalStrengthTraining
     }
 }
