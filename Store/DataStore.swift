@@ -63,15 +63,29 @@ final class DataStore {
                 allowsSave: true
             )
         }
-        if let ok = try? ModelContainer(for: schema, configurations: [config]) {
-            return ok
+        // The first container creation in a fresh simulator process can fail
+        // (the store URL resolves to /dev/null until the app's data container is
+        // ready). A short delay + retry handles the cold launch; a warm process
+        // creates the container on the first attempt.
+        for attempt in 0..<4 {
+            if let ok = try? ModelContainer(for: schema, configurations: [config]) {
+                return ok
+            }
+            if attempt < 3 { Thread.sleep(forTimeInterval: 0.75) }
         }
-        // Last resort: an in-memory container so the app never crashes.
+        // Last resort: an in-memory container (also retried) so the app never
+        // crashes on a store failure.
         let fallback = ModelConfiguration(
             "RepLog", schema: schema,
             isStoredInMemoryOnly: true, allowsSave: false
         )
-        return (try? ModelContainer(for: schema, configurations: [fallback]))!
+        for attempt in 0..<4 {
+            if let ok = try? ModelContainer(for: schema, configurations: [fallback]) {
+                return ok
+            }
+            if attempt < 3 { Thread.sleep(forTimeInterval: 0.75) }
+        }
+        fatalError("Failed to create ModelContainer after retries")
     }
 
     /// Load the exercise library from the bundled JSON on first run.
