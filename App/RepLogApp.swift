@@ -27,6 +27,7 @@ struct RepLogApp: App {
     }
 
     var body: some Scene {
+        FileHandle.standardError.write("RepLogApp DIAG: isUnitTestHost=\(isUnitTestHost)\n".data(using: .utf8)!)
         WindowGroup {
             if isUnitTestHost {
                 // Deliberately inert: nothing here may touch the store.
