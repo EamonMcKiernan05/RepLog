@@ -1,7 +1,6 @@
 # RepLog
 
-A native SwiftUI iOS workout tracker — a RepCount clone with an added **RPE
-column** between Reps and Notes — plus a small self-hostable CSV sync
+A native SwiftUI iOS workout tracker, plus an optional self-hosted CSV sync
 service. Everything is stored on-device (SwiftData, zero third-party Swift
 dependencies); finished sessions can optionally sync to a flat
 `sessions.csv` that AI agents can read cheaply and unambiguously.
@@ -110,14 +109,6 @@ In the app: Profile → Settings → Sync → enter the URL
   delete/tombstone + no resurrection, atomic rewrite, auth, malformed
   payloads.
 
-## Migration from RepCount
-
-`scripts/repcount_import.py` converts the legacy 7-column export into the
-new schema, lifting RPE out of the notes prose (bare numbers, `Rpe n`,
-`RIR n` → 10−n, ranges → midpoint, standalone `F` → RPE 10) and writing an
-anomaly report for every row it refused to guess at.
-`scripts/validate_sessions.py` checks data validity only — it never applies
-the coach's 1RM junk filter.
 
 ## Notes
 
