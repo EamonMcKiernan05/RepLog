@@ -27,7 +27,6 @@ struct RepLogApp: App {
     }
 
     var body: some Scene {
-        try? "isUnitTestHost=\(isUnitTestHost)\n".write(toFile: "/tmp/replog-app-body.txt", atomically: true, encoding: .utf8)
         WindowGroup {
             if isUnitTestHost {
                 // Deliberately inert: nothing here may touch the store.
