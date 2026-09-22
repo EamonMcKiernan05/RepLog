@@ -68,8 +68,30 @@ class Supervisor:
         except Exception:
             return False
 
+    def _kill_port_users(self) -> None:
+        """Kill whatever already holds the service port.
+
+        A uvicorn leaked from an earlier run (killing the supervisor with
+        SIGTERM used to leave the child alive) keeps the port, answers the
+        health check and swallows the drill's uploads into a stale data dir —
+        the run then asserts against an empty CSV and looks like a sync bug.
+        """
+        try:
+            out = subprocess.check_output(
+                ["/usr/sbin/lsof", "-ti", f"tcp:{self.service_port}"],
+                text=True, timeout=5, stderr=subprocess.DEVNULL,
+            )
+        except Exception:
+            return
+        for pid in out.split():
+            try:
+                os.kill(int(pid), signal.SIGKILL)
+            except (ValueError, ProcessLookupError, PermissionError):
+                pass
+
     def start(self) -> dict:
         self.stop()
+        self._kill_port_users()
         self.data_dir = tempfile.mkdtemp(prefix="replog-drill-")
         uvicorn = os.path.join(self.repo, "service", ".venv", "bin", "uvicorn")
         if not os.path.exists(uvicorn):
@@ -89,6 +111,9 @@ class Supervisor:
         # drill can be diagnosed from the supervisor's own log file.
         print(f"service started, data dir {self.data_dir}", flush=True)
         for _ in range(60):
+            if self.proc.poll() is not None:
+                return {"ok": False,
+                        "error": f"service exited during startup (port {self.service_port} in use?)"}
             if self._health():
                 return {"ok": True, "data_dir": self.data_dir, "token": TOKEN,
                         "port": self.service_port, "gateway": gateway_ip()}
@@ -165,6 +190,16 @@ def main() -> None:
 
     sup = Supervisor(repo=args.repo, service_port=args.service_port)
     Handler.sup = sup
+
+    def _shutdown(signum, frame):  # noqa: ARG001
+        # pkill/SIGTERM must take the child service with it; otherwise the
+        # port stays held and the next run's service cannot bind.
+        sup.stop()
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, _shutdown)
+    signal.signal(signal.SIGINT, _shutdown)
+
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     print(f"drill supervisor on 127.0.0.1:{args.port} (service port {args.service_port})", flush=True)
     try:

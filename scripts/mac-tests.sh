@@ -40,9 +40,11 @@ stop_supervisor() {
 }
 trap stop_supervisor EXIT
 
-# 0. Kill any supervisor left over from a previous run, before anything else.
+# 0. Kill any supervisor (and any uvicorn it leaked) left over from a
+#    previous run, before anything else.
 echo "==> stopping any stale drill supervisor"
 stop_supervisor
+ssh -o ConnectTimeout=10 "$HOST" "pkill -f 'uvicorn lift_sync.app:app' || true" >/dev/null 2>&1 || true
 
 run "cd $REPO_DIR && git pull --ff-only"
 
