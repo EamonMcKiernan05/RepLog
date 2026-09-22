@@ -115,8 +115,9 @@ final class RepLogUITests: XCTestCase {
 
     func testSyncURLAndTokenFields() {
         completeOnboarding()
-        // Profile tab -> Settings.
-        let profile = app.buttons["tab-profile"]
+        // Profile tab is the 4th tab (index 3); SwiftUI does not propagate
+        // accessibilityIdentifier to .tabItem, so target it positionally.
+        let profile = app.tabBars.buttons.element(boundBy: 3)
         XCTAssertTrue(wait(for: profile), "'Profile' tab not found")
         profile.tap()
         let settings = app.buttons["settings-link"]
