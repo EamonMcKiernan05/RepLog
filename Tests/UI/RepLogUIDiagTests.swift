@@ -1,8 +1,7 @@
 import XCTest
 
-/// Temporary diagnostic: dump the accessibility identifiers/labels XCUITest
-/// actually exposes on the main app, so the real UI test can address elements
-/// by ground truth rather than guesswork.
+/// Temporary diagnostic: complete onboarding, then dump the main app's tab bar
+/// and toolbar so the real UI test can address elements by ground truth.
 final class RepLogUIDiagTests: XCTestCase {
     var app: XCUIApplication!
 
@@ -16,28 +15,26 @@ final class RepLogUIDiagTests: XCTestCase {
 
     @MainActor
     func testDumpTree() async {
-        // Complete onboarding robustly: keep tapping the onboarding button
-        // (id onboarding-next) while it exists, up to 6 times.
-        let next = app.buttons["onboarding-next"]
-        for _ in 0..<6 {
-            if next.waitForExistence(timeout: 4) {
+        // Complete onboarding exactly like the real test: fresh query each tap.
+        for _ in 0..<3 {
+            let next = app.buttons["onboarding-next"]
+            if next.waitForExistence(timeout: 6) {
                 next.tap()
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
             } else {
                 break
             }
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
         }
         try? await Task.sleep(nanoseconds: 2_000_000_000)
 
+        let still = app.buttons["onboarding-next"]
         print("=== ONBOARDING STILL PRESENT? ===")
-        print("  onboarding-next exists: \(next.exists)")
-        print("=== BUTTONS (id | label) ===")
-        for el in app.buttons.allElementsBoundByIndex { print("  id=\(el.identifier) label=\(el.label)") }
+        print("  onboarding-next exists: \(still.exists)")
         print("=== TABBAR BUTTONS (id | label) ===")
         for el in app.tabBars.buttons.allElementsBoundByIndex { print("  id=\(el.identifier) label=\(el.label)") }
         print("=== NAVBAR BUTTONS (id | label) ===")
         for el in app.navigationBars.buttons.allElementsBoundByIndex { print("  id=\(el.identifier) label=\(el.label)") }
-        print("=== STATIC TEXT (first 25) ===")
-        for el in app.staticTexts.allElementsBoundByIndex.prefix(25) { print("  text=\(el.label)") }
+        print("=== ALL BUTTONS (id | label) ===")
+        for el in app.buttons.allElementsBoundByIndex { print("  id=\(el.identifier) label=\(el.label)") }
     }
 }

@@ -6,6 +6,7 @@ struct StartWorkoutSheet: View {
     @Environment(DataStore.self) private var store
     @Environment(AppRouter.self) private var router
     @Environment(\.dismiss) private var dismiss
+    @State private var showRepeatSheet = false
 
     var body: some View {
         NavigationStack {
@@ -17,6 +18,14 @@ struct StartWorkoutSheet: View {
                         Label("New Workout (Today)", systemImage: "plus.circle")
                     }
                     .accessibilityIdentifier("new-workout-today")
+                    if !store.sessions().isEmpty {
+                        Button {
+                            showRepeatSheet = true
+                        } label: {
+                            Label("Repeat Last Workout", systemImage: "arrow.clockwise")
+                        }
+                        .accessibilityIdentifier("repeat-last")
+                    }
                 }
                 if !store.routines().isEmpty {
                     Section("From a Routine") {
@@ -39,6 +48,9 @@ struct StartWorkoutSheet: View {
             }
         }
         .presentationDetents([.medium])
+        .sheet(isPresented: $showRepeatSheet) {
+            RepeatWorkoutSheet()
+        }
     }
 
     private func start(fresh: Bool) {

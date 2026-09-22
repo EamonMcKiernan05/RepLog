@@ -86,21 +86,8 @@ struct LogTabView: View {
                     .buttonBorderShape(.capsule)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            showStartSheet = true
-                        } label: {
-                            Label("New Workout", systemImage: "plus")
-                        }
-                        .accessibilityIdentifier("menu-new-workout")
-                        if !sessions.isEmpty {
-                            Button {
-                                showRepeatSheet = true
-                            } label: {
-                                Label("Repeat Last Workout", systemImage: "arrow.clockwise")
-                            }
-                            .accessibilityIdentifier("menu-repeat")
-                        }
+                    Button {
+                        showStartSheet = true
                     } label: {
                         Image(systemName: "plus")
                             .fontWeight(.semibold)
@@ -108,7 +95,6 @@ struct LogTabView: View {
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.circle)
                     .accessibilityIdentifier("plus")
-                    .accessibilityLabel("Add workout")
                 }
             }
             .environment(\.editMode, $editMode)

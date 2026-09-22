@@ -45,14 +45,11 @@ final class RepLogUITests: XCTestCase {
         start.tap()
     }
 
-    /// Open the Log "+" menu and start a fresh workout (ActiveWorkoutView).
+    /// Tap the Log "+" button and start a fresh workout (ActiveWorkoutView).
     private func startFreshWorkout() {
         let plus = app.buttons["plus"]
         XCTAssertTrue(wait(for: plus), "'plus' toolbar button not found")
         plus.tap()
-        let new = app.buttons["menu-new-workout"]
-        XCTAssertTrue(wait(for: new), "'New Workout' menu item not found")
-        new.tap()
         let today = app.buttons["new-workout-today"]
         XCTAssertTrue(wait(for: today), "'New Workout (Today)' not found")
         today.tap()
