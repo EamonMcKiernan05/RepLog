@@ -20,8 +20,15 @@ struct RepLogApp: App {
 
     init() {
         // Test hook: -ResetRepLog YES wipes persisted state so UI tests always
-        // start at onboarding.
-        let reset = CommandLine.arguments.contains("-ResetRepLog")
+        // start at onboarding. -ResetRepLog NO must NOT reset: the offline
+        // drill relaunches with NO because the queued session and the sync
+        // config have to survive the restart (the old presence-only check
+        // wiped them, which would have broken the drill's later steps).
+        let args = CommandLine.arguments
+        let resetValue = args.firstIndex(of: "-ResetRepLog").map { i in
+            i + 1 < args.count ? args[i + 1] : "YES"
+        } ?? "NO"
+        let reset = resetValue.uppercased() != "NO"
         if reset {
             let bundleID = Bundle.main.bundleIdentifier ?? "im.eamon.replog"
             if let defaults = UserDefaults(suiteName: bundleID) {
@@ -38,6 +45,21 @@ struct RepLogApp: App {
             MainActor.assumeIsolated {
                 seedDemoData(store: s, settings: set)
             }
+        }
+        // Test hook: -SyncURL <url> -SyncToken <token> pre-configures sync so
+        // the offline drill does not have to type into the Settings form.
+        // Typing into the token SecureField triggers iOS's AutoFill "Save
+        // Password?" prompt, and while that alert is up every later tap in a
+        // UI test is swallowed (that is what stalled the drill twice on
+        // 2026-09-22). This writes exactly what the Settings screen writes:
+        // URL + enabled in UserDefaults, token in the Keychain.
+        let launchArgs = args
+        if let i = launchArgs.firstIndex(of: "-SyncURL"), i + 1 < launchArgs.count {
+            set.syncURL = launchArgs[i + 1]
+            if let j = launchArgs.firstIndex(of: "-SyncToken"), j + 1 < launchArgs.count {
+                set.syncToken = launchArgs[j + 1]
+            }
+            set.syncEnabled = true
         }
         // Created AFTER the reset so isOnboarding reads the wiped state.
         let r = AppRouter()

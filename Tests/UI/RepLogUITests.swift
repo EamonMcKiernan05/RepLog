@@ -92,13 +92,17 @@ final class RepLogUITests: XCTestCase {
     @MainActor
     private func dismissSavePasswordPrompt() async {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        for label in ["Not Now", "Never for This Website", "Not now"] {
-            let button = springboard.buttons[label]
-            if button.waitForExistence(timeout: 4) {
-                button.tap()
-                await settle()
-                return
+        let labels = ["Not Now", "Never for This Website", "Not now", "Later"]
+        let deadline = Date().addingTimeInterval(8)
+        while Date() < deadline {
+            for host in [app, springboard] {
+                for label in labels where host.buttons[label].exists {
+                    host.buttons[label].tap()
+                    await settle()
+                    return
+                }
             }
+            try? await Task.sleep(nanoseconds: 400_000_000)
         }
     }
 
@@ -417,34 +421,18 @@ final class RepLogUITests: XCTestCase {
         // The service must be down for the offline phase.
         await supervisorJSON("/stop")
 
-        // 1. Configure sync (URL + token) with the service stopped.
+        // 1. Sync is pre-configured by the -SyncURL/-SyncToken launch
+        // arguments (see RepLogApp): typing into the Settings form triggers
+        // iOS's AutoFill "Save Password?" prompt, and while that alert is up
+        // every later tap is swallowed. The Settings form itself is covered by
+        // testSyncURLAndTokenFields. The service is stopped for this phase.
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES",
+                               "-SyncURL", "http://\(drillGateway):8391",
+                               "-SyncToken", drillToken]
+        app.launch()
+        await settle(2)
         await completeOnboarding()
-        let profile = app.tabBars.buttons.element(boundBy: 3)
-        await expectExists(profile, "'Profile' tab not found")
-        await tapSettled(profile)
-        await tapSettled(app.buttons["settings-link"])
-        let toggle = app.switches["enable-sync"]
-        for _ in 0..<8 where !toggle.exists {
-            app.swipeUp()
-            await settle(0.5)
-        }
-        XCTAssertTrue(toggle.exists, "'Enable Sync' toggle not found")
-        await tapSwitchKnob(toggle)
-        let urlField = app.textFields["sync-url-field"]
-        await expectExists(urlField, "sync URL field not found")
-        urlField.tap()
-        urlField.typeText("http://\(drillGateway):8391")
-        let tokenField = app.secureTextFields["sync-token-field"]
-        await expectExists(tokenField, "sync token field not found")
-        tokenField.tap()
-        tokenField.typeText(drillToken)
-        await tapSettled(app.buttons["done"])   // applies config + syncNow (fails: service down)
-        // Settings must be gone before the next navigation: a tap fired
-        // while the sheet is still animating away lands on nothing.
-        await expectExists(app.buttons["settings-link"], "Settings did not dismiss after Done")
-        // ...and iOS's "Save Password?" prompt must be dismissed or it eats
-        // every later tap (that is what stalled this test on 2026-09-22).
-        await dismissSavePasswordPrompt()
 
         // 2. Finish a session while the service is stopped -> queued offline.
         await tapSettled(app.tabBars.buttons.element(boundBy: 0))
@@ -459,10 +447,14 @@ final class RepLogUITests: XCTestCase {
         let rowID = (row.identifier as NSString).replacingOccurrences(of: "session-row-", with: "")
         let sid = String(rowID.prefix(8))
 
-        // 3. Relaunch the app (queue must survive the restart).
+        // 3. Relaunch the app (queue must survive the restart). -ResetRepLog NO
+        // keeps the persisted state; the sync args are re-applied so the
+        // configured server is unambiguous.
         app.terminate()
         await settle(1)
-        app.launchArguments = ["-ResetRepLog", "NO"]
+        app.launchArguments = ["-ResetRepLog", "NO",
+                               "-SyncURL", "http://\(drillGateway):8391",
+                               "-SyncToken", drillToken]
         app.launch()
         await settle(3)
 
