@@ -58,6 +58,22 @@ final class RepLogUITests: XCTestCase {
         XCTAssertTrue(ok, message)
     }
 
+    /// Tap a Form toggle. A SwiftUI Form does not toggle from a label tap,
+    /// and the switch element spans the whole row, so its centre is the
+    /// label. Tap the knob: the switch's trailing subelement, or the right
+    /// edge of the row if no subelement is exposed (verified: this flips the
+    /// toggle; a centre tap does not).
+    @MainActor
+    private func tapSwitchKnob(_ toggle: XCUIElement) async {
+        let knob = toggle.otherElements.lastMatch
+        if knob.exists {
+            await tapSettled(knob)
+        } else {
+            toggle.tap(at: UnitPoint(x: 0.95, y: 0.5))
+            await settle()
+        }
+    }
+
     /// Walk onboarding (units -> privacy -> skip sync) to the Log tab.
     @MainActor
     private func completeOnboarding() async {
@@ -243,11 +259,7 @@ final class RepLogUITests: XCTestCase {
             await settle(0.5)
         }
         XCTAssertTrue(toggle.exists, "'Enable Sync' toggle not found")
-        // Tap the switch KNOB, not the row: a SwiftUI Form does not toggle
-        // from a label tap, and the element's centre is the label. The knob
-        // is the trailing subelement of the switch.
-        let knob = toggle.otherElements.last ?? toggle
-        await tapSettled(knob)
+        await tapSwitchKnob(toggle)
 
         let url = app.textFields["sync-url-field"]
         await expectExists(url, "sync URL field not found")
@@ -321,7 +333,7 @@ final class RepLogUITests: XCTestCase {
     }
 
     /// POST the same session payload again (the resurrection attempt).
-    private func drillReimport(sessionID: String) async -> Int {
+    private func drillReimport(sessionID: String) async throws -> Int {
         let body: [String: Any] = [
             "session_id": sessionID,
             "date": "2026-09-22",
@@ -331,7 +343,7 @@ final class RepLogUITests: XCTestCase {
         req.httpMethod = "POST"
         req.setValue("Bearer \(drillToken)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (_, resp) = try await URLSession.shared.data(for: req)
         return (resp as? HTTPURLResponse)?.statusCode ?? -1
     }
@@ -360,8 +372,7 @@ final class RepLogUITests: XCTestCase {
             await settle(0.5)
         }
         XCTAssertTrue(toggle.exists, "'Enable Sync' toggle not found")
-        let knob = toggle.otherElements.last ?? toggle
-        await tapSettled(knob)
+        await tapSwitchKnob(toggle)
         let urlField = app.textFields["sync-url-field"]
         await expectExists(urlField, "sync URL field not found")
         urlField.tap()
@@ -406,8 +417,9 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(syncNow)
         await settle(4)
 
-        XCTAssertEqual(await drillRows(sessionID: sid), 1,
-                       "expected exactly the session's one set row, got \(await drillRows(sessionID: sid))")
+        let rows = await drillRows(sessionID: sid)
+        XCTAssertEqual(rows, 1,
+                       "expected exactly the session's one set row, got \(rows)")
         // Exactly one upload: one upsert event for this session in the audit.
         guard let auditData = await supervisor("/audit"),
               let audit = String(data: auditData, encoding: .utf8) else {
@@ -429,7 +441,8 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(dialogDelete)
         await settle(3)
 
-        XCTAssertEqual(await drillRows(sessionID: sid), 0, "session rows should be removed after delete")
+        let rowsAfterDelete = await drillRows(sessionID: sid)
+        XCTAssertEqual(rowsAfterDelete, 0, "session rows should be removed after delete")
         guard let jsonlData = await supervisor("/audit"),
               let jsonl = String(data: jsonlData, encoding: .utf8) else {
             XCTFail("audit log not readable"); return
@@ -438,9 +451,10 @@ final class RepLogUITests: XCTestCase {
                       "tombstone event not recorded for \(sid)")
 
         // 6. Re-import the same session -> the server must refuse (409).
-        let status = await drillReimport(sessionID: sid)
+        let status = try await drillReimport(sessionID: sid)
         XCTAssertEqual(status, 409, "re-import of a tombstoned session must 409, got \(status)")
-        XCTAssertEqual(await drillRows(sessionID: sid), 0, "tombstoned session must not be resurrected")
+        let rowsAfterReimport = await drillRows(sessionID: sid)
+        XCTAssertEqual(rowsAfterReimport, 0, "tombstoned session must not be resurrected")
 
         await supervisorJSON("/stop")
     }
