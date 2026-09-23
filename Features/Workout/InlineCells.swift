@@ -142,7 +142,7 @@ struct InlineTextField: View {
         .foregroundStyle(Palette.textPrimary)
         .keyboardType(keyboard)
         .multilineTextAlignment(alignment)
-        .lineLimit(axis == nil ? nil : lineLimit)
+        .modifier(LineLimitIf(range: axis == nil ? nil : lineLimit))
         .labelsHidden()
         .submitLabel(.done)
         .focused(focus, equals: focusValue)
@@ -160,6 +160,20 @@ struct InlineTextField: View {
         draftBase = nil
         guard text == base else { return }
         commit(draft)
+    }
+}
+
+/// Applies a line limit only when the field is multi-line, so a one-line field
+/// can grow with its content.
+private struct LineLimitIf: ViewModifier {
+    let range: ClosedRange<Int>?
+
+    func body(content: Content) -> some View {
+        if let range {
+            content.lineLimit(range)
+        } else {
+            content
+        }
     }
 }
 
