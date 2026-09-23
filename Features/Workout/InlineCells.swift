@@ -55,30 +55,45 @@ struct InlineCell: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
-            TextField(
-                "",
-                text: Binding(
-                    get: { shown },
-                    set: { newValue in
-                        if typed == nil { draftBase = value }
-                        typed = newValue
-                    }
-                ),
-                prompt: Text("—").foregroundStyle(Palette.textSecondary.opacity(0.6))
-            )
-            .textFieldStyle(.plain)
-            .font(Typography.mono(17, isEmpty ? .regular : .bold))
-            .foregroundStyle(isEmpty ? Palette.textSecondary.opacity(0.6) : Palette.textPrimary)
-            .keyboardType(keyboard)
-            .multilineTextAlignment(alignment)
-            .submitLabel(.done)
-            .fixedSize(horizontal: !wide, vertical: false)
-            .frame(maxWidth: wide ? .infinity : nil, alignment: .leading)
-            .focused(focus, equals: focusValue)
-            .accessibilityIdentifier(id)
-            .onSubmit { finishEditing() }
-            .onChange(of: isFocused) { _, focused in
-                if !focused { finishEditing() }
+            // The empty state is drawn as a sibling, not as the field's
+            // `prompt:` — with a custom prompt style, iOS renders the text
+            // being typed in the prompt's grey while the keyboard is up, so a
+            // value you are entering looks like a placeholder.
+            ZStack(alignment: wide ? .leading : .center) {
+                if isEmpty {
+                    Text("—")
+                        .font(Typography.mono(17))
+                        .foregroundStyle(Palette.textSecondary.opacity(0.6))
+                        .allowsHitTesting(false)
+                }
+                TextField(
+                    "",
+                    text: Binding(
+                        get: { shown },
+                        set: { newValue in
+                            if typed == nil { draftBase = value }
+                            typed = newValue
+                        }
+                    )
+                )
+                .textFieldStyle(.plain)
+                .font(Typography.mono(17, .bold))
+                .foregroundStyle(Palette.textPrimary)
+                .keyboardType(keyboard)
+                .multilineTextAlignment(alignment)
+                .submitLabel(.done)
+                .fixedSize(horizontal: !wide, vertical: false)
+                // A minimum width keeps an EMPTY box focusable: a zero-width
+                // field takes the keyboard but gives no caret to aim at.
+                .frame(minWidth: wide ? nil : 44,
+                       maxWidth: wide ? .infinity : nil,
+                       alignment: .leading)
+                .focused(focus, equals: focusValue)
+                .accessibilityIdentifier(id)
+                .onSubmit { finishEditing() }
+                .onChange(of: isFocused) { _, focused in
+                    if !focused { finishEditing() }
+                }
             }
         }
         .frame(minWidth: wide ? nil : 44, maxWidth: wide ? .infinity : nil)
@@ -124,32 +139,51 @@ struct InlineTextField: View {
     private var isFocused: Bool { focus.wrappedValue == focusValue }
     private var shown: String { typed ?? text }
 
+    /// Where the placeholder sits, matching the field's own alignment.
+    private var zAlignment: Alignment {
+        switch alignment {
+        case .center: .center
+        case .trailing: .trailing
+        default: axis == nil ? .leading : .topLeading
+        }
+    }
+
     var body: some View {
-        TextField(
-            "",
-            text: Binding(
-                get: { shown },
-                set: { newValue in
-                    if typed == nil { draftBase = text }
-                    typed = newValue
-                }
-            ),
-            prompt: Text(placeholder).foregroundStyle(Palette.textSecondary),
-            axis: axis ?? .horizontal
-        )
-        .textFieldStyle(.plain)
-        .font(font)
-        .foregroundStyle(Palette.textPrimary)
-        .keyboardType(keyboard)
-        .multilineTextAlignment(alignment)
-        .modifier(LineLimitIf(range: axis == nil ? nil : lineLimit))
-        .labelsHidden()
-        .submitLabel(.done)
-        .focused(focus, equals: focusValue)
-        .accessibilityIdentifier(id)
-        .onSubmit { finishEditing() }
-        .onChange(of: isFocused) { _, focused in
-            if !focused { finishEditing() }
+        // The placeholder is a sibling Text, not the field's `prompt:` — with a
+        // custom prompt style, iOS renders text being typed in the prompt's
+        // grey while the keyboard is up (see `InlineCell`).
+        ZStack(alignment: zAlignment) {
+            if shown.isEmpty {
+                Text(placeholder)
+                    .font(font)
+                    .foregroundStyle(Palette.textSecondary)
+                    .allowsHitTesting(false)
+            }
+            TextField(
+                "",
+                text: Binding(
+                    get: { shown },
+                    set: { newValue in
+                        if typed == nil { draftBase = text }
+                        typed = newValue
+                    }
+                ),
+                axis: axis ?? .horizontal
+            )
+            .textFieldStyle(.plain)
+            .font(font)
+            .foregroundStyle(Palette.textPrimary)
+            .keyboardType(keyboard)
+            .multilineTextAlignment(alignment)
+            .modifier(LineLimitIf(range: axis == nil ? nil : lineLimit))
+            .labelsHidden()
+            .submitLabel(.done)
+            .focused(focus, equals: focusValue)
+            .accessibilityIdentifier(id)
+            .onSubmit { finishEditing() }
+            .onChange(of: isFocused) { _, focused in
+                if !focused { finishEditing() }
+            }
         }
     }
 
