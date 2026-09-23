@@ -64,14 +64,17 @@ struct OutboxTests {
                                 lastAttempt: ["s1": now]) == ["s1"])
     }
 
-    @Test("delete resolves the session")
+    @Test("delete removes the entry (local-only, never re-uploaded)")
     func delete() {
         var ob = Outbox()
         ob.finish("s1")
         ob.uploadSucceeded("s1")
         ob.delete("s1")
-        #expect(ob.state(of: "s1") == .uploaded)
+        // The entry is gone: an unseen session is .local and never due, and
+        // the queued count no longer includes it.
+        #expect(ob.state(of: "s1") == .local)
         #expect(ob.dueForUpload().isEmpty)
+        #expect(ob.queuedCount == 0)
     }
 
     @Test("queuedCount counts queued/dirty/failed only")

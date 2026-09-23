@@ -223,7 +223,10 @@ struct LogTabView: View {
             let n = sync.outbox.queuedCount
             return "\(n) to sync"
         }
-        return "Sync"
+        // The engine's status text carries the rest: the auth-failure state,
+        // "Sync off", and "Up to date · <relative time>" (or plain
+        // "Up to date" before the first sync).
+        return sync.statusText
     }
 
     /// Delete the pending row. Local only: `sessionDeleted` drops it from the

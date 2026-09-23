@@ -96,7 +96,7 @@ struct ProfileTabView: View {
                             .foregroundStyle(Palette.textSecondary)
                     }
                     HStack {
-                        Text("Data is synced automatically when finishing a workout.")
+                        Text("Sync is manual: tap the sync button on the Log when you want to upload.")
                             .font(.caption)
                             .foregroundStyle(Palette.textSecondary)
                     }

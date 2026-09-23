@@ -28,8 +28,10 @@ dependencies); finished sessions can optionally sync to a flat
 - **kg/lb** global unit with per-exercise override inside a workout.
 - **CSV export** (same bytes the sync service stores) and in-app import to
   rebuild a fresh phone from a file.
-- **Offline-first** — sync catches up later; the outbox queues finished
-  sessions, retries with backoff, and tombstones deletions.
+- **Offline-first** — sync is manual (the sync button on the Log shows what
+  is waiting); the outbox queues finished sessions and retries with backoff.
+  Deleting a workout on the phone is local-only: a copy that already reached
+  the sync database stays there.
 
 ## The RPE column
 

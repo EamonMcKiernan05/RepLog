@@ -5,7 +5,7 @@ import Foundation
 ///   local ──finish──► queued ──upload ok──► uploaded
 ///   uploaded ──edit──► dirty ──re-post ok──► uploaded
 ///   queued/dirty/failed ──upload fail──► failed ──retry──► queued
-///   delete ──► tombstone (DELETE posted)
+///   delete ──► removed (local-only: nothing is posted, the entry is gone)
 ///
 /// Pure and synchronous so every transition is unit-testable.
 struct Outbox {
@@ -44,8 +44,13 @@ struct Outbox {
         }
     }
 
+    /// Local-only delete: the entry is REMOVED from the queue so a deleted
+    /// session can never be re-uploaded. Nothing is posted to the service —
+    /// a copy that already reached the sync database stays there (owner
+    /// rule, 2026-09-23).
     mutating func delete(_ id: String) {
-        states[id] = .uploaded   // tombstone posted; treat as resolved
+        states[id] = nil
+        attempts[id] = nil
     }
 
     /// Sessions that need an upload now (queued, dirty, or failed-with-backoff-elapsed).
