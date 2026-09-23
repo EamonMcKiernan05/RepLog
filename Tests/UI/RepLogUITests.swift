@@ -598,11 +598,18 @@ final class RepLogUITests: XCTestCase {
         XCTAssertEqual((healthResult?.1 as? HTTPURLResponse)?.statusCode, 200,
                        "drill service not reachable from the simulator at \(drillServiceURL)/v1/health")
 
+        // The queue survived the restart and is VISIBLE from the Log without
+        // opening Profile: the sync control reads "1 to sync".
+        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
+        await expectExists(app.buttons["plus"], "Log tab not shown before syncing")
+        let queuedLabel = app.staticTexts
+            .matching(NSPredicate(format: "label BEGINSWITH '1 to sync'")).firstMatch
+        await expectExists(queuedLabel,
+                           "the Log's sync control should read '1 to sync' while one session is queued")
+
         // Sync is manual (owner request, 2026-09-23): nothing uploads on launch
         // or when the network comes back, so prove the queue waits, then tap the
         // Log's sync control and poll for the upload.
-        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
-        await expectExists(app.buttons["plus"], "Log tab not shown before syncing")
         try? await Task.sleep(nanoseconds: 8_000_000_000)
         let rowsWithoutTap = await drillCSVDataRows()
         XCTAssertEqual(rowsWithoutTap, 0,
