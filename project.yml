@@ -10,6 +10,11 @@ settings:
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     GENERATE_INFOPLIST_FILE: NO
+    # Eamon's Apple Developer team (Individual, paid). With Automatic
+    # signing this lets Xcode create the explicit App ID + profile the
+    # capabilities need (HealthKit, app group) instead of the wildcard XC
+    # profile, and keeps the iPhone a valid run destination.
+    DEVELOPMENT_TEAM: 7729UBUJQX
 targets:
   RepLog:
     type: application
@@ -67,6 +72,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog.widget
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 7729UBUJQX
         SKIP_INSTALL: YES
     info:
       path: Widget/RepLogWidget-Info.plist
