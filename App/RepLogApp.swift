@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Foundation
 
 @main
 struct RepLogApp: App {
@@ -35,6 +36,15 @@ struct RepLogApp: App {
                 defaults.removePersistentDomain(forName: bundleID)
             }
             UserDefaults.standard.removePersistentDomain(forName: bundleID)
+            // The SwiftData store is the other half of "persisted state", and
+            // leaving it behind is not harmless: the outbox is rebuilt from
+            // each session's syncState (SyncEngine.rehydrateOutbox), so a
+            // session left queued by an earlier run re-uploads the moment a
+            // sync URL is configured. That is how the offline drill uploaded a
+            // previous session on top of its own and read 9 CSV rows where it
+            // asserts 1. Safe here: the container is created lazily, on first
+            // access, so nothing has the store open yet.
+            wipeStore()
         }
         let s = DataStore()
         let set = Settings()
@@ -164,3 +174,16 @@ private func seedDemoData(store: DataStore, settings: Settings) {
     ctx.insert(BodyweightEntry(date: cal.startOfDay(for: .now), weightKg: 102.0))
     store.save()
 }
+
+/// Deletes the on-disk SwiftData store so `-ResetRepLog YES` really does start
+/// from nothing. File-scope, called from `RepLogApp.init` before anything
+/// creates the container (it is created lazily, on first access).
+private func wipeStore() {
+    let fm = FileManager.default
+    guard let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+        return
+    }
+    // The directory holds RepLog.sqlite plus its -shm / -wal sidecars.
+    try? fm.removeItem(at: base.appendingPathComponent("RepLog", isDirectory: true))
+}
+
