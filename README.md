@@ -84,6 +84,24 @@ that can `ssh mac`:
 scripts/mac-tests.sh
 ```
 
+## Installing on a device (over the air)
+
+Ad-hoc builds are published to the fleet's app-downloads host, so a phone can
+install without Xcode, a cable or Bonjour:
+
+1. On the Mac, archive and export an ad-hoc IPA (`xcodebuild -scheme RepLog
+   -configuration Release -destination "generic/platform=iOS" -archivePath
+   /tmp/RepLog.xcarchive archive`, then `-exportArchive` with `method: ad-hoc`).
+   Signing needs the Mac's **GUI session** (`launchctl asuser`) — a plain SSH
+   session cannot reach the signing keychain.
+2. Copy the IPA to the host and publish it with
+   `/srv/downloads/publish.sh --slug replog --ipa /tmp/RepLog.ipa --name RepLog
+   --bundle im.eamon.replog --version 1.0.0 --base https://replog.eamonmckiernan.im`.
+3. On the iPhone, open `https://replog.eamonmckiernan.im/replog/` **in Safari**
+   and tap Install RepLog.
+
+Ad-hoc means only devices listed in the provisioning profile can install it.
+
 ## Running the service
 
 ```bash
