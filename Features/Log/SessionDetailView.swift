@@ -8,6 +8,9 @@ struct SessionDetailView: View {
     @Environment(SyncEngine.self) private var sync
     let session: Session
     @State private var confirmDelete = false
+    /// Read-only screen: no cell here is editable, but the cards still take a
+    /// focus binding (see `CellFocus`).
+    @FocusState private var focus: CellFocus?
 
     var body: some View {
         ScrollView {
@@ -17,7 +20,8 @@ struct SessionDetailView: View {
                     ExerciseCardView(
                         entry: entry,
                         unit: entry.displayUnit(global: settings.unit),
-                        isEditing: false
+                        isEditing: false,
+                        focus: $focus
                     )
                 }
             }

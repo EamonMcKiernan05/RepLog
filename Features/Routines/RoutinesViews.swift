@@ -85,8 +85,9 @@ struct RoutineDetailView: View {
     let routine: Routine
     @State private var showAddExercise = false
     @State private var editExercise: RoutineExercise?
-    @State private var showRename = false
-    @State private var showNotes = false
+    /// Which inline cell (the name, the notes) has the keyboard — the fields
+    /// are typed in place, no sheets (see `CellFocus`).
+    @FocusState private var focus: CellFocus?
 
     var body: some View {
         ScrollView {
@@ -106,18 +107,22 @@ struct RoutineDetailView: View {
 
                 // Routine card
                 VStack(spacing: 0) {
-                    HStack {
-                        Text(routine.name)
-                            .font(.body.weight(.semibold))
-                        Spacer()
-                        if showRename {
-                            TextField("Name", text: Binding(
-                                get: { routine.name },
-                                set: { routine.name = $0; store.save() }
-                            ))
-                            .multilineTextAlignment(.trailing)
+                    InlineTextField(
+                        placeholder: "Name",
+                        id: "routine-name-field",
+                        text: routine.name,
+                        font: .body.weight(.semibold),
+                        focus: $focus,
+                        focusValue: CellFocus(owner: ObjectIdentifier(routine), field: .routineName),
+                        // An empty name would leave the routines list and the
+                        // navigation title blank, so a cleared box reverts.
+                        commit: { text in
+                            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !trimmed.isEmpty else { return }
+                            routine.name = trimmed
+                            store.save()
                         }
-                    }
+                    )
                     .padding()
                     Divider()
                     HStack {
@@ -137,20 +142,19 @@ struct RoutineDetailView: View {
                         store.save()
                     }
                     Divider()
-                    HStack {
-                        Text(routine.notes.isEmpty ? "Notes" : routine.notes)
-                            .foregroundStyle(routine.notes.isEmpty ? Palette.textSecondary : Palette.textPrimary)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(Palette.textSecondary)
-                    }
+                    InlineTextField(
+                        placeholder: "Notes",
+                        id: "routine-notes-field",
+                        text: routine.notes,
+                        focus: $focus,
+                        focusValue: CellFocus(owner: ObjectIdentifier(routine), field: .notes),
+                        commit: { text in
+                            routine.notes = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                            store.save()
+                        }
+                    )
                     .padding(.horizontal)
                     .padding(.vertical, 10)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        showNotes = true
-                    }
                 }
                 .replogCard()
 
@@ -207,13 +211,16 @@ struct RoutineDetailView: View {
             }
             .padding(.vertical, 8)
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(Palette.bg)
         .navigationTitle(routine.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button { showRename.toggle() } label: { Label("Rename", systemImage: "pencil") }
+                    Button {
+                        focus = CellFocus(owner: ObjectIdentifier(routine), field: .routineName)
+                    } label: { Label("Rename", systemImage: "pencil") }
                     Button { duplicate() } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
                     Button(role: .destructive) {
                         store.context.delete(routine)
@@ -223,6 +230,7 @@ struct RoutineDetailView: View {
                     Image(systemName: "ellipsis.circle")
                 }
             }
+            KeyboardDoneButton(focus: $focus)
         }
         .sheet(isPresented: $showAddExercise) {
             SelectExerciseSheet(
@@ -234,9 +242,6 @@ struct RoutineDetailView: View {
         }
         .sheet(item: $editExercise) { re in
             RoutineExerciseEditorSheet(routineExercise: re)
-        }
-        .sheet(isPresented: $showNotes) {
-            RoutineNotesSheet(routine: routine)
         }
     }
 
@@ -302,28 +307,52 @@ struct RoutineExerciseEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     let routineExercise: RoutineExercise
     @State private var showReplace = false
+    /// The set counts are typed straight into their boxes (see `CellFocus`).
+    @FocusState private var focus: CellFocus?
+
+    private var owner: ObjectIdentifier { ObjectIdentifier(routineExercise) }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     LabeledContent("Warm Up Sets") {
-                        Stepper(value: Binding(
-                            get: { routineExercise.warmupSets },
-                            set: { routineExercise.warmupSets = $0; store.save() }
-                        ), in: 0...10) {
-                            Text("\(routineExercise.warmupSets)")
-                                .monospacedDigit()
-                        }
+                        InlineTextField(
+                            placeholder: "0",
+                            id: "warmup-sets-field",
+                            text: "\(routineExercise.warmupSets)",
+                            keyboard: .numberPad,
+                            alignment: .trailing,
+                            font: Typography.mono(17),
+                            focus: $focus,
+                            focusValue: CellFocus(owner: owner, field: .warmup),
+                            // Out-of-range or unparseable input is refused and
+                            // the box snaps back to the stored count.
+                            commit: { text in
+                                guard let v = Int(text.trimmingCharacters(in: .whitespaces)) else { return }
+                                routineExercise.warmupSets = min(max(v, 0), 10)
+                                store.save()
+                            }
+                        )
+                        .frame(width: 64)
                     }
                     LabeledContent("Sets") {
-                        Stepper(value: Binding(
-                            get: { routineExercise.workingSets },
-                            set: { routineExercise.workingSets = $0; store.save() }
-                        ), in: 1...20) {
-                            Text("\(routineExercise.workingSets)")
-                                .monospacedDigit()
-                        }
+                        InlineTextField(
+                            placeholder: "0",
+                            id: "working-sets-field",
+                            text: "\(routineExercise.workingSets)",
+                            keyboard: .numberPad,
+                            alignment: .trailing,
+                            font: Typography.mono(17),
+                            focus: $focus,
+                            focusValue: CellFocus(owner: owner, field: .working),
+                            commit: { text in
+                                guard let v = Int(text.trimmingCharacters(in: .whitespaces)) else { return }
+                                routineExercise.workingSets = min(max(v, 1), 20)
+                                store.save()
+                            }
+                        )
+                        .frame(width: 64)
                     }
                 }
                 Section("Scheme") {
@@ -339,10 +368,19 @@ struct RoutineExerciseEditorSheet: View {
                     }
                 }
                 Section("Notes") {
-                    TextField("Per-exercise notes", text: Binding(
-                        get: { routineExercise.notes },
-                        set: { routineExercise.notes = $0; store.save() }
-                    ), axis: .vertical)
+                    InlineTextField(
+                        placeholder: "Per-exercise notes",
+                        id: "routine-exercise-notes-field",
+                        text: routineExercise.notes,
+                        axis: .vertical,
+                        lineLimit: 1...4,
+                        focus: $focus,
+                        focusValue: CellFocus(owner: owner, field: .exerciseNote),
+                        commit: { text in
+                            routineExercise.notes = text
+                            store.save()
+                        }
+                    )
                 }
                 Section {
                     Button("Replace Exercise") {
@@ -364,6 +402,7 @@ struct RoutineExerciseEditorSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+                KeyboardDoneButton(focus: $focus)
             }
             .sheet(isPresented: $showReplace) {
                 SelectExerciseSheet(
@@ -376,35 +415,5 @@ struct RoutineExerciseEditorSheet: View {
                 )
             }
         }
-    }
-}
-
-/// Routine notes sheet (helper to present a text editor).
-struct RoutineNotesSheet: View {
-    let routine: Routine
-    @Environment(\.dismiss) private var dismiss
-    @Environment(DataStore.self) private var store
-    @State private var text = ""
-
-    var body: some View {
-        NavigationStack {
-            TextField("Routine notes", text: $text, axis: .vertical)
-                .lineLimit(3...8)
-                .padding()
-                .onAppear { text = routine.notes }
-                .navigationTitle("Notes")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
-                            routine.notes = text
-                            store.save()
-                            dismiss()
-                        }
-                    }
-                }
-        }
-        .presentationDetents([.medium])
     }
 }

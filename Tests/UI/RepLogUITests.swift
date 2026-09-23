@@ -166,31 +166,47 @@ final class RepLogUITests: XCTestCase {
         let abWheel = app.buttons["pick-Ab Wheel"]
         await expectExists(abWheel, "'Ab Wheel' not found")
         await tapSettled(abWheel)
-        await expectExists(app.buttons["rpe-cell"], "RPE cell not shown after adding exercise")
+        await expectExists(app.textFields["rpe-cell"], "RPE cell not shown after adding exercise")
     }
 
-    /// Fill the first set's weight/reps/RPE through the real input sheets
-    /// (XCUITest is the only way — agent-device keystrokes do not update
-    /// SwiftUI bindings).
+    /// Type into a cell that is edited in place — no sheet. XCUITest is the
+    /// only way in (agent-device keystrokes do not update SwiftUI bindings).
+    ///
+    /// The box may already hold a value (the target placeholder from the last
+    /// time this exercise was done), and typing appends, so clear it first.
+    @MainActor
+    private func typeInCell(_ id: String, _ text: String) async {
+        let field = app.textFields[id]
+        await expectExists(field, "'\(id)' box not found")
+        field.tap()
+        await settle(0.6)
+        let existing = (field.value as? String) ?? ""
+        if !existing.isEmpty, existing != "—" {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
+                                  count: existing.count + 2))
+            await settle(0.3)
+        }
+        field.typeText(text)
+        await settle(0.3)
+    }
+
+    /// Close the keyboard with the toolbar Done button. The numeric pads have
+    /// no return key, and the value is committed when the box loses focus.
+    @MainActor
+    private func dismissKeyboard() async {
+        let done = app.buttons["keyboard-done"]
+        if await wait(for: done, timeout: 5) {
+            await tapSettled(done)
+        }
+    }
+
+    /// Fill the first set's weight/reps/RPE by typing straight into each box.
     @MainActor
     private func fillFirstSet(weight: String, reps: String, rpe: String) async {
-        await tapSettled(app.buttons["weight-cell"])
-        let w = app.textFields["number-field"]
-        await expectExists(w, "weight field not found")
-        w.tap(); w.typeText(weight)
-        await tapSettled(app.buttons["done"])
-
-        await tapSettled(app.buttons["reps-cell"])
-        let r = app.textFields["number-field"]
-        await expectExists(r, "reps field not found")
-        r.tap(); r.typeText(reps)
-        await tapSettled(app.buttons["done"])
-
-        await tapSettled(app.buttons["rpe-cell"])
-        let rp = app.textFields["rpe-field"]
-        await expectExists(rp, "RPE field not found")
-        rp.tap(); rp.typeText(rpe)
-        await tapSettled(app.buttons["done"])
+        await typeInCell("weight-cell", weight)
+        await typeInCell("reps-cell", reps)
+        await typeInCell("rpe-cell", rpe)
+        await dismissKeyboard()
     }
 
     // MARK: - RPE entry
@@ -201,32 +217,27 @@ final class RepLogUITests: XCTestCase {
         await startFreshWorkout()
         await addFirstExercise()
 
-        await tapSettled(app.buttons["rpe-cell"])
-        let field = app.textFields["rpe-field"]
-        await expectExists(field, "RPE field not found")
-        field.tap()
-        field.typeText("8.5")
-        let done = app.buttons["done"]
-        await expectExists(done, "RPE 'Done' not found")
-        await tapSettled(done)
+        await typeInCell("rpe-cell", "8.5")
+        await dismissKeyboard()
 
-        // Read it back: the RPE cell now shows 8.5.
-        let rpeCell = app.buttons["rpe-cell"]
-        await expectExists(rpeCell, "RPE cell missing after entry")
-        let label = rpeCell.label ?? ""
-        XCTAssertTrue(label.contains("8.5"), "RPE cell should read 8.5, got '\(label)'")
+        // Read it back: the RPE box now shows 8.5 — typed in place, with no
+        // sheet in between.
+        let field = app.textFields["rpe-cell"]
+        await expectExists(field, "RPE box missing after entry")
+        XCTAssertEqual(field.value as? String, "8.5",
+                       "RPE box should read 8.5, got '\((field.value as? String) ?? "nil")'")
     }
 
     /// The quick chips must display whole values without a trailing ".0"
-    /// (plan §3.2: chips 6, 7, 7.5, 8, 8.5, 9; "displays 8, not 8.0").
+    /// (plan §3.2: chips 6, 7, 7.5, 8, 8.5, 9; "displays 8, not 8.0"). They
+    /// now sit under the row whose RPE box is being edited.
     @MainActor
     func testRPEChipsDisplayWholeValues() async {
         await completeOnboarding()
         await startFreshWorkout()
         await addFirstExercise()
 
-        await tapSettled(app.buttons["rpe-cell"])
-        await expectExists(app.textFields["rpe-field"], "RPE sheet not found")
+        await tapSettled(app.textFields["rpe-cell"])
 
         // Whole-value chips read exactly "6" / "8" — no "6.0" / "8.0".
         for chip in ["6", "7", "8", "9"] {
@@ -243,12 +254,12 @@ final class RepLogUITests: XCTestCase {
 
         // Tapping the "8" chip stores 8 and the cell displays "8", not "8.0".
         await tapSettled(app.buttons["rpe-chip-8"])
-        await tapSettled(app.buttons["done"])
-        let rpeCell = app.buttons["rpe-cell"]
-        await expectExists(rpeCell, "RPE cell missing after chip tap")
-        let label = rpeCell.label ?? ""
-        XCTAssertTrue(label.contains("8") && !label.contains("8.0"),
-                      "RPE cell should read '8' (not '8.0'), got '\(label)'")
+        await settle(0.8)
+        let field = app.textFields["rpe-cell"]
+        await expectExists(field, "RPE box missing after chip tap")
+        let shown = (field.value as? String) ?? ""
+        XCTAssertTrue(shown.contains("8") && !shown.contains("8.0"),
+                      "RPE box should read '8' (not '8.0'), got '\(shown)'")
     }
 
     // MARK: - Session row navigation
@@ -343,14 +354,9 @@ final class RepLogUITests: XCTestCase {
         await startFreshWorkout()
         await addFirstExercise()
 
-        await tapSettled(app.buttons["notes-cell"])
-        let field = app.textFields["set-note-field"]
-        await expectExists(field, "set note field not found")
-        field.tap()
-        field.typeText("felt heavy")
-        let save = app.buttons["save-note"]
-        await expectExists(save, "note 'Save' not found")
-        await tapSettled(save)
+        // Typed straight into the row's Notes box — no note sheet.
+        await typeInCell("notes-cell", "felt heavy")
+        await dismissKeyboard()
 
         // The note renders as a second line under the row.
         let noteLine = app.staticTexts["felt heavy"]

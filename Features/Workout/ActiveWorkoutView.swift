@@ -12,8 +12,11 @@ struct ActiveWorkoutView: View {
 
     @State private var showTimer = false
     @State private var showAddExercise = false
-    @State private var showSessionNotes = false
     @State private var confirmFinish = false
+    /// Which inline cell (a set cell, an exercise note, the workout note) has
+    /// the keyboard. One value for the screen: every card shares it and the
+    /// keyboard's Done button clears it.
+    @FocusState private var focus: CellFocus?
     @State private var timer = RestTimerController()
     @State private var health = HealthService()
 
@@ -25,13 +28,15 @@ struct ActiveWorkoutView: View {
                     ExerciseCardView(
                         entry: entry,
                         unit: entry.displayUnit(global: settings.unit),
-                        isEditing: true
+                        isEditing: true,
+                        focus: $focus
                     )
                 }
                 addExerciseButton
             }
             .padding(.vertical, 8)
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(Palette.bg)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -79,7 +84,9 @@ struct ActiveWorkoutView: View {
                         Button { showAddExercise = true } label: {
                             Label("Add Exercise", systemImage: "plus")
                         }
-                        Button { showSessionNotes = true } label: {
+                        Button {
+                            focus = CellFocus(owner: ObjectIdentifier(session), field: .workoutNote)
+                        } label: {
                             Label("Workout Notes", systemImage: "text.alignleft")
                         }
                     } label: {
@@ -89,6 +96,9 @@ struct ActiveWorkoutView: View {
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)
             }
+            // The number pads have no return key: this is how the keyboard
+            // closes.
+            KeyboardDoneButton(focus: $focus)
         }
         .safeAreaInset(edge: .bottom) {
             if showTimer {
@@ -108,9 +118,6 @@ struct ActiveWorkoutView: View {
                     addSuperset(exercises)
                 }
             )
-        }
-        .sheet(isPresented: $showSessionNotes) {
-            SessionNotesSheet(session: session)
         }
         .confirmationDialog("Finish this workout?", isPresented: $confirmFinish, titleVisibility: .visible) {
             Button("Finish", role: .none) { finish() }
@@ -136,22 +143,19 @@ struct ActiveWorkoutView: View {
             Divider()
             bodyweightRow
             Divider()
-            Button {
-                showSessionNotes = true
-            } label: {
-                HStack {
-                    Text(session.notes.isEmpty ? "Notes" : session.notes)
-                        .foregroundStyle(session.notes.isEmpty ? Palette.textSecondary : Palette.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(Palette.textSecondary)
+            InlineTextField(
+                placeholder: "Notes",
+                id: "session-notes-field",
+                text: session.notes,
+                focus: $focus,
+                focusValue: CellFocus(owner: ObjectIdentifier(session), field: .workoutNote),
+                commit: { text in
+                    session.notes = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    store.save()
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 10)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            )
+            .padding(.horizontal)
+            .padding(.vertical, 10)
         }
         .replogCard()
     }
@@ -290,38 +294,5 @@ struct ActiveWorkoutView: View {
             }
         }
         dismiss()
-    }
-}
-
-/// Session-level notes sheet.
-struct SessionNotesSheet: View {
-    let session: Session
-    @Environment(\.dismiss) private var dismiss
-    @Environment(DataStore.self) private var store
-    @State private var text: String = ""
-
-    var body: some View {
-        NavigationStack {
-            TextField("Workout note", text: $text, axis: .vertical)
-                .lineLimit(3...8)
-                .padding()
-                .onAppear { text = session.notes }
-                .navigationTitle("Workout Notes")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
-                            session.notes = text
-                            store.save()
-                            dismiss()
-                        }
-                        .fontWeight(.semibold)
-                    }
-                }
-        }
-        .presentationDetents([.medium])
     }
 }

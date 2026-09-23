@@ -202,28 +202,35 @@ final class RepLogVisualTourTests: XCTestCase {
             await tapLabel("Cancel")
             await settle(1)
 
-            // RPE sheet, then a note on the same set. The first RPE cell can
-            // sit half under the navigation bar, so nudge the content up
-            // first (a small drag, not a full swipe).
-            let rpeCell = app.buttons["rpe-cell"].firstMatch
+            // RPE typed in place (with the inline quick chips under the row),
+            // then a note typed straight into the row's Notes box. The first
+            // RPE box can sit half under the navigation bar, so nudge the
+            // content up first (a small drag, not a full swipe).
+            let rpeCell = app.textFields["rpe-cell"].firstMatch
             if rpeCell.exists, rpeCell.frame.minY < 200 {
                 let dragStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62))
                 let dragEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
                 dragStart.press(forDuration: 0.05, thenDragTo: dragEnd)
                 await settle(1)
             }
-            await tapAny([app.buttons["rpe-cell"].firstMatch], "rpe cell")
+            await tapAny([app.textFields["rpe-cell"].firstMatch], "rpe cell")
             await settle(1)
-            shot("10-rpe-sheet")
+            shot("10-rpe-inline")
             await tapAny([app.buttons["rpe-chip-8"]], "rpe chip 8")
-            await tapAny([app.buttons["done"]], "rpe done")
             await settle(0.8)
 
-            await tapAny([app.buttons["notes-cell"].firstMatch], "notes cell")
-            if await waitFor(app.textFields["set-note-field"], timeout: 6) {
-                app.textFields["set-note-field"].tap()
-                app.textFields["set-note-field"].typeText("felt heavy")
-                await tapAny([app.buttons["save-note"]], "save note")
+            await tapAny([app.textFields["notes-cell"].firstMatch], "notes cell")
+            await settle(0.8)
+            let noteField = app.textFields["notes-cell"].firstMatch
+            if noteField.exists {
+                let existing = (noteField.value as? String) ?? ""
+                if !existing.isEmpty, existing != "—" {
+                    noteField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
+                                              count: existing.count + 2))
+                    await settle(0.4)
+                }
+                noteField.typeText("felt heavy")
+                await tapAny([app.buttons["keyboard-done"]], "keyboard done")
             }
             await settle(1)
         }

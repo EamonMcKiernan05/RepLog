@@ -4,14 +4,22 @@ import SwiftData
 /// One set row (plan §6.2, §3.2): circled set number, then type-appropriate
 /// columns — Weight · Reps · **RPE** · Notes (weight_reps). RPE sits
 /// immediately after Reps, before Notes, exactly as the spec requires.
+///
+/// Every cell is edited in place: tap the box and type (no sheet). In a
+/// finished session (`isEditing == false`) the same boxes render as plain
+/// text.
 struct SetRowView: View {
+    @Environment(DataStore.self) private var store
     let set: SetEntry
     let type: ExerciseType
     let unit: WeightUnit
     var isEditing: Bool
-    var onRPE: (SetEntry) -> Void
-    var onNumber: (ExerciseCardView.NumberField) -> Void
-    var onNotes: (SetEntry) -> Void
+    /// Shared with the whole screen so one keyboard "Done" clears whatever is
+    /// being typed, and the card can reveal the RPE chips under the row being
+    /// edited.
+    let focus: FocusState<CellFocus?>.Binding
+
+    private var owner: ObjectIdentifier { ObjectIdentifier(set) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -37,64 +45,74 @@ struct SetRowView: View {
 
                 // Columns per type
                 if type.hasWeight {
-                    column(
+                    cell(
                         label: unit == .kg ? "Kg" : "Lb",
                         value: weightDisplay,
-                        isPlaceholder: weightDisplay.isEmpty,
                         id: "weight-cell",
-                        action: { onNumber(.weight(set)) }
+                        field: .weight,
+                        keyboard: .decimalPad,
+                        commit: commitWeight
                     )
                 }
                 if type.hasReps {
-                    column(
+                    cell(
                         label: "Reps",
                         value: set.reps.map(String.init) ?? "",
-                        isPlaceholder: set.reps == nil,
                         id: "reps-cell",
-                        action: { onNumber(.reps(set)) }
+                        field: .reps,
+                        keyboard: .numberPad,
+                        commit: commitReps
                     )
                 }
                 if type.hasTime {
-                    column(
+                    cell(
                         label: "Time",
                         value: timeDisplay,
-                        isPlaceholder: set.durationS == nil,
-                        action: { onNumber(.time(set)) }
+                        id: "time-cell",
+                        field: .time,
+                        keyboard: .decimalPad,
+                        commit: commitTime
                     )
                 }
                 if type.hasCardioExtras {
-                    column(
+                    cell(
                         label: "Dist",
                         value: set.distanceM.map { String(Int($0)) } ?? "",
-                        isPlaceholder: set.distanceM == nil,
-                        action: { onNumber(.distance(set)) }
+                        id: "distance-cell",
+                        field: .distance,
+                        keyboard: .decimalPad,
+                        commit: commitDistance
                     )
-                    column(
+                    cell(
                         label: "kcal",
                         value: set.kcal.map { String(Int($0)) } ?? "",
-                        isPlaceholder: set.kcal == nil,
-                        action: { onNumber(.kcal(set)) }
+                        id: "kcal-cell",
+                        field: .kcal,
+                        keyboard: .decimalPad,
+                        commit: commitKcal
                     )
                 }
                 // RPE column — after Reps/Time, before Notes.
                 if type.hasRPE {
-                    column(
+                    cell(
                         label: "RPE",
                         value: rpeDisplay,
-                        isPlaceholder: set.rpe == nil,
                         id: "rpe-cell",
-                        action: { if isEditing { onRPE(set) } }
+                        field: .rpe,
+                        keyboard: .decimalPad,
+                        commit: commitRPE
                     )
                 }
                 // Notes column
-                column(
+                cell(
                     label: "Notes",
-                    value: set.notes.isEmpty ? "" : set.notes,
-                    isPlaceholder: set.notes.isEmpty,
+                    value: set.notes,
                     id: "notes-cell",
-                    action: { if isEditing { onNotes(set) } }
+                    field: .notes,
+                    keyboard: .default,
+                    wide: true,
+                    commit: commitNotes
                 )
-                .frame(maxWidth: .infinity)
             }
             .padding(.vertical, 6)
 
@@ -110,6 +128,72 @@ struct SetRowView: View {
         .padding(.horizontal, 12)
         .contentShape(Rectangle())
     }
+
+    // MARK: - Columns
+
+    /// Editing: the box is the input. Finished: plain text, exactly as before.
+    @ViewBuilder
+    private func cell(label: String, value: String, id: String,
+                      field: CellFocus.Field, keyboard: UIKeyboardType,
+                      wide: Bool = false,
+                      commit: @escaping (String) -> Void) -> some View {
+        if isEditing {
+            InlineCell(
+                label: label,
+                id: id,
+                value: value,
+                keyboard: keyboard,
+                wide: wide,
+                focus: focus,
+                focusValue: CellFocus(owner: owner, field: field),
+                commit: commit
+            )
+        } else {
+            column(label: label, value: value, isPlaceholder: value.isEmpty, id: id)
+                .modifier(WideIf(wide: wide))
+        }
+    }
+
+    @ViewBuilder
+    private func column(label: String, value: String, isPlaceholder: Bool,
+                        id: String?) -> some View {
+        VStack(spacing: 1) {
+            Text(label)
+                .font(Typography.label)
+                .foregroundStyle(Palette.textSecondary)
+            Text(value.isEmpty ? "—" : value)
+                .font(Typography.mono(17, value.isEmpty ? .regular : .bold))
+                .foregroundStyle(isPlaceholder ? Palette.textSecondary.opacity(0.6) : Palette.textPrimary)
+        }
+        .frame(minWidth: 44)
+        .modifier(ColumnID(id: id))
+    }
+
+    private struct WideIf: ViewModifier {
+        let wide: Bool
+        func body(content: Content) -> some View {
+            if wide {
+                content.frame(maxWidth: .infinity)
+            } else {
+                content
+            }
+        }
+    }
+
+    /// Applies an accessibility identifier when present (keeps the call sites
+    /// clean).
+    private struct ColumnID: ViewModifier {
+        let id: String?
+        func body(content: Content) -> some View {
+            if let id {
+                content.accessibilityIdentifier(id)
+            } else {
+                content
+            }
+        }
+    }
+
+    // MARK: - Display
 
     private var weightDisplay: String {
         guard let kg = set.weightKg else { return "" }
@@ -129,43 +213,90 @@ struct SetRowView: View {
 
     private var rpeDisplay: String {
         guard let rpe = set.rpe else { return "" }
-        let tenths = Int((rpe * 10).rounded())
+        return SetRowView.rpeText(rpe)
+    }
+
+    /// RPE reads as `8`, never `8.0` (plan §3.2).
+    static func rpeText(_ v: Double) -> String {
+        let tenths = Int((v * 10).rounded())
         if tenths % 10 == 0 {
             return String(tenths / 10)
         }
-        return String(format: "%.1f", rpe)
+        return String(format: "%.1f", v)
     }
 
-    @ViewBuilder
-    private func column(label: String, value: String, isPlaceholder: Bool,
-                        id: String? = nil, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 1) {
-                Text(label)
-                    .font(Typography.label)
-                    .foregroundStyle(Palette.textSecondary)
-                Text(value.isEmpty ? "—" : value)
-                    .font(Typography.mono(17, value.isEmpty ? .regular : .bold))
-                    .foregroundStyle(isPlaceholder ? Palette.textSecondary.opacity(0.6) : Palette.textPrimary)
-            }
-            .frame(minWidth: 44)
+    // MARK: - Commits
+    //
+    // Each one parses the typed text and writes the model. An empty box clears
+    // the value; text that does not parse is ignored (the box snaps back to the
+    // stored value). Values are written on submit / focus loss, never per
+    // keystroke.
+
+    private func commitWeight(_ text: String) {
+        let t = text.trimmingCharacters(in: .whitespaces)
+        if t.isEmpty {
+            set.weightKg = nil
+        } else if let v = Double(t), v >= 0 {
+            set.weightKg = unit.toKg(v)
         }
-        .buttonStyle(.plain)
-        .disabled(!isEditing)
-        .modifier(ColumnID(id: id))
+        store.save()
     }
 
-    /// Applies an accessibility identifier when present (keeps the call sites
-    /// clean).
-    private struct ColumnID: ViewModifier {
-        let id: String?
-        func body(content: Content) -> some View {
-            if let id {
-                content.accessibilityIdentifier(id)
-            } else {
-                content
-            }
+    private func commitReps(_ text: String) {
+        let t = text.trimmingCharacters(in: .whitespaces)
+        if t.isEmpty {
+            set.reps = nil
+        } else if let v = Int(t), v >= 0 {
+            set.reps = v
         }
+        store.save()
+    }
+
+    private func commitTime(_ text: String) {
+        let t = text.trimmingCharacters(in: .whitespaces)
+        if t.isEmpty {
+            set.durationS = nil
+        } else if let v = Double(t), v >= 0 {
+            set.durationS = v
+        }
+        store.save()
+    }
+
+    private func commitDistance(_ text: String) {
+        let t = text.trimmingCharacters(in: .whitespaces)
+        if t.isEmpty {
+            set.distanceM = nil
+        } else if let v = Double(t), v >= 0 {
+            set.distanceM = v
+        }
+        store.save()
+    }
+
+    private func commitKcal(_ text: String) {
+        let t = text.trimmingCharacters(in: .whitespaces)
+        if t.isEmpty {
+            set.kcal = nil
+        } else if let v = Double(t), v >= 0 {
+            set.kcal = v
+        }
+        store.save()
+    }
+
+    /// RPE snaps to half steps inside 1–10 (the old sheet's rule, now applied
+    /// to what is typed straight into the cell).
+    private func commitRPE(_ text: String) {
+        let t = text.trimmingCharacters(in: .whitespaces)
+        if t.isEmpty {
+            set.rpe = nil
+        } else if let v = Double(t) {
+            set.rpe = min(max((v * 2).rounded() / 2, 1.0), 10.0)
+        }
+        store.save()
+    }
+
+    private func commitNotes(_ text: String) {
+        set.notes = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        store.save()
     }
 
     private var accessibilityText: String {
