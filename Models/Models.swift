@@ -118,7 +118,9 @@ final class Session {
     var rowAccessibilityText: String {
         let dateText = date.formatted(.dateTime.weekday(.wide).day().month())
         let name = routineName.isEmpty ? "Workout" : routineName
-        return "\(dateText), \(name), \(summaryLines.joined(separator: ", ")), \(durationText)"
+        // An open workout has no duration yet: say so rather than "<1 min".
+        let tail = endTime == nil ? "In progress" : durationText
+        return "\(dateText), \(name), \(summaryLines.joined(separator: ", ")), \(tail)"
     }
 }
 

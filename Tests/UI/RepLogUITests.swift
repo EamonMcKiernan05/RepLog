@@ -209,6 +209,27 @@ final class RepLogUITests: XCTestCase {
         await dismissKeyboard()
     }
 
+    /// Finish the open workout and answer the confirmation. The checkmark asks
+    /// first now (owner request, 2026-09-23), so every finish has to go through
+    /// the dialog.
+    @MainActor
+    private func finishWorkout() async {
+        await tapSettled(app.buttons["finish-workout"])
+        let confirm = app.buttons["Finish"]
+        await expectExists(confirm, "finish confirmation dialog not shown")
+        await tapSettled(confirm)
+        await settle(1.5)
+    }
+
+    /// Leave the pushed screen the way the owner does: an edge swipe.
+    @MainActor
+    private func swipeBackFromPushedScreen() async {
+        let left = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5))
+        let middle = app.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.5))
+        left.press(forDuration: 0.05, thenDragTo: middle)
+        await settle(1.5)
+    }
+
     // MARK: - RPE entry
 
     @MainActor
@@ -274,7 +295,7 @@ final class RepLogUITests: XCTestCase {
         await startFreshWorkout()
         await addFirstExercise()
         await fillFirstSet(weight: "100", reps: "5", rpe: "8")
-        await tapSettled(app.buttons["finish-workout"])
+        await finishWorkout()
         // Finishing pops the pushed workout (ActiveWorkoutView.finish() ->
         // dismiss() -> the Log root), so the Log's "+" toolbar button is the
         // proof we are back on the Log tab before hunting for the row.
@@ -285,6 +306,84 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(row)
         let detail = app.buttons["session-detail-menu"]
         await expectExists(detail, "session detail did not open after tapping the row")
+    }
+
+    // MARK: - Finishing, leaving and deleting a workout (owner report, 2026-09-23)
+
+    /// The checkmark must ask before ending the workout: cancel keeps it open,
+    /// confirming finishes it.
+    @MainActor
+    func testFinishAsksBeforeEnding() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
+
+        await tapSettled(app.buttons["finish-workout"])
+        let cancel = app.buttons["Cancel"]
+        await expectExists(cancel, "finish confirmation dialog not shown")
+        await tapSettled(cancel)
+        await settle(1)
+        // Cancelling must not end the workout.
+        await expectExists(app.buttons["add-exercise"],
+                           "cancelling the finish dialog closed the workout")
+
+        await finishWorkout()
+        await expectExists(app.buttons["plus"], "workout did not finish after confirming")
+    }
+
+    /// Leaving an open workout must not strand it: the Log marks it in progress,
+    /// and tapping it reopens the EDITOR. It used to open the read-only detail,
+    /// which hid the End Time row and had no control that could end it — the
+    /// owner's "the end time section disappears and I cannot end the workout".
+    @MainActor
+    func testOpenWorkoutReopensEditorAfterLeavingIt() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
+
+        await swipeBackFromPushedScreen()
+
+        let row = await expectSessionRow("open workout not listed in the Log")
+        XCTAssertTrue(row.label.contains("In progress"),
+                      "open workout row should read 'In progress', got '\(row.label)'")
+
+        await tapSettled(row)
+        await expectExists(app.buttons["add-exercise"],
+                           "tapping the open workout did not reopen the editor")
+        await expectExists(app.buttons["finish-workout"],
+                           "finish control missing on the reopened workout")
+
+        await finishWorkout()
+        await expectExists(app.buttons["plus"], "Log not shown after finishing the reopened workout")
+    }
+
+    /// Edit mode must reveal a delete per row. It used to flip editMode with
+    /// nothing to act on, which is why the app looked as if a workout could not
+    /// be deleted at all.
+    @MainActor
+    func testEditModeRevealsRowDelete() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
+        await fillFirstSet(weight: "100", reps: "5", rpe: "8")
+        await finishWorkout()
+        await expectExists(app.buttons["plus"], "Log not shown after finishing")
+
+        let row = await expectSessionRow("session row missing in the Log")
+        let sid = row.identifier.replacingOccurrences(of: "session-row-", with: "")
+
+        XCTAssertFalse(app.buttons["row-delete-\(sid)"].exists,
+                       "a delete must not be on screen outside Edit mode")
+        await tapSettled(app.buttons["log-edit"])
+        let rowDelete = app.buttons["row-delete-\(sid)"]
+        await expectExists(rowDelete, "Edit mode revealed no delete for the row")
+        await tapSettled(rowDelete)
+        let confirm = app.buttons["Delete"]
+        await expectExists(confirm, "row delete confirmation not shown")
+        await tapSettled(confirm)
+        await settle(1.5)
+        XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
+                       "deleted workout should be gone from the Log")
     }
 
     // MARK: - Exercise search
@@ -433,8 +532,9 @@ final class RepLogUITests: XCTestCase {
     }
 
     /// Plan §7.5, in-simulator: service stopped -> finish a session ->
-    /// relaunch the app -> service back up -> exactly one upload -> delete ->
-    /// tombstone lands -> re-import 409s.
+    /// relaunch the app -> service back up -> nothing uploads until sync is
+    /// tapped -> exactly one upload -> delete the workout on the phone (LOCAL
+    /// only: the database copy stays) -> re-import is accepted, not refused.
     @MainActor
     func testOfflineDrill() async {
         // 0. Supervisor must be reachable (started by scripts/mac-tests.sh).
@@ -465,7 +565,7 @@ final class RepLogUITests: XCTestCase {
         await startFreshWorkout()
         await addFirstExercise()
         await fillFirstSet(weight: "100", reps: "5", rpe: "8")
-        await tapSettled(app.buttons["finish-workout"])
+        await finishWorkout()
         await settle(3)
 
         // The session is in the Log. (Its id is NOT read from here: the Log
@@ -498,18 +598,20 @@ final class RepLogUITests: XCTestCase {
         XCTAssertEqual((healthResult?.1 as? HTTPURLResponse)?.statusCode, 200,
                        "drill service not reachable from the simulator at \(drillServiceURL)/v1/health")
 
-        // Poll the service for the upload. The app syncs on launch (start()
-        // rehydrates the outbox and the path monitor fires), so no tap is
-        // needed — and tapping "Sync now" is actively risky: its neighbouring
-        // row is "Export CSV", and that sheet then blocks every later tap
-        // (found in the 2026-09-22 run). "Sync now" is only nudged if the
-        // launch sync has not landed after a few seconds.
-        var rows = await drillCSVDataRows()
+        // Sync is manual (owner request, 2026-09-23): nothing uploads on launch
+        // or when the network comes back, so prove the queue waits, then tap the
+        // Log's sync control and poll for the upload.
+        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
+        await expectExists(app.buttons["plus"], "Log tab not shown before syncing")
+        try? await Task.sleep(nanoseconds: 8_000_000_000)
+        let rowsWithoutTap = await drillCSVDataRows()
+        XCTAssertEqual(rowsWithoutTap, 0,
+                       "nothing may upload until sync is tapped, got \(rowsWithoutTap) row(s)")
+
+        var rows = rowsWithoutTap
         var attempt = 0
         while rows != 1 && attempt < 20 {
-            if attempt == 6 {
-                let profileTab = app.tabBars.buttons.element(boundBy: 3)
-                if profileTab.exists { await tapSettled(profileTab) }
+            if attempt % 4 == 0 {
                 let syncNow = app.buttons["sync-now"]
                 if await wait(for: syncNow, timeout: 5) { await tapSettled(syncNow) }
             }
@@ -536,14 +638,12 @@ final class RepLogUITests: XCTestCase {
         }.count
         XCTAssertEqual(upserts, 1, "expected exactly one upload, got \(upserts) upsert events")
 
-        // 5. Delete the session in the app -> tombstone lands on the server.
-        //    Close a stray Export CSV sheet first if one opened.
-        if app.navigationBars["Export CSV"].exists {
-            await tapSettled(app.buttons["Done"])
-        }
+        // 5. Delete the session in the app -> LOCAL ONLY (owner rule,
+        //    2026-09-23): the phone forgets the workout, and the copy that
+        //    already reached the sync database stays there.
         await tapSettled(app.tabBars.buttons.element(boundBy: 0))
-        // The tab tap can be swallowed while the Profile screen settles; the
-        // Log's "+" is the proof we are on the Log before hunting for the row.
+        // The tab tap can be swallowed while another screen settles; the Log's
+        // "+" is the proof we are on the Log before hunting for the row.
         if !(await wait(for: app.buttons["plus"], timeout: 6)) {
             await tapSettled(app.tabBars.buttons.element(boundBy: 0))
         }
@@ -559,20 +659,37 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(dialogDelete)
         await settle(3)
 
+        // Gone from the phone, and the detail screen left with it (it used to
+        // stay on a deleted model, which read as "delete did nothing").
+        XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
+                       "deleted session should be gone from the Log")
+        await expectExists(app.buttons["plus"], "not back on the Log after deleting")
+        // The database copy is untouched and no delete was ever sent.
         let rowsAfterDelete = await drillCSVDataRows()
-        XCTAssertEqual(rowsAfterDelete, 0, "session rows should be removed after delete")
+        XCTAssertEqual(rowsAfterDelete, 1,
+                       "the uploaded session must stay in the sync database after a phone delete, got \(rowsAfterDelete) row(s)")
         guard let jsonlData = await supervisor("/audit"),
               let jsonl = String(data: jsonlData, encoding: .utf8) else {
             XCTFail("audit log not readable"); return
         }
-        XCTAssertTrue(jsonl.contains("\"type\":\"delete\"") && jsonl.contains(sid),
-                      "tombstone event not recorded for \(sid)")
+        XCTAssertFalse(jsonl.contains("\"type\":\"delete\""),
+                       "a phone delete must never send a server-side delete")
 
-        // 6. Re-import the same session -> the server must refuse (409).
+        // 6. Re-import the same session -> accepted as an upsert (there is no
+        //    tombstone any more) and the database still holds exactly one row.
         let status = (try? await drillReimport(sessionID: fullID)) ?? -1
-        XCTAssertEqual(status, 409, "re-import of a tombstoned session must 409, got \(status)")
+        XCTAssertTrue(status < 400,
+                      "re-import after a phone-only delete should be accepted, got \(status)")
         let rowsAfterReimport = await drillCSVDataRows()
-        XCTAssertEqual(rowsAfterReimport, 0, "tombstoned session must not be resurrected")
+        XCTAssertEqual(rowsAfterReimport, 1,
+                       "the database copy must survive, got \(rowsAfterReimport) row(s)")
+
+        // And a further sync must not bring it back on the phone.
+        let finalSync = app.buttons["sync-now"]
+        if await wait(for: finalSync, timeout: 5) { await tapSettled(finalSync) }
+        await settle(3)
+        XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
+                       "a locally deleted session must not come back after syncing")
 
         await supervisorJSON("/stop")
     }

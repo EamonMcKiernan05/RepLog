@@ -272,8 +272,30 @@ final class RepLogVisualTourTests: XCTestCase {
             await settle(0.8)
         }
 
-        // Finish -> Log -> session detail.
+        // Finish -> Log -> session detail. The checkmark asks first now (owner
+        // request, 2026-09-23): capture the dialog and cancel it. Then leave the
+        // editor and come back — that path used to strand an open workout — and
+        // finish through the confirmation.
         await tapAny([app.buttons["finish-workout"]], "finish workout")
+        await settle(1.2)
+        shot("12b-finish-confirm")
+        await tapAny([app.buttons["Cancel"]], "cancel finish")
+        await settle(1)
+
+        // Swipe back to the Log: the open workout is marked in progress...
+        let backLeft = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5))
+        let backMiddle = app.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.5))
+        backLeft.press(forDuration: 0.05, thenDragTo: backMiddle)
+        await settle(1.5)
+        shot("12c-log-in-progress")
+        // ...and tapping it reopens the EDITOR, not the read-only detail.
+        await tapAny([firstSessionRow()], "in-progress row")
+        await settle(1.5)
+        shot("12d-open-workout-reopened")
+
+        await tapAny([app.buttons["finish-workout"]], "finish workout")
+        await settle(1.2)
+        await tapAny([app.buttons["Finish"]], "confirm finish")
         await settle(2.5)
         await tapAny([firstSessionRow()], "session row")
         await settle(1.5)
