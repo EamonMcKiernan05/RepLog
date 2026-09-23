@@ -220,20 +220,25 @@ final class RepLogVisualTourTests: XCTestCase {
             await settle(0.8)
 
             // A number typed straight into a set cell, shot with the caret in
-            // the box and the keyboard up (the whole point: no sheet). The box
-            // is cleared first — typing appends.
-            let weightCell = app.textFields["weight-cell"].firstMatch
-            if weightCell.exists {
-                await bringIntoView(weightCell)
-                weightCell.tap()
-                await settle(0.8)
-                let existing = (weightCell.value as? String) ?? ""
-                if !existing.isEmpty, existing != "—" {
-                    weightCell.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
-                                               count: existing.count + 2))
-                    await settle(0.4)
+            // the box and the keyboard up (the whole point: no sheet). The
+            // demo routine's LAST set row is empty, so type there: XCUITest's
+            // delete keys land wherever the tap put the caret and cannot be
+            // trusted to clear a filled box.
+            let weightCells = app.textFields.matching(identifier: "weight-cell")
+            var emptyWeightCell: XCUIElement?
+            for i in 0..<min(weightCells.count, 8) {
+                let candidate = weightCells.element(boundBy: i)
+                let value = (candidate.value as? String) ?? ""
+                if value.isEmpty || value == "—" {
+                    emptyWeightCell = candidate
+                    break
                 }
-                weightCell.typeText("140")
+            }
+            if let emptyWeightCell {
+                await bringIntoView(emptyWeightCell)
+                emptyWeightCell.tap()
+                await settle(0.8)
+                emptyWeightCell.typeText("140")
                 await settle(0.6)
                 shot("10b-set-cell-typed")
                 await tapAny([app.buttons["keyboard-done"]], "keyboard done")
