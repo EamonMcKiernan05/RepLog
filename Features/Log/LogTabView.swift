@@ -214,7 +214,10 @@ struct LogTabView: View {
         .buttonStyle(.plain)
         .disabled(sync.isSyncing)
         .accessibilityIdentifier("sync-now")
-        .accessibilityLabel("Sync now")
+        // No fixed accessibilityLabel: the button's label is its content, so
+        // VoiceOver (and the offline drill's assertion) hear the real state —
+        // "1 to sync", "Up to date · 2 minutes ago", "Auth failed — check your
+        // token" — not a constant "Sync now".
     }
 
     private var syncButtonTitle: String {

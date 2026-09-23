@@ -599,13 +599,14 @@ final class RepLogUITests: XCTestCase {
                        "drill service not reachable from the simulator at \(drillServiceURL)/v1/health")
 
         // The queue survived the restart and is VISIBLE from the Log without
-        // opening Profile: the sync control reads "1 to sync".
-        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
-        await expectExists(app.buttons["plus"], "Log tab not shown before syncing")
-        let queuedLabel = app.staticTexts
-            .matching(NSPredicate(format: "label BEGINSWITH '1 to sync'")).firstMatch
-        await expectExists(queuedLabel,
-                           "the Log's sync control should read '1 to sync' while one session is queued")
+        // opening Profile: the sync control reads "1 to sync". (Assert the
+        // BUTTON's label — an explicit accessibilityLabel makes the button a
+        // leaf element, so its inner Text is not separately queryable.)
+        let syncNow = app.buttons["sync-now"]
+        await expectExists(syncNow, "Log's sync control not found before syncing")
+        let queuedLabel = (syncNow.label as? String) ?? ""
+        XCTAssertTrue(queuedLabel.contains("1 to sync"),
+                      "the Log's sync control should read '1 to sync' while one session is queued, got '\(queuedLabel)'")
 
         // Sync is manual (owner request, 2026-09-23): nothing uploads on launch
         // or when the network comes back, so prove the queue waits, then tap the
