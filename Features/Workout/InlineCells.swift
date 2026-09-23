@@ -85,9 +85,13 @@ struct InlineCell: View {
                 .fixedSize(horizontal: !wide, vertical: false)
                 // A minimum width keeps an EMPTY box focusable: a zero-width
                 // field takes the keyboard but gives no caret to aim at.
+                // Narrow cells centre their value under their label; only the
+                // wide Notes column is leading. A leading frame here pushed a
+                // short typed value to the left edge of the box while the label
+                // above it stayed centred (owner report, 2026-09-23).
                 .frame(minWidth: wide ? nil : 44,
                        maxWidth: wide ? .infinity : nil,
-                       alignment: .leading)
+                       alignment: wide ? .leading : .center)
                 .focused(focus, equals: focusValue)
                 .accessibilityIdentifier(id)
                 .onSubmit { finishEditing() }

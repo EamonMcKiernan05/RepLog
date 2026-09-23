@@ -4,9 +4,13 @@ import SwiftData
 struct LogTabView: View {
     @Environment(DataStore.self) private var store
     @Environment(AppRouter.self) private var router
+    @Environment(SyncEngine.self) private var sync
     @State private var editMode: EditMode = .inactive
     @State private var showStartSheet = false
     @State private var showRepeatSheet = false
+    /// The row waiting on the delete confirmation.
+    @State private var pendingDelete: Session?
+    @State private var confirmRowDelete = false
 
     private var sessions: [Session] { store.sessions() }
 
@@ -46,21 +50,44 @@ struct LogTabView: View {
 
                             VStack(spacing: 0) {
                                 ForEach(Array(month.sessions.enumerated()), id: \.element.id) { idx, session in
-                                    // The AX identifier/label must sit on the
-                                    // LINK, not inside its label: the row view
-                                    // used to carry
-                                    // .accessibilityElement(children: .combine),
-                                    // which made the row swallow its own taps
-                                    // (present in the AX tree, taps dead). The
-                                    // combine modifier now lives nowhere.
-                                    NavigationLink(value: session.id) {
-                                        SessionRowView(session: session)
+                                    HStack(spacing: 0) {
+                                        // Edit mode has something to do now: it
+                                        // reveals a delete per row. It used to
+                                        // flip editMode with nothing to act on
+                                        // (this list is a ScrollView, not a
+                                        // List), so tapping Edit appeared to do
+                                        // nothing and the app looked as if it
+                                        // could not delete a workout.
+                                        if editMode == .active {
+                                            Button {
+                                                pendingDelete = session
+                                                confirmRowDelete = true
+                                            } label: {
+                                                Image(systemName: "trash")
+                                                    .font(.body)
+                                                    .foregroundStyle(Palette.destructive)
+                                                    .frame(width: 48, height: 44)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .accessibilityIdentifier("row-delete-\(session.id.prefix(8))")
+                                            .accessibilityLabel("Delete workout")
+                                        }
+                                        // The AX identifier/label must sit on the
+                                        // LINK, not inside its label: the row view
+                                        // used to carry
+                                        // .accessibilityElement(children: .combine),
+                                        // which made the row swallow its own taps
+                                        // (present in the AX tree, taps dead). The
+                                        // combine modifier now lives nowhere.
+                                        NavigationLink(value: session.id) {
+                                            SessionRowView(session: session)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityIdentifier("session-row-\(session.id.prefix(8))")
+                                        .accessibilityLabel(session.rowAccessibilityText)
                                     }
-                                    .buttonStyle(.plain)
-                                    .accessibilityIdentifier("session-row-\(session.id.prefix(8))")
-                                    .accessibilityLabel(session.rowAccessibilityText)
                                     if idx < month.sessions.count - 1 {
-                                        Divider().padding(.leading, 76)
+                                        Divider().padding(.leading, editMode == .active ? 128 : 76)
                                     }
                                 }
                             }
@@ -81,9 +108,18 @@ struct LogTabView: View {
                 // (NavigationLink(value: session.id)). It must NOT share a
                 // view with the item-based destination further down or SwiftUI
                 // silently drops it and the row taps do nothing.
+                //
+                // An OPEN workout (no end time) opens the editor, not the
+                // read-only detail: that screen has no finish control and used
+                // to hide its End Time row, which stranded the workout after a
+                // back-swipe — the owner could not end it at all.
                 .navigationDestination(for: String.self) { id in
                     if let session = sessions.first(where: { $0.id == id }) {
-                        SessionDetailView(session: session)
+                        if session.endTime == nil {
+                            ActiveWorkoutView(session: session)
+                        } else {
+                            SessionDetailView(session: session)
+                        }
                     }
                 }
             }
@@ -101,7 +137,7 @@ struct LogTabView: View {
                             editMode = editMode == .active ? .inactive : .active
                         }
                     } label: {
-                        Text("Edit")
+                        Text(editMode == .active ? "Done" : "Edit")
                             .font(.body)
                             .foregroundStyle(Palette.textPrimary)
                             .fixedSize()
@@ -113,15 +149,18 @@ struct LogTabView: View {
                     .accessibilityIdentifier("log-edit")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showStartSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .fontWeight(.semibold)
+                    HStack(spacing: 8) {
+                        syncButton
+                        Button {
+                            showStartSheet = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .fontWeight(.semibold)
+                        }
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.circle)
+                        .accessibilityIdentifier("plus")
                     }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.circle)
-                    .accessibilityIdentifier("plus")
                 }
             }
             .environment(\.editMode, $editMode)
@@ -138,7 +177,66 @@ struct LogTabView: View {
             .sheet(isPresented: $showRepeatSheet) {
                 RepeatWorkoutSheet()
             }
+            .confirmationDialog("Delete this workout?",
+                                isPresented: $confirmRowDelete,
+                                titleVisibility: .visible) {
+                Button("Delete", role: .destructive) { deletePendingRow() }
+                    .accessibilityIdentifier("row-delete-confirm")
+                Button("Cancel", role: .cancel) { pendingDelete = nil }
+            } message: {
+                Text("It stays in the sync database if it has already been uploaded.")
+            }
         }
+    }
+
+    /// The Log's sync control (manual sync, 2026-09-23). Shows real state, and
+    /// keeps the "sync-now" identifier the offline drill taps.
+    private var syncButton: some View {
+        Button {
+            sync.syncNow()
+        } label: {
+            HStack(spacing: 6) {
+                if sync.isSyncing {
+                    ProgressView()
+                        .controlSize(.mini)
+                } else {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                }
+                Text(syncButtonTitle)
+            }
+            .font(.subheadline)
+            .foregroundStyle(Palette.textPrimary)
+            .fixedSize()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Palette.card, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(sync.isSyncing)
+        .accessibilityIdentifier("sync-now")
+        .accessibilityLabel("Sync now")
+    }
+
+    private var syncButtonTitle: String {
+        if sync.isSyncing { return "Syncing…" }
+        if sync.outbox.queuedCount > 0 {
+            let n = sync.outbox.queuedCount
+            return "\(n) to sync"
+        }
+        return "Sync"
+    }
+
+    /// Delete the pending row. Local only: `sessionDeleted` drops it from the
+    /// upload queue and never calls the service, so a copy that already reached
+    /// the sync database stays there.
+    private func deletePendingRow() {
+        guard let session = pendingDelete else { return }
+        pendingDelete = nil
+        if router.activeSession === session { router.activeSession = nil }
+        sync.sessionDeleted(session)
+        store.context.delete(session)
+        store.save()
+        if sessions.isEmpty { editMode = .inactive }
     }
 }
 

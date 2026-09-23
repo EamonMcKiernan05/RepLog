@@ -355,18 +355,11 @@ struct RoutineExerciseEditorSheet: View {
                         .frame(width: 64)
                     }
                 }
-                Section("Scheme") {
-                    let scheme = routineExercise.scheme
-                    ForEach(Array(scheme.enumerated()), id: \.offset) { idx, pair in
-                        HStack {
-                            Text("Set \(idx + 1)")
-                                .foregroundStyle(Palette.textSecondary)
-                            Spacer()
-                            Text("\(Int(pair[0])) × \(Int(pair[1]))")
-                                .monospacedDigit()
-                        }
-                    }
-                }
+                // The read-only "Scheme" section was removed at the owner's
+                // request (2026-09-23): it listed "Set 1  100 × 5" with no
+                // controls, and nothing in the app could edit those pairs. The
+                // `scheme` model field and the set prefill it drives in
+                // StartWorkoutSheet are untouched.
                 Section("Notes") {
                     InlineTextField(
                         placeholder: "Per-exercise notes",

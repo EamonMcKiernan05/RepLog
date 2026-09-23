@@ -1,12 +1,12 @@
 import Foundation
 import SwiftData
-import Network
 
 /// Orchestrates the outbox + client (plan §4.3, §7.3 T7.3).
 ///
-/// iOS gives no "the moment connectivity returns" trigger, so a queued
-/// session is uploaded on: the next foreground run, a manual "Sync now",
-/// or an opportunistic background refresh. Sessions are never lost.
+/// Sync is MANUAL: a queued session uploads only when the user taps the Log's
+/// sync button (or "Sync now" in Settings). Nothing uploads by itself — no
+/// path-monitor trigger, no upload on finish. A workout finished offline waits
+/// in the outbox until it is asked for; sessions are never lost.
 ///
 /// @MainActor: it is UI-facing (status text) and touches the main context.
 @MainActor
@@ -15,7 +15,6 @@ final class SyncEngine {
     let client = LiftSyncClient()
     private let store: DataStore
     private let settings: Settings
-    private var pathMonitor: NWPathMonitor?
 
     private(set) var outbox = Outbox()
     private(set) var lastSync: Date?
@@ -45,7 +44,6 @@ final class SyncEngine {
     func start() {
         rehydrateOutbox()
         applyConfig()
-        startMonitor()
     }
 
     /// Rebuild the in-memory outbox from the persisted per-session state.
@@ -79,43 +77,32 @@ final class SyncEngine {
         authFailed = false
     }
 
-    private func startMonitor() {
-        let monitor = NWPathMonitor()
-        monitor.pathUpdateHandler = { [weak self] path in
-            if path.status == .satisfied {
-                Task { @MainActor in
-                    self?.syncNow()
-                }
-            }
-        }
-        let q = DispatchQueue(label: "im.eamon.replog.network")
-        monitor.start(queue: q)
-        pathMonitor = monitor
-    }
+    // Sync is manual: there was a NWPathMonitor here that uploaded whenever the
+    // network came back. Removed 2026-09-23 at the owner's request — nothing
+    // uploads without a tap on the Log's sync button.
 
     // MARK: - Session lifecycle
 
-    /// Call when a workout is finished.
+    /// Call when a workout is finished. It records what is pending and stops
+    /// there: sync is manual, so nothing is uploaded behind the user's back.
     func sessionFinished(_ session: Session) {
         outbox.finish(session.id)
         persistState(session)
-        syncNow()
     }
 
-    /// Call when an already-uploaded session is edited.
+    /// Call when an already-uploaded session is edited. Same rule: queue it and
+    /// wait to be asked.
     func sessionEdited(_ session: Session) {
         outbox.editAfterUpload(session.id)
         persistState(session)
-        syncNow()
     }
 
-    /// Call when a session is deleted on the phone.
+    /// Call when a session is deleted on the phone. Deleting is LOCAL ONLY: the
+    /// phone forgets the workout and drops it from the queue, but a copy that
+    /// has already reached the sync database stays there. Never enqueue a
+    /// server-side delete (owner's rule, 2026-09-23).
     func sessionDeleted(_ session: Session) {
-        let id = session.id
-        Task {
-            _ = await client.delete(id)
-            outbox.delete(id)
-        }
+        outbox.delete(session.id)
     }
 
     // MARK: - Sync

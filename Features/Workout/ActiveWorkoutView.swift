@@ -56,7 +56,9 @@ struct ActiveWorkoutView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
-                    finish()
+                    // Ask first: the checkmark used to call finish() straight
+                    // away and end the workout on a misplaced tap.
+                    confirmFinish = true
                 } label: {
                     Image(systemName: "checkmark")
                         .font(.title3.weight(.bold))
@@ -120,7 +122,10 @@ struct ActiveWorkoutView: View {
             )
         }
         .confirmationDialog("Finish this workout?", isPresented: $confirmFinish, titleVisibility: .visible) {
-            Button("Finish", role: .none) { finish() }
+            Button("Finish", role: .destructive) { finish() }
+                .accessibilityIdentifier("finish-confirm")
+            Button("Cancel", role: .cancel) { }
+                .accessibilityIdentifier("finish-cancel")
         }
         .onAppear {
             if session.startTime == nil {

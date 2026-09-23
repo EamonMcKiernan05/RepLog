@@ -2,10 +2,16 @@ import SwiftUI
 import SwiftData
 
 /// Completed-session detail (plan §6.2, T2.2): read-only cards with set rows.
+///
+/// A session with no end time is an OPEN workout: `LogTabView` routes those to
+/// `ActiveWorkoutView` instead, so this screen only ever shows finished
+/// sessions. End Time still renders for an open one ("—") if it is reached with
+/// one, so the row never disappears.
 struct SessionDetailView: View {
     @Environment(DataStore.self) private var store
     @Environment(Settings.self) private var settings
     @Environment(SyncEngine.self) private var sync
+    @Environment(\.dismiss) private var dismiss
     let session: Session
     @State private var confirmDelete = false
     /// Read-only screen: no cell here is editable, but the cards still take a
@@ -47,6 +53,7 @@ struct SessionDetailView: View {
         }
         .confirmationDialog("Delete this workout?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) { delete() }
+                .accessibilityIdentifier("delete-workout-confirm")
         }
     }
 
@@ -61,10 +68,11 @@ struct SessionDetailView: View {
                 infoRow("Start Time", st.formatted(date: .abbreviated, time: .shortened))
                 Divider()
             }
-            if let et = session.endTime {
-                infoRow("End Time", et.formatted(date: .abbreviated, time: .shortened))
-                Divider()
-            }
+            // Always present — "—" while the workout is open — so the section
+            // cannot vanish on a session that has no end time yet.
+            infoRow("End Time",
+                    session.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "—")
+            Divider()
             if let bw = session.bodyweightKg {
                 infoRow("Bodyweight (kg)", String(format: "%.0f", bw))
                 Divider()
@@ -86,9 +94,14 @@ struct SessionDetailView: View {
         .padding(.vertical, 10)
     }
 
+    /// Delete from the phone only. `SyncEngine.sessionDeleted` drops the session
+    /// from the upload queue and never talks to the service, so a copy that has
+    /// already reached the sync database stays there. The screen then leaves:
+    /// leaving a deleted model on-screen is what made this look broken.
     private func delete() {
         sync.sessionDeleted(session)
         store.context.delete(session)
         store.save()
+        dismiss()
     }
 }

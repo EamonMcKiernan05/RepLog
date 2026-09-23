@@ -51,11 +51,9 @@ struct ProfileTabView: View {
                                     .lineLimit(1)
                             }
                         }
-                        Button("Sync now") {
-                            sync.syncNow()
-                        }
-                        .disabled(!settings.syncEnabled)
-                        .accessibilityIdentifier("sync-now")
+                        // Sync moved to the Log's toolbar (2026-09-23) so it is
+                        // one tap away where workouts are listed. This screen
+                        // keeps the status and the server/token config.
                         Button {
                             showExport = true
                         } label: {

@@ -26,9 +26,17 @@ struct SessionRowView: View {
                 }
             }
             Spacer()
-            Text(session.durationText)
-                .font(Typography.duration)
-                .foregroundStyle(Palette.textSecondary)
+            // An open workout has no duration yet: say so rather than showing
+            // "00:00", which reads like a finished session of no length.
+            if session.endTime == nil {
+                Text("In progress")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.accent)
+            } else {
+                Text(session.durationText)
+                    .font(Typography.duration)
+                    .foregroundStyle(Palette.textSecondary)
+            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
