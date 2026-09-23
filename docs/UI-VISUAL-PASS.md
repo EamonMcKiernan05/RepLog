@@ -25,7 +25,7 @@ Final committed set: `docs/visual/` — one file per screen, plus
 | 07-active-workout.png | Active workout, routine course loaded |
 | 08-select-exercise.png | Select Exercise sheet (categories) |
 | 09-select-exercise-category.png | Select Exercise, category drill-in |
-| 10-rpe-sheet.png | RPE input sheet (chips 6/7/7.5/8/8.5/9) |
+| 10-rpe-inline.png | RPE typed in place — chips 6/7/7.5/8/8.5/9 sit under the editing row |
 | 11-active-workout-populated.png | Active workout with RPE + a set note |
 | 12-rest-timer.png | Rest timer sheet |
 | 13-session-detail.png | Completed-session detail |
@@ -72,7 +72,7 @@ Final committed set: `docs/visual/` — one file per screen, plus
 ### Why not agent-device for everything
 
 `agent-device type` / `fill` inject keystrokes at the OS level and SwiftUI
-`@State` bindings do not receive them, so anything that types (the RPE sheet,
+`@State` bindings do not receive them, so anything that types (the RPE box,
 set notes, the sync fields) has to be driven by XCUITest. Navigation taps work
 fine in both.
 

@@ -219,6 +219,27 @@ final class RepLogVisualTourTests: XCTestCase {
             await tapAny([app.buttons["rpe-chip-8"]], "rpe chip 8")
             await settle(0.8)
 
+            // A number typed straight into a set cell, shot with the caret in
+            // the box and the keyboard up (the whole point: no sheet). The box
+            // is cleared first — typing appends.
+            let weightCell = app.textFields["weight-cell"].firstMatch
+            if weightCell.exists {
+                await bringIntoView(weightCell)
+                weightCell.tap()
+                await settle(0.8)
+                let existing = (weightCell.value as? String) ?? ""
+                if !existing.isEmpty, existing != "—" {
+                    weightCell.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
+                                               count: existing.count + 2))
+                    await settle(0.4)
+                }
+                weightCell.typeText("140")
+                await settle(0.6)
+                shot("10b-set-cell-typed")
+                await tapAny([app.buttons["keyboard-done"]], "keyboard done")
+                await settle(0.8)
+            }
+
             await tapAny([app.textFields["notes-cell"].firstMatch], "notes cell")
             await settle(0.8)
             let noteField = app.textFields["notes-cell"].firstMatch
