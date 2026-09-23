@@ -26,6 +26,7 @@ Final committed set: `docs/visual/` — one file per screen, plus
 | 08-select-exercise.png | Select Exercise sheet (categories) |
 | 09-select-exercise-category.png | Select Exercise, category drill-in |
 | 10-rpe-inline.png | RPE typed in place — chips 6/7/7.5/8/8.5/9 sit under the editing row |
+| 10b-set-cell-typed.png | A weight typed straight into its set cell (caret in the box, keyboard up) |
 | 11-active-workout-populated.png | Active workout with RPE + a set note |
 | 12-rest-timer.png | Rest timer sheet |
 | 13-session-detail.png | Completed-session detail |

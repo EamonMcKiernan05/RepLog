@@ -11,11 +11,94 @@ pass covers every screen against the 17 reference screenshots (§4), and the
 Dynamic Type / accessibility checks are in §5. What cannot be shown in a
 simulator is listed as device-only and is never claimed to work (§6).
 
-The commits after `1941ab8` are documentation only (this report, the
-visual-pass doc and the capture files); no code changed after the gate run.
+The commits after `1941ab8` were documentation only until the inline-entry
+change recorded in §0 below, which *is* code; that section carries its own gate
+re-run.
 
 The previous version of this report said 35/35 units and "the Mac lost power
 mid-run"; both were stale and are gone.
+
+---
+
+## 0. Inline entry — no text-entry sheets (2026-09-23, after the gate above)
+
+Owner feedback on the screens that mirror the reference: the cells that opened
+a sheet with a text box now take the value **straight in the box**.
+
+**What is typed in place now**
+
+- Set rows: weight, reps, time, distance, kcal, **RPE** and the set note.
+- The exercise note (the notes icon now puts the caret in the inline field
+  instead of opening a sheet), the workout note, and the routine name + notes.
+- The routine exercise editor's warm-up / working set counts (typed fields; they
+  were steppers).
+
+**Rules kept**
+
+- Values commit on submit or focus loss, never per keystroke — a half-typed
+  `1.` must not be parsed and written back, or the field rewrites itself and
+  eats the decimal point.
+- RPE keeps its half-step snapping and 1–10 clamp, now in the cell's commit.
+- The RPE quick chips (6 · 7 · 7.5 · 8 · 8.5 · 9) moved inline: they appear
+  under the row whose RPE box is being edited. A chip tap discards a half-typed
+  draft rather than overwriting it.
+- A cleared NUMBER box means "no value"; a cleared TEXT box means empty.
+  Unparseable input is refused and the box snaps back to the stored value.
+- The routine name reverts if you clear it (an empty name would blank the list
+  row and the navigation title).
+- One keyboard **Done** per screen clears whatever cell is focused — the number
+  pads have no return key.
+- Still a sheet, deliberately: **creating** a routine (`RoutineEditorSheet` asks
+  for the name before the routine exists). No other text-entry sheet remains in
+  these flows.
+
+**Deleted:** `RPEInputSheet`, `NumberInputSheet`, `SetNoteSheet`,
+`ExerciseNotesSheet`, `SessionNotesSheet`, `RoutineNotesSheet`
+(`Features/Workout/InputSheets.swift` is gone); replaced by `InlineCell` /
+`InlineTextField` (`Features/Workout/InlineCells.swift`).
+
+**Gate re-run after the change** (`bash scripts/mac-tests.sh`, one run):
+
+```
+** BUILD SUCCEEDED **
+✔ Test run with 36 tests in 5 suites passed after 0.650 seconds.
+Test Case '-[RepLogUITests.RepLogUITests testExerciseSearchFilters]' passed (23.502 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testOfflineDrill]' passed (93.929 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testRPEChipsDisplayWholeValues]' passed (31.939 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testRPEEntryTypes85AndReadsBack]' passed (30.690 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testSessionRowOpensDetail]' passed (40.137 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testSetNoteEntry]' passed (30.646 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testSyncURLAndTokenFields]' passed (34.357 seconds).
+	 Executed 7 tests, with 0 failures (0 unexpected) in 285.200 (285.215) seconds
+** TEST SUCCEEDED **
+All Mac tests passed.
+```
+
+The UI tests were rewritten onto the inline boxes (type → keyboard Done → read
+the value back); they no longer touch a sheet.
+
+**Two defects the work surfaced, both fixed**
+
+1. With a custom `prompt:` style, iOS rendered the text *being typed* in the
+   prompt's grey while the keyboard was up, so a value you were entering looked
+   like a placeholder until it was committed (seen in the capture
+   `10b-set-cell-typed.png`). The empty state is now a sibling `Text`, the field
+   always renders bold/primary, and an empty box keeps a 44 pt minimum so it
+   stays focusable.
+2. `-ResetRepLog YES` wiped UserDefaults but **not** the SwiftData store. The
+   outbox is rebuilt from each session's `syncState`, so a session left queued
+   by an earlier run re-uploaded as soon as a sync URL was configured: after a
+   visual-tour run the offline drill uploaded 8 rows of the tour's session on
+   top of its own and read **9** where it asserts **1**. The hook now deletes
+   the store as well. It passed before only while the store happened to hold no
+   queued sessions.
+
+**Evidence:** `docs/visual/10-rpe-inline.png` (RPE box focused, chips inline
+under the row), `10b-set-cell-typed.png` (140 typed into an empty weight box,
+caret in the box, keyboard up), `11-active-workout-populated.png` (typed note +
+a typed value), `15-routine-detail.png`, `16-routine-exercise-editor.png`.
+The `docs/visual/dynamic-type/` set is from the earlier pass and predates this
+change — those four screens are the ones whose layout moved.
 
 ---
 
