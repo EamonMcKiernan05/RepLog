@@ -102,6 +102,103 @@ change — those four screens are the ones whose layout moved.
 
 ---
 
+## 0.1 The six owner-reported fixes — gate re-run and re-publish (2026-09-24)
+
+The six fixes landed on 2026-09-23 (`4e228ab` → `a83f355`, 22:52–23:36) but
+two things were left undone, and the owner found both on the phone:
+
+1. **The published build was older than the fixes.** The IPA on the install
+   host was archived from `b4b1732` at 20:50 BST — three hours before them — so
+   installing 1.0.0 gave the pre-fix app. Nothing was re-archived or
+   re-published after the fixes.
+2. **The UI suite was red at that commit, not 7/7.** Five of the ten UI tests
+   failed (`testEditModeRevealsRowDelete`, `testFinishAsksBeforeEnding`,
+   `testOfflineDrill`, `testOpenWorkoutReopensEditorAfterLeavingIt`,
+   `testSessionRowOpensDetail`) — the finish-confirmation change had made the
+   tests' dialog queries unusable on iOS 26 (below). The earlier "7/7" figure
+   was true when the suite had seven tests; it was never re-established after
+   the suite grew to ten.
+
+Both are fixed at `b07e0c5`, and 1.0.1 is published (§0.1.5).
+
+### 0.1.1 Gate — one `bash scripts/mac-tests.sh` run at `b07e0c5`
+
+```
+** BUILD SUCCEEDED **
+✔ Test run with 36 tests in 5 suites passed after 0.221 seconds.
+Test Case '-[RepLogUITests.RepLogUITests testEditModeRevealsRowDelete]' passed (52.776 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testExerciseSearchFilters]' passed (23.112 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testFinishAsksBeforeEnding]' passed (37.209 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testOfflineDrill]' passed (99.940 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testOpenWorkoutReopensEditorAfterLeavingIt]' passed (46.898 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testRPEChipsDisplayWholeValues]' passed (31.682 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testRPEEntryTypes85AndReadsBack]' passed (30.482 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testSessionRowOpensDetail]' passed (44.006 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testSetNoteEntry]' passed (30.474 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testSyncURLAndTokenFields]' passed (35.443 seconds).
+	 Executed 10 tests, with 0 failures (0 unexpected) in 432.021 (432.037) seconds
+** TEST SUCCEEDED **
+All Mac tests passed.
+```
+
+The suite is **ten** UI tests, not seven (`scripts/mac-tests.sh`'s header and
+the status block above now say 10/10).
+
+### 0.1.2 The six items, as the code stands
+
+| # | The owner's item | Where it lives now | Test |
+|---|---|---|---|
+| 1 | Delete a workout, local only; the uploaded copy stays | `Sync/SyncEngine.swift:100-106` (`sessionDeleted` drops the outbox entry and never calls the service), `Features/Log/SessionDetailView.swift:97-106` (`delete()` then `dismiss()`), `LogTabView.swift:61-70` (per-row trash in Edit mode) and `:180-188` (confirm + "It stays in the sync database…"). | `testEditModeRevealsRowDelete`; the drill asserts the CSV row count stays 1 after a phone delete and that no delete event is sent |
+| 2 | Never strand an open workout | `LogTabView.swift:112-124` (a session with no end time opens the EDITOR), `SessionRowView.swift:31-32` + `Models.swift:122` ("In progress"), `ActiveWorkoutView.swift:147` (End Time row always renders) | `testOpenWorkoutReopensEditorAfterLeavingIt` |
+| 3 | The finish checkmark must ask first | `ActiveWorkoutView.swift:59-70` (sets `confirmFinish`), `:124-129` (the dialog, with `finish-confirm` / `finish-cancel`) | `testFinishAsksBeforeEnding` |
+| 4 | Sync is a manual action at the top of the Log | `SyncEngine.swift:80-82` (the `NWPathMonitor` auto-upload is gone), `:110` (`syncNow`), `LogTabView.swift:192-232` (state text: "N to sync" / spinner / "Up to date · <relative>" / auth failure) | the drill: zero rows upload until the sync button is tapped, then exactly one upsert |
+| 5 | Centre the narrow set cells under their column titles | `Features/Workout/InlineCells.swift:33, 62, 83, 88-94` — narrow cells centre, only the wide Notes column is leading | capture `11-active-workout-populated.png` (100 / 5 / 8 sit under Kg / Reps / RPE) |
+| 6 | Drop the dead "Scheme" section from the routine-exercise editor | `Features/Routines/RoutinesViews.swift:358` — the read-only section is gone; the `scheme` model field and the set prefill (`StartWorkoutSheet.swift:70-78`) stay | capture `16-routine-exercise-editor.png` |
+
+Schemes are no longer editable anywhere in the app (`plannedScheme` is still
+shown read-only on the exercise card, and the routine's scheme lines still
+prefill a started workout). No data was migrated.
+
+### 0.1.3 Two iOS 26 traps the re-run exposed (in the tests, not the app)
+
+Measured on the iPhone 17 Pro simulator, 2026-09-24:
+
+- **A `confirmationDialog` button is nested.** `Button, identifier:
+  'finish-confirm'` sits INSIDE a second element with the same identifier, both
+  with the same frame, so `app.buttons["finish-confirm"]` raises *"Multiple
+  matching elements found"* on any attribute access (including `.exists` inside
+  a polling helper). Every dialog tap now goes through `.firstMatch`.
+  `app.buttons["Finish"]` (by label) had the same problem.
+- **The dialog has no reachable Cancel.** `app.descendants(matching: .any)`
+  matching a "Cancel" label returns **zero** elements, and the dialog is a
+  POPOVER pinned near the top of the screen (the button's frame starts at
+  y=132pt of 874) with no dimmed backdrop. Cancelling is therefore done by
+  tapping well below the card (`dx 0.5, dy 0.85`); a tap at `dy 0.12` lands
+  inside the card and does nothing, which is what silently broke two tests and
+  two captures.
+
+The tour and the tests both carry these notes now, so the next pass does not
+re-learn them.
+
+### 0.1.4 Captures refreshed
+
+`docs/visual/04-log.png` (sync control top-right), `11-active-workout-populated.png`
+(centred cells), and three new files: `12b-finish-confirm.png` (the dialog),
+`12c-log-in-progress.png` (the Log with the open workout marked "In progress"),
+`12d-open-workout-reopened.png` (tapping it reopens the editor), plus
+`16-routine-exercise-editor.png` (no Scheme section). `docs/UI-VISUAL-PASS.md`
+lists them and records both traps.
+
+### 0.1.5 Published
+
+1.0.1 (build 2) — `im.eamon.replog`, **661,378 bytes**, sha256
+`e2a20a3a07de3c4ecc43bd25af04d2a56bdca418337ae9a387470ebe7e5a1630`, archived
+from `b07e0c5` through the Mac's GUI session, ad-hoc profile valid to
+2027-09-23 with the owner's iPhone UDID. The served file's sha256 was read back
+over HTTPS and matches. Install page: <https://replog.eamonmckiernan.im/replog/>.
+
+---
+
 ## 1. Test evidence (all real, all run)
 
 ### 1.1 The gate — `bash scripts/mac-tests.sh` (one run, pasted raw)
