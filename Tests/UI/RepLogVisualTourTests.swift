@@ -431,6 +431,35 @@ final class RepLogVisualTourTests: XCTestCase {
         print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
     }
 
+    /// The set-row layout variants under owner review (2026-09-24): one
+    /// capture per `-RowLayout` value, the same screen every time so they can
+    /// be compared side by side. Run with
+    ///   -only-testing:RepLogUITests/RepLogVisualTourTests/testRowLayoutVariants
+    ///
+    /// Each variant relaunches with `-ResetRepLog YES -DemoData YES` so every
+    /// shot starts from the identical demo workout (fresh store, same 4-set
+    /// routine), and the shot is taken before anything is typed.
+    @MainActor
+    func testRowLayoutVariants() async {
+        continueAfterFailure = true
+        for variant in 1...4 {
+            app.terminate()
+            app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES",
+                                   "-RowLayout", "\(variant)"]
+            app.launch()
+            await settle(4)
+
+            await tapAny([app.buttons["plus"]], "log plus")
+            await settle(1.5)
+            // First launch shows the start sheet; a run that reopens an open
+            // workout is already in the editor.
+            _ = await tapLabel("Push Day", timeout: 4)
+            await settle(2.5)
+            shot("layout-v\(variant)")
+        }
+        print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
+    }
+
     @MainActor
     private func waitFor(_ element: XCUIElement, timeout: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)

@@ -31,6 +31,13 @@ struct InlineCell: View {
     /// Fills the rest of the row (the Notes column).
     var wide = false
     var alignment: TextAlignment = .center
+    /// Value font size. The numbers shrank and the Notes value sits a step
+    /// below them (owner, 2026-09-24).
+    var valueSize: CGFloat = 17
+    /// Fixed cell width — three digits of the number font, so a column holds
+    /// its place whether it reads "5" or "140". nil keeps the old 44 pt
+    /// minimum, and the wide Notes column fills what is left.
+    var fixedWidth: CGFloat? = nil
     let focus: FocusState<CellFocus?>.Binding
     let focusValue: CellFocus
     /// Parse-and-write. Called on submit and on focus loss — never per
@@ -49,6 +56,8 @@ struct InlineCell: View {
     private var isFocused: Bool { focus.wrappedValue == focusValue }
     private var shown: String { typed ?? value }
     private var isEmpty: Bool { shown.isEmpty }
+    /// The fixed numeric width, or nil for the flexible Notes column.
+    private var cellWidth: CGFloat? { wide ? nil : fixedWidth }
 
     var body: some View {
         VStack(spacing: 4) {
@@ -62,7 +71,7 @@ struct InlineCell: View {
             ZStack(alignment: wide ? .leading : .center) {
                 if isEmpty {
                     Text("—")
-                        .font(Typography.mono(17))
+                        .font(Typography.mono(valueSize))
                         .foregroundStyle(Palette.textSecondary.opacity(0.6))
                         .allowsHitTesting(false)
                 }
@@ -77,7 +86,7 @@ struct InlineCell: View {
                     )
                 )
                 .textFieldStyle(.plain)
-                .font(Typography.mono(17, .bold))
+                .font(Typography.mono(valueSize, .bold))
                 .foregroundStyle(Palette.textPrimary)
                 .keyboardType(keyboard)
                 .multilineTextAlignment(alignment)
@@ -89,8 +98,8 @@ struct InlineCell: View {
                 // wide Notes column is leading. A leading frame here pushed a
                 // short typed value to the left edge of the box while the label
                 // above it stayed centred (owner report, 2026-09-23).
-                .frame(minWidth: wide ? nil : 44,
-                       maxWidth: wide ? .infinity : nil,
+                .frame(minWidth: cellWidth ?? 44,
+                       maxWidth: wide ? .infinity : cellWidth,
                        alignment: wide ? .leading : .center)
                 .focused(focus, equals: focusValue)
                 .accessibilityIdentifier(id)
@@ -100,7 +109,7 @@ struct InlineCell: View {
                 }
             }
         }
-        .frame(minWidth: wide ? nil : 44, maxWidth: wide ? .infinity : nil)
+        .frame(minWidth: cellWidth ?? 44, maxWidth: wide ? .infinity : cellWidth)
         // The whole box is the tap target, not just the glyphs.
         .contentShape(Rectangle())
         .onTapGesture { focus.wrappedValue = focusValue }

@@ -21,11 +21,15 @@ struct SetRowView: View {
 
     private var owner: ObjectIdentifier { ObjectIdentifier(set) }
 
+    /// Row geometry — see `RowLayout` (four variants under owner review).
+    private var layout: RowLayout { RowLayout.current }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Column gap + row height were both too tight to read at arm's
-            // length on the phone (owner report, 2026-09-24).
-            HStack(spacing: 14) {
+            // Uniform gap between every column, and no spacer: the columns
+            // sit next to the set-number circle instead of being pushed right
+            // (owner report, 2026-09-24).
+            HStack(spacing: layout.gutter) {
                 // Circled index
                 ZStack {
                     Circle().stroke(Palette.textSecondary.opacity(0.5), lineWidth: 1.5)
@@ -34,7 +38,7 @@ struct SetRowView: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(set.isDrop ? Palette.accent : Palette.textPrimary)
                 }
-                .frame(width: 32)
+                .frame(width: 23)
 
                 if set.isDrop {
                     Image(systemName: "arrow.down")
@@ -42,8 +46,6 @@ struct SetRowView: View {
                         .foregroundStyle(Palette.accent)
                         .frame(width: 16)
                 }
-
-                Spacer(minLength: 8)
 
                 // Columns per type
                 if type.hasWeight {
@@ -123,7 +125,7 @@ struct SetRowView: View {
                 Text(set.notes)
                     .font(.footnote)
                     .foregroundStyle(Palette.textPrimary)
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, 23 + layout.gutter)
                     .padding(.bottom, 8)
             }
         }
@@ -146,40 +148,35 @@ struct SetRowView: View {
                 value: value,
                 keyboard: keyboard,
                 wide: wide,
+                valueSize: wide ? layout.notesSize : layout.numberSize,
+                fixedWidth: wide ? nil : layout.numberWidth,
                 focus: focus,
                 focusValue: CellFocus(owner: owner, field: field),
                 commit: commit
             )
         } else {
-            column(label: label, value: value, isPlaceholder: value.isEmpty, id: id)
-                .modifier(WideIf(wide: wide))
+            column(label: label, value: value, isPlaceholder: value.isEmpty,
+                   id: id, wide: wide)
         }
     }
 
     @ViewBuilder
     private func column(label: String, value: String, isPlaceholder: Bool,
-                        id: String?) -> some View {
+                        id: String?, wide: Bool) -> some View {
         VStack(spacing: 4) {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
             Text(value.isEmpty ? "—" : value)
-                .font(Typography.mono(17, value.isEmpty ? .regular : .bold))
+                .font(Typography.mono(wide ? layout.notesSize : layout.numberSize,
+                                      value.isEmpty ? .regular : .bold))
                 .foregroundStyle(isPlaceholder ? Palette.textSecondary.opacity(0.6) : Palette.textPrimary)
+                .lineLimit(1)
         }
-        .frame(minWidth: 44)
+        .frame(minWidth: wide ? nil : layout.numberWidth,
+               maxWidth: wide ? .infinity : layout.numberWidth,
+               alignment: wide ? .leading : .center)
         .modifier(ColumnID(id: id))
-    }
-
-    private struct WideIf: ViewModifier {
-        let wide: Bool
-        func body(content: Content) -> some View {
-            if wide {
-                content.frame(maxWidth: .infinity)
-            } else {
-                content
-            }
-        }
     }
 
     /// Applies an accessibility identifier when present (keeps the call sites
