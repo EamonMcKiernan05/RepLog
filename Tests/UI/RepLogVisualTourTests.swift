@@ -501,7 +501,7 @@ final class RepLogVisualTourTests: XCTestCase {
     /// TEMPORARY (migration check, removed once the scheme columns are gone).
     /// Phase 1: with the OLD schema, leave a store on disk holding a marker.
     @MainActor
-    func testMigrationSnapshotOldSchema() async {
+    func testZMigrationSnapshotOldSchema() async {
         app.terminate()
         app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
         app.launch()
@@ -528,7 +528,7 @@ final class RepLogVisualTourTests: XCTestCase {
     /// the marker. An in-memory fallback would show an empty routine list, so
     /// finding the marker proves the on-disk store migrated.
     @MainActor
-    func testMigrationSurvivedNewSchema() async {
+    func testZMigrationSurvivedNewSchema() async {
         app.terminate()
         app.launchArguments = []
         app.launch()

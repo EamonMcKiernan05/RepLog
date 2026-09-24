@@ -608,12 +608,12 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
         await settle(1.5)
         print("DEBUG list: buttons=\(app.buttons.allElementsBoundByIndex.map { $0.label })")
-        // Force a fresh render of the list: leave the tab and come back.
-        await tapSettled(app.tabBars.buttons.element(boundBy: 2))
+        // Is the copy in the STORE at all? The Log's "+" lists every routine.
+        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
         await settle()
-        await tapSettled(app.tabBars.buttons.element(boundBy: 1))
-        await settle(1.5)
-        print("DEBUG after tab round-trip: buttons=\(app.buttons.allElementsBoundByIndex.map { $0.label })")
+        await tapSettled(app.buttons["plus"])
+        await settle(2)
+        print("DEBUG start sheet: buttons=\(app.buttons.allElementsBoundByIndex.map { $0.label })")
         let copy = app.buttons["routine-Push Day Copy"].firstMatch
         await expectExists(copy, "the duplicated routine in the list")
         await tapSettled(copy)
