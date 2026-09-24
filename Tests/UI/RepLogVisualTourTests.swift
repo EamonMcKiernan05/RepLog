@@ -140,7 +140,10 @@ final class RepLogVisualTourTests: XCTestCase {
     func testVisualTour() async {
         if !quick {
             // ---- Phase A: onboarding (no demo data yet) ----
-            await settle(2.5)
+            // A first launch on a just-booted simulator is slower than a warm
+            // one; 2.5s was not always enough for the Continue button to exist
+            // (missed once on 2026-09-24).
+            await settle(4.5)
             shot("01-onboarding-units")
             if await tapAny([app.buttons["onboarding-next"]], "onboarding continue") {
                 shot("02-onboarding-privacy")
@@ -267,7 +270,9 @@ final class RepLogVisualTourTests: XCTestCase {
             // The exercise card's "…" menu (owner screenshot, 2026-09-24) and
             // the End Time picker. Both are opened and dismissed: the tour
             // still finishes this workout through the checkmark below.
-            await tapAny([app.buttons["exercise-menu"]], "exercise menu")
+            // .firstMatch: every exercise card carries this identifier, so a
+            // plain subscript query is ambiguous and aborts the tour.
+            await tapAny([app.buttons["exercise-menu"].firstMatch], "exercise menu")
             await settle(1.2)
             shot("11b-exercise-menu")
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.93)).tap()
