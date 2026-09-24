@@ -13,6 +13,10 @@ struct ActiveWorkoutView: View {
     @State private var showTimer = false
     @State private var showAddExercise = false
     @State private var confirmFinish = false
+    /// The End Time row opens a clock picker; confirming it finishes the
+    /// workout (owner request, 2026-09-24).
+    @State private var showEndTime = false
+    @State private var endTimeDraft: Date = .now
     /// Which inline cell (a set cell, an exercise note, the workout note) has
     /// the keyboard. One value for the screen: every card shares it and the
     /// keyboard's Done button clears it.
@@ -121,6 +125,11 @@ struct ActiveWorkoutView: View {
                 }
             )
         }
+        .sheet(isPresented: $showEndTime) {
+            EndTimePickerSheet(initial: endTimeDraft) { picked in
+                finish(at: endDate(from: picked))
+            }
+        }
         .confirmationDialog("Finish this workout?", isPresented: $confirmFinish, titleVisibility: .visible) {
             Button("Finish", role: .destructive) { finish() }
                 .accessibilityIdentifier("finish-confirm")
@@ -144,7 +153,7 @@ struct ActiveWorkoutView: View {
             Divider()
             infoRow("Start Time", session.startTime?.formatted(date: .abbreviated, time: .shortened) ?? "—")
             Divider()
-            infoRow("End Time", session.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "—")
+            endTimeRow
             Divider()
             bodyweightRow
             Divider()
@@ -163,6 +172,32 @@ struct ActiveWorkoutView: View {
             .padding(.vertical, 10)
         }
         .replogCard()
+    }
+
+    /// Tappable: opens the clock picker at the current time, and confirming it
+    /// sets the end time AND finishes the session — the owner's flow for
+    /// "I forgot to hit the checkmark, the workout ended at 14:05"
+    /// (2026-09-24). The chevron is what makes it look tappable.
+    private var endTimeRow: some View {
+        Button {
+            endTimeDraft = session.endTime ?? .now
+            showEndTime = true
+        } label: {
+            HStack {
+                Text("End Time")
+                Spacer()
+                Text(session.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "—")
+                    .foregroundStyle(Palette.textSecondary)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Palette.textSecondary)
+            }
+            .contentShape(Rectangle())
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("end-time-row")
     }
 
     private var bodyweightRow: some View {
@@ -280,8 +315,21 @@ struct ActiveWorkoutView: View {
         store.save()
     }
 
-    private func finish() {
-        session.endTime = .now
+    /// The session's day at the picked clock time. A workout that ran past
+    /// midnight rolls to the next day rather than ending before it started.
+    private func endDate(from picked: Date) -> Date {
+        let cal = Calendar.current
+        let day = session.startTime ?? session.date
+        let hm = cal.dateComponents([.hour, .minute], from: picked)
+        var d = cal.date(bySettingHour: hm.hour ?? 0, minute: hm.minute ?? 0, second: 0, of: day) ?? picked
+        if let start = session.startTime, d < start {
+            d = cal.date(byAdding: .day, value: 1, to: d) ?? d
+        }
+        return d
+    }
+
+    private func finish(at endTime: Date = .now) {
+        session.endTime = endTime
         store.save()
         timer.stop()
         sync.sessionFinished(session)

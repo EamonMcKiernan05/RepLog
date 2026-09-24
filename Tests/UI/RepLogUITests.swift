@@ -436,6 +436,55 @@ final class RepLogUITests: XCTestCase {
                        "deleted workout should be gone from the Log")
     }
 
+    // MARK: - The End Time row (owner request, 2026-09-24)
+
+    /// Tapping End Time must open a clock picker at the current time, and
+    /// confirming it must set the end time AND finish the workout.
+    @MainActor
+    func testEndTimeRowFinishesTheWorkout() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
+
+        let row = app.buttons["end-time-row"]
+        await expectExists(row, "the End Time row is not tappable")
+        await tapSettled(row)
+
+        let done = app.buttons["end-time-done"]
+        await expectExists(done, "the end time picker was not shown")
+        await tapSettled(done)
+        await settle(2.5)
+
+        await expectExists(app.buttons["plus"], "the workout did not finish after picking an end time")
+        let sessionRow = app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'session-row-'")).firstMatch
+        await expectExists(sessionRow, "the finished session is not listed in the Log")
+        XCTAssertFalse(sessionRow.label.contains("In progress"),
+                       "session still reads In progress after an end time was set: \(sessionRow.label)")
+    }
+
+    // MARK: - The exercise card menu (owner request, 2026-09-24)
+
+    /// The "…" on an exercise card must open the reference app's action set.
+    /// It used to be a bare glyph with no tap target, so it read as dead.
+    @MainActor
+    func testExerciseMenuOffersTheReferenceActions() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
+
+        await tapSettled(app.buttons["exercise-menu"])
+        for label in ["Move", "Replace", "Delete", "Edit Note", "History", "Charts", "Personal Records", "Weight Unit"] {
+            let item = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", label)).firstMatch
+            let shown = await wait(for: item, timeout: 6)
+            XCTAssertTrue(shown, "the exercise menu is missing '\(label)'")
+        }
+        // Dismiss without choosing anything.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.93)).tap()
+        await settle(1)
+    }
+
     // MARK: - Exercise search
 
     @MainActor

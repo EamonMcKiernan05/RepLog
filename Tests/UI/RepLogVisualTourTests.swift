@@ -264,6 +264,21 @@ final class RepLogVisualTourTests: XCTestCase {
         shot("11-active-workout-populated")
 
         if !quick {
+            // The exercise card's "…" menu (owner screenshot, 2026-09-24) and
+            // the End Time picker. Both are opened and dismissed: the tour
+            // still finishes this workout through the checkmark below.
+            await tapAny([app.buttons["exercise-menu"]], "exercise menu")
+            await settle(1.2)
+            shot("11b-exercise-menu")
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.93)).tap()
+            await settle(1)
+
+            await tapAny([app.buttons["end-time-row"]], "end time row")
+            await settle(1.2)
+            shot("11c-end-time-picker")
+            await tapAny([app.buttons["end-time-cancel"]], "cancel end time")
+            await settle(1)
+
             // Rest timer dock (plan §6.8).
             await tapAny([app.buttons["timer-button"]], "timer button")
             await settle(1)

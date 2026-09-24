@@ -251,18 +251,19 @@ struct RoutineDetailView: View {
         for re in routine.routineExercises.sorted(by: { $0.sortOrder < $1.sortOrder }) {
             guard let ex = re.exercise else { continue }
             let entry = ExerciseEntry(exercise: ex, sortOrder: order)
+            // Same rule as the "+" path: rows from the counts, values only from
+            // a scheme row that carries a real weight (`SchemePrefill`).
             let scheme = re.scheme
-            let total = re.warmupSets + re.workingSets
-            for i in 0..<max(total, scheme.count) {
+            let total = SchemePrefill.setCount(warmupSets: re.warmupSets,
+                                               workingSets: re.workingSets,
+                                               schemeRows: scheme.count)
+            for i in 0..<total {
                 let set = SetEntry(setNumber: i + 1, setType: i < re.warmupSets ? .warmup : .working)
-                if scheme.indices.contains(i) {
-                    set.weightKg = scheme[i][0]
-                    set.reps = Int(scheme[i][1])
+                if let v = SchemePrefill.values(for: scheme.indices.contains(i) ? scheme[i] : nil) {
+                    set.weightKg = v.weightKg
+                    set.reps = v.reps
                 }
                 entry.setEntries.append(set)
-            }
-            if !re.schemeLines.isEmpty {
-                entry.plannedScheme = re.schemeLines.joined(separator: " / ")
             }
             session.exerciseEntries.append(entry)
             order += 1
@@ -275,7 +276,10 @@ struct RoutineDetailView: View {
     private func addExercise(_ exercise: Exercise) {
         let next = (routine.routineExercises.map { $0.sortOrder }.max() ?? -1) + 1
         let re = RoutineExercise(exercise: exercise, sortOrder: next, workingSets: 4)
-        re.scheme = [[0, 4]]
+        // No seeded scheme: the old default `[[0, 4]]` meant "0 kg x 4" and was
+        // what pre-filled a committed 0 into every new session. Schemes are no
+        // longer editable in the app, so a new exercise simply has none.
+        re.scheme = []
         routine.routineExercises.append(re)
         store.save()
     }

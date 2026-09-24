@@ -10,6 +10,7 @@ import SwiftData
 /// 7, 7.5, 8, 8.5, 9) appear under the row whose RPE cell is being edited.
 struct ExerciseCardView: View {
     @Environment(DataStore.self) private var store
+    @Environment(Settings.self) private var settings
     let entry: ExerciseEntry
     var unit: WeightUnit
     var isEditing: Bool
@@ -18,6 +19,9 @@ struct ExerciseCardView: View {
 
     @State private var showHistory = false
     @State private var showPR = false
+    @State private var showCharts = false
+    @State private var showMove = false
+    @State private var showReplace = false
     @State private var confirmRemove = false
 
     private var owner: ObjectIdentifier { ObjectIdentifier(entry) }
@@ -44,8 +48,6 @@ struct ExerciseCardView: View {
             if isEditing {
                 addSetRow
                 Divider()
-                noteRow
-                Divider()
                 iconRow
             } else if !entry.notes.isEmpty {
                 // Read-only: the note still shows, just not as an input.
@@ -67,37 +69,103 @@ struct ExerciseCardView: View {
         .sheet(isPresented: $showPR) {
             PRView(exerciseName: entry.exercise?.name ?? "")
         }
+        .sheet(isPresented: $showCharts) {
+            NavigationStack {
+                ExerciseDetailView(exerciseName: entry.exercise?.name ?? "")
+            }
+        }
+        .sheet(isPresented: $showMove) {
+            MoveExercisesSheet(session: entry.session)
+        }
+        .sheet(isPresented: $showReplace) {
+            SelectExerciseSheet(title: "Replace Exercise", onSelect: { exercise in
+                replace(with: exercise)
+            })
+        }
         .confirmationDialog("Remove this exercise?", isPresented: $confirmRemove) {
-            Button("Remove", role: .destructive) { remove() }
+            Button("Delete", role: .destructive) { remove() }
+                .accessibilityIdentifier("exercise-delete-confirm")
+            Button("Cancel", role: .cancel) { }
         }
     }
 
+    /// Swap the movement and keep the work already logged: sets, notes and the
+    /// unit override belong to the entry, not to the exercise (same rule as the
+    /// routine editor's Replace).
+    private func replace(with exercise: Exercise) {
+        entry.exercise = exercise
+        store.save()
+    }
+
+    /// Per-exercise unit override; nil = follow the global setting. Storage
+    /// stays kg either way (the CSV is frozen in kg).
+    private func setUnit(_ unit: WeightUnit?) {
+        entry.unitOverride = unit
+        store.save()
+    }
+
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(entry.exercise?.name ?? "Exercise")
                     .font(.body.weight(.bold))
-                if let scheme = entry.plannedScheme, !scheme.isEmpty {
-                    Text(scheme)
-                        .font(.caption)
-                        .foregroundStyle(Palette.textSecondary)
-                }
+                // The line under the name is the exercise NOTE, shown and typed
+                // in place — the position RepCount uses (owner request,
+                // 2026-09-24). It replaced the routine's "1x4" scheme line,
+                // which read as a set he had not entered.
+                InlineTextField(
+                    placeholder: "Add Note",
+                    id: "exercise-note-field",
+                    text: entry.notes,
+                    font: .caption,
+                    focus: focus,
+                    focusValue: CellFocus(owner: owner, field: .exerciseNote),
+                    commit: { text in
+                        entry.notes = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                        store.save()
+                    }
+                )
             }
-            Spacer()
-            if isEditing {
-                Menu {
-                    Button { focusExerciseNote() } label: { Label("Notes", systemImage: "text.alignleft") }
-                    Button { showHistory = true } label: { Label("History", systemImage: "chart.line.uptrend.xyaxis") }
-                    Button { showPR = true } label: { Label("Personal Records", systemImage: "star") }
-                    Button(role: .destructive) { confirmRemove = true } label: { Label("Remove", systemImage: "trash") }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(Palette.accent)
-                }
-            }
+            Spacer(minLength: 0)
+            if isEditing { exerciseMenu }
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
+    }
+
+    /// The card's "…" — the reference app's exercise panel (owner screenshot,
+    /// 2026-09-24). It used to be a bare `Image` with no frame or content
+    /// shape, so its hit area was the glyph itself and it read as a dead
+    /// button; it now has a 44pt target and the full set of actions.
+    private var exerciseMenu: some View {
+        Menu {
+            Button { showMove = true } label: { Label("Move", systemImage: "line.3.horizontal") }
+            Button { showReplace = true } label: { Label("Replace", systemImage: "arrow.triangle.2.circlepath") }
+            Button(role: .destructive) { confirmRemove = true } label: { Label("Delete", systemImage: "xmark") }
+            Divider()
+            Button { focusExerciseNote() } label: { Label("Edit Note", systemImage: "square.and.pencil") }
+            Divider()
+            Button { showHistory = true } label: { Label("History", systemImage: "clock.arrow.circlepath") }
+            Button { showCharts = true } label: { Label("Charts", systemImage: "chart.xyaxis.line") }
+            Button { showPR = true } label: { Label("Personal Records", systemImage: "star") }
+            Divider()
+            // Per-exercise kg/lb override (plan T5.5). Storage stays kg; only
+            // the display and entry unit change.
+            Menu {
+                Button { setUnit(nil) } label: { Label("Default (\(settings.unit.rawValue))", systemImage: "arrow.uturn.backward") }
+                Button { setUnit(.kg) } label: { Label("Kilograms", systemImage: "scalemass") }
+                Button { setUnit(.lb) } label: { Label("Pounds", systemImage: "scalemass") }
+            } label: {
+                Label("Weight Unit", systemImage: "scalemass")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.body.weight(.bold))
+                .foregroundStyle(Palette.accent)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityIdentifier("exercise-menu")
     }
 
     private var addSetRow: some View {
@@ -115,30 +183,6 @@ struct ExerciseCardView: View {
         .padding(.horizontal)
         .padding(.vertical, 10)
         .accessibilityIdentifier("add-set")
-    }
-
-    /// The exercise note, typed in place (it used to be a sheet).
-    private var noteRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "text.alignleft")
-                .font(.footnote)
-                .foregroundStyle(Palette.accent)
-            InlineTextField(
-                placeholder: "Add Note",
-                id: "exercise-note-field",
-                text: entry.notes,
-                font: .subheadline,
-                focus: focus,
-                focusValue: CellFocus(owner: owner, field: .exerciseNote),
-                commit: { text in
-                    entry.notes = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    store.save()
-                }
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
     }
 
     /// Quick RPE chips, shown under the row being edited (the sheet's chips,
