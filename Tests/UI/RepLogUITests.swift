@@ -556,9 +556,17 @@ final class RepLogUITests: XCTestCase {
         await typeInCell("notes-cell", "felt heavy")
         await dismissKeyboard()
 
-        // The note renders as a second line under the row.
-        let noteLine = app.staticTexts["felt heavy"]
-        await expectExists(noteLine, "set note 'felt heavy' not displayed")
+        // The note shows ONCE, in the Notes box. The copy that used to render
+        // as a second line under the row was removed on the owner's
+        // instruction (2026-09-24) — so this asserts both halves: the box
+        // holds it, and nothing else repeats it.
+        let cell = app.textFields["notes-cell"].firstMatch
+        await expectExists(cell, "Notes box not found")
+        XCTAssertEqual(cell.value as? String, "felt heavy",
+                       "the note is not in the Notes box")
+        XCTAssertEqual(
+            app.staticTexts.matching(NSPredicate(format: "label == %@", "felt heavy")).count, 0,
+            "the note is drawn a second time outside the Notes box")
     }
 
     // MARK: - Offline drill (plan §7.5)
