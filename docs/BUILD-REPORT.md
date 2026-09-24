@@ -445,10 +445,29 @@ duplicate's scheme copy, and `Engine/SchemePrefill.swift` with
 `warmupSets + workingSets` alone and start EMPTY — which also retires the whole
 "0 kg × 4 got committed into new sessions" family of bugs at the root.
 
-`RoutineExercise.schemeJSON` and `ExerciseEntry.plannedScheme` stay as stored
-properties with a comment: nothing reads or writes them, and keeping the
-columns means the store's schema is unchanged for installs that already hold
-data. Dropping them would need a migration for no gain.
+**The columns are gone too, not just the behaviour** (owner: *"delete the
+scheme stuff from the database as well... this is still in dev / testing so
+nothing in the database is important. Start the db fresh if it's easier"*).
+`RoutineExercise.schemeJSON` and `ExerciseEntry.plannedScheme` no longer exist
+in the model.
+
+Verified on a real store rather than assumed. A store written by the previous
+build (with the columns) was left on the simulator with a marker note in it,
+then the app was built without the columns and launched **without** a reset:
+
+- SwiftData **cannot** migrate that store — the routine was gone, so a removed
+  property is not a lightweight migration here. The owner authorised a fresh
+  database, so that is the behaviour, but it must be a *fresh database*, not a
+  silent trip into memory.
+- `DataStore.makeContainer` used to fall back to an **in-memory** container when
+  the file store would not open. That is the worst outcome available: the app
+  looks like it works and loses everything on the next launch. It now deletes
+  the store and its sidecars and creates a FRESH FILE store, keeping in-memory
+  only for a sandbox where nothing on disk can be opened at all.
+- Verified at the file level afterwards: `Library/Application Support/RepLog/`
+  holds a fresh `RepLog.sqlite` (plus `-wal`/`-shm`) with the seeded 154
+  exercises, `pragma_table_info("ZROUTINEEXERCISE")` shows **no ZSCHEMEJSON**,
+  and `pragma_table_info("ZEXERCISEENTRY")` shows **no ZPLANNEDSCHEME**.
 
 ### 0.5.3 Which row layout — chosen from captures, not described
 
@@ -468,7 +487,17 @@ This was already the model (`RoutineExercise.notes`), and it is now proved:
 Bench, duplicates the routine, gives the copy a different note, and asserts
 neither routine sees the other's.
 
-### 0.5.5 A note typed then "Done" was not reliably committed
+### 0.5.5 A duplicated routine never appeared in the list
+
+Found while writing the per-routine test, and fixed: the routines list is built
+from a FETCH (`store.routines()`), and inserting a routine from the detail
+view's menu touched nothing the list observed — so the copy existed in the
+store and never showed up (it appeared only after the app rebuilt the list).
+`DataStore` now exposes `revision`, bumped on every `save()`, and the list reads
+it, so an insert or delete made anywhere re-renders it. The test covers it: the
+copy must be in the list when the detail view pops.
+
+### 0.5.6 A note typed then "Done" was not reliably committed
 
 `InlineTextField` only wrote its draft when the box lost focus. The sheet's own
 Done button dismisses the editor without clearing focus, so the commit depended
@@ -477,7 +506,7 @@ draft commits `onDisappear` of the field, and the exercise editor's Done clears
 focus before dismissing. Every inline note field in the app inherits the
 first fix (routine name, routine notes, set counts, workout/session notes).
 
-### 0.5.6 Test-harness lesson (cost two red runs)
+### 0.5.7 Test-harness lesson (cost two red runs)
 
 The keyboard carries a **Done** button of its own. Tapping `app.buttons["Done"]`
 picked that one, so the sheet never closed and the assertion failed against the
@@ -485,7 +514,7 @@ screen behind it. Tap the sheet's Done in the nav bar:
 `app.navigationBars.buttons["Done"]`. Likewise `Start this Workout` is a
 Button, not a staticText.
 
-### 0.5.7 Published
+### 0.5.8 Published
 
 **1.1.3 (build 6)** — published after a green gate at `ef19eeb`.
 

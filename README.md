@@ -17,7 +17,7 @@ dependencies); finished sessions can optionally sync to a flat
   Bodyweight (BW+, BW−, reps, time), Cardio (time/distance/calories), Other
   (note per set).
 - **Routines** — create, edit, duplicate, reorder; per-exercise warm-up /
-  working sets and schemes; "Start this Workout".
+  working sets and a note; "Start this Workout".
 - **Exercise library** — 12 categories, 150+ seeded exercises, add/edit,
   single arm/leg, transfer data.
 - **Statistics** — overall metrics, per-exercise history with volume and
