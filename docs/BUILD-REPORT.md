@@ -20,7 +20,7 @@ Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
 
 ## Build status
 
-**Status: the whole Mac gate is green at commit `5095eef`** — `** BUILD
+**Status: the whole Mac gate is green at commit `42964ea`** — `** BUILD
 SUCCEEDED **`, 36/36 unit tests, **12/12 UI tests** including the in-simulator
 offline drill, in one `scripts/mac-tests.sh` run (§1.1, §0.1 and §0.3). The dark-mode visual
 pass covers every screen against the 17 reference screenshots (§4), and the
@@ -516,7 +516,15 @@ Button, not a staticText.
 
 ### 0.5.8 Published
 
-**1.1.3 (build 6)** — published after a green gate at `ef19eeb`.
+**1.1.3 (build 6)** — 684,667 bytes, sha256
+`4cb6850571299a3f8e4c85810ea398df835c3947bf7f0da88b1d0d8204cf88aa`, archived from
+`42964ea` after a green gate (36 unit, 14/14 UI, `All Mac tests passed.`). The
+served file's sha256 was read back over HTTPS and matches; the install page
+reads 1.1.3 built 2026-09-24 18:07 UTC.
+
+**Expect an empty app on first launch of this build** — the schema change
+cannot migrate an older store, so it starts a fresh one (154 seeded exercises,
+no routines, no sessions). That is the authorised behaviour, not a fault.
 
 ---
 
