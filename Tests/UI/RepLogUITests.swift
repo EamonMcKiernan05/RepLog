@@ -339,7 +339,6 @@ final class RepLogUITests: XCTestCase {
     /// Tapping a session row in the Log must push the session detail
     /// (plan §6.1). Regression test: the row was a Button setting the item of
     /// .navigationDestination(item:) and the push never fired.
-    @MainActor
     /// Owner request (2026-09-24): "update things so I can edit a finished
     /// workout the same way I can an active one". A finished workout opens the
     /// SAME editor, its values are editable and stay edited, and it offers no
