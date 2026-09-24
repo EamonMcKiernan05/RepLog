@@ -425,7 +425,13 @@ struct RoutineExerciseEditorSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    // Clearing focus first commits a note that is still being
+                    // typed: Done used to dismiss the sheet and drop the draft
+                    // (owner report, 2026-09-24).
+                    Button("Done") {
+                        focus = nil
+                        dismiss()
+                    }
                 }
                 KeyboardDoneButton(focus: $focus)
             }

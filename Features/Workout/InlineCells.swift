@@ -122,6 +122,10 @@ struct InlineCell: View {
         // The whole box is the tap target, not just the glyphs.
         .contentShape(Rectangle())
         .onTapGesture { focus.wrappedValue = focusValue }
+        // A row that leaves the screen (or a screen dismissed with the draft
+        // still in @State) used to drop what was typed. Commit it on the way
+        // out — same rule as losing focus (owner report, 2026-09-24).
+        .onDisappear { finishEditing() }
     }
 
     /// Commit the draft and go back to showing the model's value. The guard on
@@ -207,6 +211,12 @@ struct InlineTextField: View {
                 if !focused { finishEditing() }
             }
         }
+        // THE bug behind the owner report of 2026-09-24 ("a note set in the
+        // routine never appears"): the sheet's own Done button dismisses the
+        // editor while the draft is still in @State, so `onChange(of:
+        // isFocused)` never ran and the typed note was thrown away. Commit on
+        // the way out.
+        .onDisappear { finishEditing() }
     }
 
     private func finishEditing() {
