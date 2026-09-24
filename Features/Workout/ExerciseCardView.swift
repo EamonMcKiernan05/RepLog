@@ -70,9 +70,7 @@ struct ExerciseCardView: View {
             PRView(exerciseName: entry.exercise?.name ?? "")
         }
         .sheet(isPresented: $showCharts) {
-            NavigationStack {
-                ExerciseDetailView(exerciseName: entry.exercise?.name ?? "")
-            }
+            ExerciseChartsSheet(exerciseName: entry.exercise?.name ?? "")
         }
         .sheet(isPresented: $showMove) {
             MoveExercisesSheet(session: entry.session)

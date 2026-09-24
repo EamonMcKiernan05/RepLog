@@ -57,6 +57,26 @@ struct MoveExercisesSheet: View {
     }
 }
 
+/// The per-exercise charts, presented from the workout card's menu. The
+/// statistics screen PUSHES `ExerciseDetailView`, which has no title-bar button
+/// of its own; from a sheet it needs a way out that is not a swipe.
+struct ExerciseChartsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let exerciseName: String
+
+    var body: some View {
+        NavigationStack {
+            ExerciseDetailView(exerciseName: exerciseName)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                            .accessibilityIdentifier("charts-done")
+                    }
+                }
+        }
+    }
+}
+
 /// Pick the end time for an open workout. Confirming it sets the time AND
 /// finishes the session (owner request, 2026-09-24: tapping End Time should
 /// "automatically mark the session as finished"), so the wording says so
