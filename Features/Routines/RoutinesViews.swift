@@ -171,23 +171,11 @@ struct RoutineDetailView: View {
                                         .font(.body.weight(.bold))
                                     Text("\(re.warmupSets + re.workingSets) Sets")
                                         .font(.subheadline)
-                                    // The exercise's own note for this routine
-                                    // comes first: it is what was set in the
-                                    // editor, and the row never drew it (owner
-                                    // report, 2026-09-24).
-                                    if RoutineRowStyle.current.noteFirst {
-                                        noteLine(re)
-                                    }
-                                    if RoutineRowStyle.current.showsScheme {
-                                        ForEach(re.schemeLines, id: \.self) { line in
-                                            Text(line)
-                                                .font(.caption)
-                                                .foregroundStyle(Palette.textSecondary)
-                                        }
-                                    }
-                                    if !RoutineRowStyle.current.noteFirst {
-                                        noteLine(re)
-                                    }
+                                    // The exercise's own note for this routine.
+                                    // There is no scheme line any more: an
+                                    // exercise here is a set count and a note
+                                    // (owner, 2026-09-24).
+                                    noteLine(re)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -241,6 +229,8 @@ struct RoutineDetailView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                // Named so the UI tests can reach Rename / Duplicate / Delete.
+                .accessibilityIdentifier("routine-menu")
             }
             KeyboardDoneButton(focus: $focus)
         }
@@ -279,18 +269,13 @@ struct RoutineDetailView: View {
             // where the card shows it under the name (owner report,
             // 2026-09-24: the note set in the routine was dropped here).
             entry.notes = re.notes
-            // Same rule as the "+" path: rows from the counts, values only from
-            // a scheme row that carries a real weight (`SchemePrefill`).
-            let scheme = re.scheme
-            let total = SchemePrefill.setCount(warmupSets: re.warmupSets,
-                                               workingSets: re.workingSets,
-                                               schemeRows: scheme.count)
+            // Rows come from the set counts and nothing else: a routine
+            // exercise is a set count and a note (owner, 2026-09-24), so a new
+            // session starts with the right number of EMPTY rows and no
+            // invented weight or reps.
+            let total = re.warmupSets + re.workingSets
             for i in 0..<total {
                 let set = SetEntry(setNumber: i + 1, setType: i < re.warmupSets ? .warmup : .working)
-                if let v = SchemePrefill.values(for: scheme.indices.contains(i) ? scheme[i] : nil) {
-                    set.weightKg = v.weightKg
-                    set.reps = v.reps
-                }
                 entry.setEntries.append(set)
             }
             session.exerciseEntries.append(entry)
@@ -304,10 +289,6 @@ struct RoutineDetailView: View {
     private func addExercise(_ exercise: Exercise) {
         let next = (routine.routineExercises.map { $0.sortOrder }.max() ?? -1) + 1
         let re = RoutineExercise(exercise: exercise, sortOrder: next, workingSets: 4)
-        // No seeded scheme: the old default `[[0, 4]]` meant "0 kg x 4" and was
-        // what pre-filled a committed 0 into every new session. Schemes are no
-        // longer editable in the app, so a new exercise simply has none.
-        re.scheme = []
         routine.routineExercises.append(re)
         store.save()
     }
@@ -322,7 +303,7 @@ struct RoutineDetailView: View {
             let cre = RoutineExercise(
                 exercise: re.exercise, sortOrder: order,
                 warmupSets: re.warmupSets, workingSets: re.workingSets,
-                scheme: re.scheme, notes: re.notes
+                notes: re.notes
             )
             copy.routineExercises.append(cre)
             order += 1

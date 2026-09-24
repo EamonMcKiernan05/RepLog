@@ -130,7 +130,9 @@ final class ExerciseEntry {
     var exercise: Exercise?
     var sortOrder: Int
     var supersetId: String?
-    var plannedScheme: String?        // e.g. "1x1 / 3x4"
+    /// Vestigial, like `RoutineExercise.schemeJSON`: nothing reads or writes
+    /// it since the planned-scheme concept went (owner, 2026-09-24).
+    var plannedScheme: String? = nil
     var notes: String
     var unitOverrideRaw: String?      // per-exercise kg/lb override
     var sets: [SetEntry] = []
@@ -138,12 +140,10 @@ final class ExerciseEntry {
     @Relationship(deleteRule: .cascade, inverse: \SetEntry.exerciseEntry)
     var setEntries: [SetEntry] = []
 
-    init(exercise: Exercise?, sortOrder: Int, supersetId: String? = nil,
-         plannedScheme: String? = nil) {
+    init(exercise: Exercise?, sortOrder: Int, supersetId: String? = nil) {
         self.exercise = exercise
         self.sortOrder = sortOrder
         self.supersetId = supersetId
-        self.plannedScheme = plannedScheme
         self.notes = ""
     }
 
@@ -223,45 +223,23 @@ final class RoutineExercise {
     var sortOrder: Int
     var warmupSets: Int
     var workingSets: Int
-    var schemeJSON: String            // [[weightKg, reps], ...]
+    /// Vestigial. A routine exercise used to carry a set SCHEME
+    /// ([[weightKg, reps], ...]) that pre-filled the first sets of a new
+    /// session. The owner removed the concept on 2026-09-24: an exercise in a
+    /// routine is a number of sets and a note, nothing else. Nothing reads or
+    /// writes this. The column stays so the store's schema is unchanged for
+    /// installs that already hold data — dropping it would need a migration
+    /// for no gain.
+    var schemeJSON: String = "[]"
     var notes: String
 
     init(exercise: Exercise?, sortOrder: Int, warmupSets: Int = 0,
-         workingSets: Int = 4, scheme: [[Double]] = [], notes: String = "") {
+         workingSets: Int = 4, notes: String = "") {
         self.exercise = exercise
         self.sortOrder = sortOrder
         self.warmupSets = warmupSets
         self.workingSets = workingSets
-        self.schemeJSON = (try? JSONEncoder().encode(scheme))
-            .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
         self.notes = notes
-    }
-
-    var scheme: [[Double]] {
-        get {
-            (try? JSONDecoder().decode([[Double]].self,
-                                       from: schemeJSON.data(using: .utf8)!)) ?? []
-        }
-        set {
-            schemeJSON = (try? JSONEncoder().encode(newValue))
-                .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
-        }
-    }
-
-    /// Condensed scheme lines, e.g. "1x1" and "3x4".
-    var schemeLines: [String] {
-        // Group consecutive identical (weight, reps) pairs.
-        var lines: [String] = []
-        var i = 0
-        let s = scheme
-        while i < s.count {
-            var j = i
-            while j < s.count, s[j][0] == s[i][0], s[j][1] == s[i][1] { j += 1 }
-            let reps = Int(s[i][1])
-            lines.append("\(j - i)x\(reps)")
-            i = j
-        }
-        return lines
     }
 }
 

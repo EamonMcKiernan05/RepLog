@@ -130,9 +130,9 @@ private func seedDemoData(store: DataStore, settings: Settings) {
     let routine = Routine(name: "Push Day", sortOrder: 0)
     routine.notes = "Demo routine (synthetic data)."
     let re1 = RoutineExercise(exercise: bench, sortOrder: 0, warmupSets: 1, workingSets: 4,
-                              scheme: [[100, 5], [110, 4], [120, 3], [125, 2]], notes: "")
+                              notes: "")
     let re2 = RoutineExercise(exercise: dips, sortOrder: 1, warmupSets: 0, workingSets: 3,
-                              scheme: [[10, 8], [12.5, 8], [15, 6]], notes: "")
+                              notes: "")
     routine.routineExercises.append(re1)
     routine.routineExercises.append(re2)
     ctx.insert(routine)

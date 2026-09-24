@@ -98,7 +98,7 @@ install without Xcode, a cable or Bonjour:
    session cannot reach the signing keychain.
 2. Copy the IPA to the host and publish it with
    `/srv/downloads/publish.sh --slug replog --ipa /tmp/RepLog.ipa --name RepLog
-   --bundle im.eamon.replog --version 1.1.2 --base https://replog.eamonmckiernan.im`.
+   --bundle im.eamon.replog --version 1.1.3 --base https://replog.eamonmckiernan.im`.
 3. On the iPhone, open `https://replog.eamonmckiernan.im/replog/` **in Safari**
    and tap Install RepLog.
 

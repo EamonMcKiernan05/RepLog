@@ -70,21 +70,12 @@ struct StartWorkoutSheet: View {
             // The routine's note for this exercise travels into the workout
             // (owner report, 2026-09-24).
             entry.notes = re.notes
-            // Set ROWS come from the routine's warm-up/working counts. The
-            // VALUES only pre-fill when the scheme row carries a real weight:
-            // a "0 x 4" row is not a prescription and writing it in put a
-            // committed 0 kg set in every new session (owner report,
-            // 2026-09-24). `SchemePrefill` holds that rule and its unit tests.
-            let scheme = re.scheme
-            let total = SchemePrefill.setCount(warmupSets: re.warmupSets,
-                                               workingSets: re.workingSets,
-                                               schemeRows: scheme.count)
+            // Rows come from the set counts and nothing else: a routine
+            // exercise is a set count and a note, so a session starts with the
+            // right number of EMPTY rows and no invented weight or reps.
+            let total = re.warmupSets + re.workingSets
             for i in 0..<total {
                 let set = SetEntry(setNumber: i + 1, setType: i < re.warmupSets ? .warmup : .working)
-                if let v = SchemePrefill.values(for: scheme.indices.contains(i) ? scheme[i] : nil) {
-                    set.weightKg = v.weightKg
-                    set.reps = v.reps
-                }
                 entry.setEntries.append(set)
             }
             session.exerciseEntries.append(entry)
@@ -159,7 +150,6 @@ struct RepeatWorkoutSheet: View {
         for entry in last.exerciseEntries.sorted(by: { $0.sortOrder < $1.sortOrder }) {
             guard let ex = entry.exercise else { continue }
             let newEntry = ExerciseEntry(exercise: ex, sortOrder: order, supersetId: entry.supersetId)
-            newEntry.plannedScheme = entry.plannedScheme
             for set in entry.setEntries.sorted(by: { $0.sortOrder < $1.sortOrder }) {
                 let ns = SetEntry(setNumber: set.setNumber, setType: set.setType)
                 switch mode {

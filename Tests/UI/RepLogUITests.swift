@@ -569,6 +569,91 @@ final class RepLogUITests: XCTestCase {
             "the note is drawn a second time outside the Notes box")
     }
 
+    /// Owner requirement (2026-09-24): the note belongs to the EXERCISE IN THAT
+    /// ROUTINE, not to the exercise. Two routines can hold the same exercise and
+    /// must keep their own notes — his example: session 1's squat says "3x5 go
+    /// light", session 2's says "4x4 go heavy, no belt".
+    ///
+    /// A duplicate is the cheapest second routine that holds the same exercise.
+    @MainActor
+    func testNotesArePerRoutineNotPerExercise() async {
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
+        app.launch()
+        await settle(3)
+
+        let first = "3x5 go light"
+        let second = "4x4 go heavy, no belt"
+
+        await tapSettled(app.tabBars.buttons.element(boundBy: 1))
+        await settle()
+        await tapSettled(app.buttons["routine-Push Day"])
+        await settle()
+
+        // Note on Push Day's Competition Bench.
+        await setNote(first, on: "Competition Bench")
+        await expectExists(app.staticTexts[first], "Push Day's own note on its row")
+
+        // Duplicate the routine: the copy holds the same exercise.
+        let menu = app.buttons["routine-menu"].firstMatch
+        await expectExists(menu, "routine menu")
+        await tapSettled(menu)
+        await settle(0.8)
+        await tapSettled(app.buttons["Duplicate"].firstMatch)
+        await settle(1.5)
+
+        // Back to the list and into the copy.
+        await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
+        await settle()
+        let copy = app.buttons["routine-Push Day Copy"].firstMatch
+        await expectExists(copy, "the duplicated routine in the list")
+        await tapSettled(copy)
+        await settle()
+        await expectExists(app.staticTexts[first], "the copy inherits the note")
+
+        // Give the copy's Bench a different note.
+        await setNote(second, on: "Competition Bench")
+        await expectExists(app.staticTexts[second], "the copy's own note on its row")
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label == %@", first)).count == 0,
+            "changing the copy's note changed Push Day's note too")
+
+        // Push Day still holds its own note.
+        await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
+        await settle()
+        await tapSettled(app.buttons["routine-Push Day"].firstMatch)
+        await settle()
+        await expectExists(app.staticTexts[first], "Push Day kept its own note")
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label == %@", second)).count == 0,
+            "the copy's note leaked into Push Day")
+    }
+
+    /// Open the routine exercise editor for `exercise`, type `note`, Done.
+    @MainActor
+    private func setNote(_ note: String, on exercise: String) async {
+        let row = app.staticTexts[exercise].firstMatch
+        await expectExists(row, "\(exercise) row in the routine")
+        await tapSettled(row)
+        let field = app.textFields["routine-exercise-notes-field"].firstMatch
+        await expectExists(field, "routine exercise notes field")
+        await tapSettled(field)
+        let existing = (field.value as? String) ?? ""
+        if !existing.isEmpty {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
+                                  count: existing.count + 2))
+            await settle(0.4)
+        }
+        field.typeText(note)
+        await settle(0.6)
+        // The sheet's own Done — the nav bar's, not the keyboard's (the
+        // keyboard carries a "Done" too, and tapping that leaves the sheet up).
+        let sheetDone = app.navigationBars.buttons["Done"].firstMatch
+        await expectExists(sheetDone, "the routine editor's Done button")
+        await tapSettled(sheetDone)
+        await settle()
+    }
+
     /// Owner report (2026-09-24): "When editing a routine the exercise notes
     /// don't reflect the actual exercise note set in the routine." The note a
     /// routine exercise carries was never drawn on the routine and was dropped
