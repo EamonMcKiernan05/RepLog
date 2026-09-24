@@ -595,8 +595,12 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(field)
         field.typeText(note)
         await settle(0.6)
-        // The sheet's own Done button, exactly as reported.
-        await tapSettled(app.buttons["Done"].firstMatch)
+        // The sheet's own Done button, exactly as reported. It has to be the
+        // one in the nav bar: the keyboard carries a "Done" too, and tapping
+        // that one leaves the sheet open.
+        let sheetDone = app.navigationBars.buttons["Done"].firstMatch
+        await expectExists(sheetDone, "the routine editor's Done button")
+        await tapSettled(sheetDone)
         await settle()
 
         // 1. The routine's row draws the note that was set.

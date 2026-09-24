@@ -521,8 +521,12 @@ final class RepLogVisualTourTests: XCTestCase {
         await settle(0.8)
         print("PROBE typed, field value=\((field.value as? String) ?? "nil")")
 
-        _ = await tapAny([app.buttons["Done"].firstMatch], "sheet Done")
-        await settle(2)
+        // The keyboard carries a "Done" too — tap the SHEET's, in the nav bar.
+        print("PROBE nav-bar Done exists=\(app.navigationBars.buttons["Done"].exists)")
+        _ = await tapAny([app.navigationBars.buttons["Done"].firstMatch], "sheet Done")
+        let backOnDetail = await waitFor(app.staticTexts["Start this Workout"], timeout: 8)
+        print("PROBE sheet closed=\(backOnDetail) notesFieldGone=\(!app.textFields["routine-exercise-notes-field"].firstMatch.exists)")
+        await settle(1)
         let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }
         print("PROBE routine-detail static texts: \(labels)")
 
@@ -562,7 +566,7 @@ final class RepLogVisualTourTests: XCTestCase {
                 _ = await tapAny([app.buttons["keyboard-done"]], "keyboard done", timeout: 3)
                 await settle(0.6)
             }
-            _ = await tapAny([app.buttons["Done"].firstMatch], "sheet Done")
+            _ = await tapAny([app.navigationBars.buttons["Done"].firstMatch], "sheet Done")
             await settle(1.5)
             shot("routine-row-\(style)")
         }
