@@ -29,6 +29,9 @@ Final committed set: `docs/visual/` — one file per screen, plus
 | 10b-set-cell-typed.png | A weight typed straight into its set cell (caret in the box, keyboard up) |
 | 11-active-workout-populated.png | Active workout with RPE + a set note |
 | 12-rest-timer.png | Rest timer sheet |
+| 12b-finish-confirm.png | The finish checkmark's confirmation dialog (asks first) |
+| 12c-log-in-progress.png | Log with the open workout marked "In progress", and the sync control top-right |
+| 12d-open-workout-reopened.png | Tapping that row reopens the EDITOR, not the read-only detail |
 | 13-session-detail.png | Completed-session detail |
 | 14-routines-list.png | Routines list |
 | 15-routine-detail.png | Routine detail |
@@ -78,6 +81,20 @@ set notes, the sync fields) has to be driven by XCUITest. Navigation taps work
 fine in both.
 
 ### Traps this pass hit (now encoded in the tour)
+
+- **iOS 26 `confirmationDialog` is a POPOVER, and its buttons are nested.**
+  Measured 2026-09-24: the dialog renders as a card pinned near the TOP of the
+  screen (its button's frame starts at y=132pt of 874), with no dimmed backdrop;
+  its button appears TWICE in the accessibility tree — a `Button` with
+  identifier `finish-confirm` NESTED inside a second element with the same
+  identifier — so `app.buttons["id"]` raises *"Multiple matching elements
+  found"* on any attribute access. Tap via `.firstMatch`.
+- **The dialog has no reachable Cancel.** `app.descendants(matching: .any)`
+  matching a "Cancel" label returns **0** elements, so the `.cancel` button
+  cannot be tapped at all. Dismiss by tapping WELL BELOW the card
+  (dx 0.5, dy 0.85 — a tap at dy 0.12 lands inside the card and does nothing).
+  A missed dismissal is invisible: the next gesture is swallowed by the dialog
+  and the screen captures the wrong view.
 
 - A row tap in a `ScrollView` with `.buttonStyle(.plain)` only lands on the
   label's CONTENT shape — taps in the gaps (under a `Spacer`, between text

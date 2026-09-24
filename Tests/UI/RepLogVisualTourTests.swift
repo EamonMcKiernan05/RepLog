@@ -290,11 +290,23 @@ final class RepLogVisualTourTests: XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85)).tap()
         await settle(1.2)
 
-        // Swipe back to the Log: the open workout is marked in progress...
-        let backLeft = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5))
-        let backMiddle = app.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.5))
-        backLeft.press(forDuration: 0.05, thenDragTo: backMiddle)
-        await settle(1.5)
+        // Back to the Log: the open workout is marked in progress...
+        //
+        // Tap the nav bar's back chevron, not the edge swipe. Measured
+        // 2026-09-24: an edge swipe here silently does nothing (12c captured
+        // the editor twice, and the same miss made the UI test read "no rows
+        // in the Log"), so the explicit control is used and the swipe is only
+        // the fallback.
+        let backButton = app.navigationBars.buttons.element(boundBy: 0)
+        if backButton.exists {
+            backButton.tap()
+            await settle(1.5)
+        } else {
+            let backLeft = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5))
+            let backMiddle = app.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.5))
+            backLeft.press(forDuration: 0.05, thenDragTo: backMiddle)
+            await settle(1.5)
+        }
         shot("12c-log-in-progress")
         // ...and tapping it reopens the EDITOR, not the read-only detail.
         await tapAny([firstSessionRow()], "in-progress row")
