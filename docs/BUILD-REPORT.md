@@ -4,7 +4,23 @@ Date: 2026-09-23 (pass ran 22–23 Sep 2026). Host: WSL fleet host (edit/commit)
 + `ssh mac` (build/test — macOS 26.6.2, Xcode 26.5, iPhone 17 Pro simulator,
 iOS 26.5).
 
-**Status: the whole Mac gate is green at commit `b07e0c5`** — `** BUILD
+## Testing policy (owner, 2026-09-24)
+
+**End-to-end only.** New behaviour is proven by UI tests that drive the app in a
+simulator and assert what the owner can see — he tests on a phone, and that is
+the thing that has to work. Unit tests are not written for new work: they prove
+internals he never touches. The five pre-existing unit files (CSV codec,
+importer, metrics, outbox, targets) stay where they are — they cover the sync
+engine and the maths, which a UI test cannot reach — but nothing new is added to
+them. The seven unit tests written for the routine pre-fill rule on 2026-09-24
+were removed the same day under this rule.
+
+Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
+(including the in-simulator offline drill) in one run.
+
+## Build status
+
+**Status: the whole Mac gate is green at commit `f777dbc`** — `** BUILD
 SUCCEEDED **`, 36/36 unit tests, 10/10 UI tests including the in-simulator
 offline drill, in one `scripts/mac-tests.sh` run (§1.1 and §0.1). The dark-mode visual
 pass covers every screen against the 17 reference screenshots (§4), and the

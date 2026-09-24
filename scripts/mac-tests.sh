@@ -4,7 +4,9 @@
 # offline drill, plan §7.5/T7.3). Everything runs on the Mac over ssh; this
 # script exits non-zero if any step fails.
 #
-# The gate is: ** BUILD SUCCEEDED ** + 36/36 unit + 10/10 UI.
+# The gate is: ** BUILD SUCCEEDED ** + the unit suite + the UI suite, all
+# green. Owner policy (2026-09-24): new behaviour is proven by END-TO-END (UI)
+# tests, not unit tests — do not add unit tests for new work.
 # The accessibility-audit class is excluded here on purpose (it REPORTS
 # issues instead of gating on them); run it standalone with
 #   -only-testing:RepLogUITests/RepLogAccessibilityTests
