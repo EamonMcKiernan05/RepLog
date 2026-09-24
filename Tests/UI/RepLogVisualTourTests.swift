@@ -457,6 +457,44 @@ final class RepLogVisualTourTests: XCTestCase {
             await settle(2.5)
             shot("layout-v\(variant)")
         }
+
+        // The two candidates again, this time with an RPE and a note typed in:
+        // the Notes value is the smallest type in the row and needs to be seen
+        // with something in it.
+        for variant in [2, 3] {
+            app.terminate()
+            app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES",
+                                   "-RowLayout", "\(variant)"]
+            app.launch()
+            await settle(4)
+            await tapAny([app.buttons["plus"]], "log plus")
+            await settle(1.5)
+            _ = await tapLabel("Push Day", timeout: 4)
+            await settle(2.5)
+
+            await tapAny([app.textFields["rpe-cell"].firstMatch], "rpe cell")
+            await settle(0.8)
+            await tapAny([app.buttons["rpe-chip-8"]], "rpe chip 8")
+            await settle(0.8)
+
+            await tapAny([app.textFields["notes-cell"].firstMatch], "notes cell")
+            await settle(0.8)
+            let notesCell = app.textFields["notes-cell"].firstMatch
+            if notesCell.exists {
+                let existing = (notesCell.value as? String) ?? ""
+                if !existing.isEmpty, existing != "—" {
+                    notesCell.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
+                                              count: existing.count + 2))
+                    await settle(0.4)
+                }
+                notesCell.typeText("felt heavy")
+                await settle(0.6)
+            }
+            _ = await tapAny([app.buttons["keyboard-done"]], "keyboard done", timeout: 4)
+            await settle(1)
+            shot("layout-v\(variant)-with-a-note")
+        }
+
         print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
     }
 
