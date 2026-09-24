@@ -240,7 +240,12 @@ final class RepLogUITests: XCTestCase {
     /// go, drag the sheet down.
     @MainActor
     private func dismissDialog() async {
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+        // Measured from the failure recording (2026-09-24): the iOS 26
+        // confirmationDialog renders as a small card pinned near the TOP of the
+        // screen (its button's frame starts at y=132pt of 874), with no dimmed
+        // backdrop and no exposed Cancel. A tap at dy=0.12 landed INSIDE the
+        // card and did nothing, so tap well below it.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85)).tap()
         await settle(1.2)
         let stillUp = app.buttons["finish-confirm"].firstMatch.exists
             || app.buttons["row-delete-confirm"].firstMatch.exists
@@ -714,7 +719,15 @@ final class RepLogUITests: XCTestCase {
         // stay on a deleted model, which read as "delete did nothing").
         XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
                        "deleted session should be gone from the Log")
-        await expectExists(app.buttons["plus"], "not back on the Log after deleting")
+        // The detail screen must have dismissed. The assertion is on the Log's
+        // Edit button, not its "+": with the Log now EMPTY the toolbar's
+        // trailing group (the sync control + "+") collapses into an overflow
+        // button, so "+" is not a reliable marker of being on the Log (seen in
+        // the 2026-09-24 failure recording — reported separately, not worked
+        // around here).
+        await expectExists(app.buttons["log-edit"], "not back on the Log after deleting")
+        XCTAssertFalse(app.buttons["session-detail-menu"].exists,
+                       "the session detail screen was still up after deleting")
         // The database copy is untouched and no delete was ever sent.
         let rowsAfterDelete = await drillCSVDataRows()
         XCTAssertEqual(rowsAfterDelete, 1,
