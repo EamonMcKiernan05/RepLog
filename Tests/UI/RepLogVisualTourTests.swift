@@ -501,6 +501,7 @@ final class RepLogVisualTourTests: XCTestCase {
     /// The routine detail row under each style (owner report, 2026-09-24).
     /// A note is typed into one exercise first — the row only shows it when
     /// there is one.
+    @MainActor
     func testRoutineRowVariants() async {
         continueAfterFailure = true
         for style in 1...3 {

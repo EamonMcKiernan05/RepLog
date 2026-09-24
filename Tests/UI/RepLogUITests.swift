@@ -573,6 +573,7 @@ final class RepLogUITests: XCTestCase {
     /// don't reflect the actual exercise note set in the routine." The note a
     /// routine exercise carries was never drawn on the routine and was dropped
     /// when a workout started from it. Both halves are asserted here.
+    @MainActor
     func testRoutineExerciseNoteIsShownAndCarriesIntoTheWorkout() async {
         app.terminate()
         app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
