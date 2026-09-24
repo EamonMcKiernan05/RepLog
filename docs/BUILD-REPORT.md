@@ -4,9 +4,9 @@ Date: 2026-09-23 (pass ran 22–23 Sep 2026). Host: WSL fleet host (edit/commit)
 + `ssh mac` (build/test — macOS 26.6.2, Xcode 26.5, iPhone 17 Pro simulator,
 iOS 26.5).
 
-**Status: the whole Mac gate is green at commit `1941ab8`** — `** BUILD
-SUCCEEDED **`, 36/36 unit tests, 7/7 UI tests including the in-simulator
-offline drill, in one `scripts/mac-tests.sh` run (§1.1). The dark-mode visual
+**Status: the whole Mac gate is green at commit `b07e0c5`** — `** BUILD
+SUCCEEDED **`, 36/36 unit tests, 10/10 UI tests including the in-simulator
+offline drill, in one `scripts/mac-tests.sh` run (§1.1 and §0.1). The dark-mode visual
 pass covers every screen against the 17 reference screenshots (§4), and the
 Dynamic Type / accessibility checks are in §5. What cannot be shown in a
 simulator is listed as device-only and is never claimed to work (§6).

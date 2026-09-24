@@ -299,7 +299,11 @@ final class RepLogVisualTourTests: XCTestCase {
 
         await tapAny([app.buttons["finish-workout"]], "finish workout")
         await settle(1.2)
-        await tapAny([app.buttons["Finish"]], "confirm finish")
+        // .firstMatch: the dialog's button is nested inside a second element
+        // with the same identifier (both 'finish-confirm'), so a plain
+        // subscript query raises "Multiple matching elements" and the tour
+        // aborted here on 2026-09-24.
+        await tapAny([app.buttons["finish-confirm"].firstMatch], "confirm finish")
         await settle(2.5)
         await tapAny([firstSessionRow()], "session row")
         await settle(1.5)
