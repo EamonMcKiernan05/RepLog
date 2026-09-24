@@ -498,6 +498,24 @@ final class RepLogVisualTourTests: XCTestCase {
         print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
     }
 
+    /// The editor opened on a FINISHED workout (owner request, 2026-09-24).
+    @MainActor
+    func testFinishedWorkoutEditorCapture() async {
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
+        app.launch()
+        await settle(4)
+        _ = await tapAny([app.tabBars.buttons.element(boundBy: 0)], "log tab")
+        await settle(1.2)
+        // The demo history's newest session is already finished.
+        _ = await tapAny([firstSessionRow()], "session row")
+        await settle(2)
+        shot("finished-workout-editor")
+        app.swipeUp()
+        await settle(1.2)
+        shot("finished-workout-editor-scrolled")
+    }
+
     /// The routine detail row under each style (owner report, 2026-09-24).
     /// A note is typed into one exercise first — the row only shows it when
     /// there is one.
