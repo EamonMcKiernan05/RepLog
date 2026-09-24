@@ -30,28 +30,30 @@ struct SetRowView: View {
             // with the row centred, the Notes cell's smaller value made its
             // label sit lower than Kg/Reps/RPE (owner report, 2026-09-24).
             HStack(alignment: .top, spacing: layout.gutter) {
-                // Circled index, with an empty label line above it so the
-                // circle sits level with the values.
-                VStack(spacing: 4) {
-                    Text(" ").font(Typography.label).hidden()
-                    ZStack {
-                        Circle().stroke(Palette.textSecondary.opacity(0.5), lineWidth: 1.5)
-                            .frame(width: 23, height: 23)
-                        Text("\(set.setNumber)")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(set.isDrop ? Palette.accent : Palette.textPrimary)
-                    }
-                    .frame(width: 23)
+                // Circled index, CENTRED on the row's height (owner,
+                // 2026-09-24). It used to ride an empty label line so it sat
+                // level with the values; those cells are two lines tall
+                // (label above value), so the owner wants the circle in the
+                // middle of the row instead. `maxHeight: .infinity` inside the
+                // top-aligned HStack is what stretches it to the row's height.
+                ZStack {
+                    Circle().stroke(Palette.textSecondary.opacity(0.5), lineWidth: 1.5)
+                        .frame(width: 23, height: 23)
+                    Text("\(set.setNumber)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(set.isDrop ? Palette.accent : Palette.textPrimary)
                 }
+                .frame(width: 23)
+                .frame(maxHeight: .infinity, alignment: .center)
 
                 if set.isDrop {
-                    VStack(spacing: 4) {
-                        Text(" ").font(Typography.label).hidden()
-                        Image(systemName: "arrow.down")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Palette.accent)
-                            .frame(width: 16)
-                    }
+                    // Same centring as the circle beside it: the two are one
+                    // badge column, so they must agree.
+                    Image(systemName: "arrow.down")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Palette.accent)
+                        .frame(width: 16)
+                        .frame(maxHeight: .infinity, alignment: .center)
                 }
 
                 // Columns per type
