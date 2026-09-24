@@ -146,6 +146,9 @@ struct SetRowView: View {
                 value: value,
                 keyboard: keyboard,
                 wide: wide,
+                // A typed note is left-aligned: centred, it floated in the
+                // middle of the column instead of under its own label.
+                alignment: wide ? .leading : .center,
                 valueSize: layout.numberSize,
                 fixedWidth: wide ? nil : layout.numberWidth,
                 valueFont: wide ? NotesStyle.current.font : nil,
@@ -166,13 +169,13 @@ struct SetRowView: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
-                .padding(.leading, NotesStyle.current.labelShift(wide: wide))
                 .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
             Text(value.isEmpty ? "—" : value)
                 .font(wide ? NotesStyle.current.font
                            : Typography.mono(layout.numberSize, value.isEmpty ? .regular : .bold))
                 .foregroundStyle(isPlaceholder ? Palette.textSecondary.opacity(0.6) : Palette.textPrimary)
                 .lineLimit(1)
+                .padding(.leading, wide ? NotesStyle.current.valueInset(wide: true) : 0)
         }
         // A wide cell's label rides above its own value — centred in a cell
         // that fills the row, it drifted ~100 pt away from the value under it.

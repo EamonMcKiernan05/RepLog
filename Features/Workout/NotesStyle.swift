@@ -31,10 +31,13 @@ struct NotesStyle: Equatable {
     /// The note's own type.
     let font: Font
 
-    /// How far right the label moves so its centre sits over the note's first
-    /// character: half of "Notes" at the caption size. Zero for the flush
-    /// treatment, and zero for the numeric columns.
-    func labelShift(wide: Bool) -> CGFloat {
+    /// How far the NOTE is indented from the column's leading edge. With the
+    /// label sitting flush, half the label's own width ("Notes" at the caption
+    /// size) puts the label's centre over the note's first character — the
+    /// note moves left from where centring put it, the label right from the
+    /// edge, by very nearly the same distance. Zero for the flush treatment
+    /// and for the numeric columns.
+    func valueInset(wide: Bool) -> CGFloat {
         guard wide, labelPlacement == .centredOverValue else { return 0 }
         return 16
     }
