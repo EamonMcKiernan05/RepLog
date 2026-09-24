@@ -523,31 +523,46 @@ final class RepLogVisualTourTests: XCTestCase {
         print("MIGRATION old schema: store written, marker on row=\(onRow)")
     }
 
-    /// TEMPORARY (migration check). Phase 2: with the NEW schema (scheme columns
-    /// dropped) and NO reset, the app must open the SAME store and still show
-    /// the marker. An in-memory fallback would show an empty routine list, so
-    /// finding the marker proves the on-disk store migrated.
+    /// TEMPORARY (migration check). Phase 2: with the stopped-out schema
+    /// (the scheme columns are gone) and NO reset, the app must still be a
+    /// WORKING PERSISTENT app: it may start a fresh store (owner says the DB is
+    /// disposable), but it must not fall back to in-memory. Write a routine,
+    /// relaunch, and it must still be there.
     @MainActor
     func testZMigrationSurvivedNewSchema() async {
         app.terminate()
         app.launchArguments = []
         app.launch()
         await settle(4)
-        let logged = await waitFor(app.tabBars.buttons.element(boundBy: 1), timeout: 10)
-        print("MIGRATION new schema: app opened=\(logged)")
+        let opened = await waitFor(app.tabBars.buttons.element(boundBy: 1), timeout: 10)
+        print("MIGRATION new schema: app opened=\(opened)")
+
+        // Create a routine through the UI.
         _ = await tapAny([app.tabBars.buttons.element(boundBy: 1)], "routines tab")
         await settle(1.5)
-        let routine = app.buttons["routine-Push Day"].firstMatch
-        let routineThere = await waitFor(routine, timeout: 8)
-        print("MIGRATION new schema: routine present=\(routineThere)")
-        if routineThere {
-            _ = await tapAny([routine], "routine row")
+        _ = await tapAny([app.buttons["Add"]], "add routine")
+        await settle(1.5)
+        let nameField = app.textFields["routine-name"].firstMatch
+        if await waitFor(nameField, timeout: 6) {
+            _ = await tapAny([nameField], "routine name field")
+            await settle(0.6)
+            nameField.typeText("PERSIST-PROBE")
+            await settle(0.6)
+            _ = await tapAny([app.buttons["Save"]], "save")
             await settle(1.5)
-            let marker = await waitFor(app.staticTexts["MIGRATION-PROBE-4242"], timeout: 8)
-            print("MIGRATION new schema: MARKER SURVIVED=\(marker)")
-            let note = app.textFields["routine-exercise-notes-field"].firstMatch
-            print("MIGRATION new schema: note field on screen=\(note.exists)")
         }
+        let created = await waitFor(app.buttons["routine-PERSIST-PROBE"], timeout: 8)
+        print("MIGRATION new schema: routine created=\(created)")
+
+        // Relaunch WITHOUT a reset: a real file store keeps it, an in-memory
+        // fallback would lose it.
+        app.terminate()
+        app.launch()
+        await settle(4)
+        _ = await tapAny([app.tabBars.buttons.element(boundBy: 1)], "routines tab (relaunch)")
+        await settle(1.5)
+        let survived = await waitFor(app.buttons["routine-PERSIST-PROBE"], timeout: 8)
+        print("MIGRATION new schema: PERSISTED ACROSS RELAUNCH=\(survived)")
     }
 
     /// The routine detail row under each style (owner report, 2026-09-24).

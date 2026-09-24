@@ -75,8 +75,25 @@ final class DataStore {
             }
             if attempt < 3 { Thread.sleep(forTimeInterval: 0.75) }
         }
-        // Last resort: an in-memory container (also retried) so the app never
-        // crashes on a store failure.
+        // The file store would not open. The overwhelmingly likely reason is a
+        // schema change SwiftData will not migrate (a removed property): the
+        // store on disk was written by an older build. Falling back to an
+        // in-memory store — what this used to do — is the worst option
+        // available: it looks like a working app and then loses everything on
+        // the next launch. Start a FRESH file store instead, after deleting the
+        // old one and its sidecars. Owner decision (2026-09-24): the database
+        // is disposable during development.
+        if !inMemory {
+            removeStoreFiles()
+            for attempt in 0..<4 {
+                if let ok = try? ModelContainer(for: schema, configurations: [config]) {
+                    return ok
+                }
+                if attempt < 3 { Thread.sleep(forTimeInterval: 0.75) }
+            }
+        }
+        // Truly last resort: an in-memory container (also retried) so the app
+        // never crashes when nothing on disk can be opened at all.
         let fallback = ModelConfiguration(
             "RepLog", schema: schema,
             isStoredInMemoryOnly: true, allowsSave: true
@@ -88,6 +105,19 @@ final class DataStore {
             if attempt < 3 { Thread.sleep(forTimeInterval: 0.75) }
         }
         fatalError("Failed to create ModelContainer after retries")
+    }
+
+    /// Delete the on-disk store and its sidecars. Called only when the store
+    /// cannot be opened at all (see `makeContainer`), so an unmigratable schema
+    /// starts from a clean file store rather than an in-memory one.
+    private func removeStoreFiles() {
+        let fm = FileManager.default
+        guard let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        else { return }
+        let dir = base.appendingPathComponent("RepLog", isDirectory: true)
+        for name in ["RepLog.sqlite", "RepLog.sqlite-wal", "RepLog.sqlite-shm"] {
+            try? fm.removeItem(at: dir.appendingPathComponent(name))
+        }
     }
 
     /// Load the exercise library from the bundled JSON on first run.
