@@ -617,9 +617,9 @@ final class RepLogUITests: XCTestCase {
         // also avoids depending on how the field clears existing text).
         await setNote(second, on: "Competition Bench")
         await expectExists(app.staticTexts[second], "the copy's own note on its row")
-        XCTAssertTrue(
-            app.staticTexts.matching(NSPredicate(format: "label == %@", first)).count == 0,
-            "changing the copy's note changed Push Day's note too")
+        // The copy also carries the note it was duplicated WITH, on its other
+        // row. Two routines, two independent sets of notes.
+        await expectExists(app.staticTexts[first], "the copy's inherited note on its other row")
 
         // Push Day still holds its own note.
         await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
@@ -647,10 +647,8 @@ final class RepLogUITests: XCTestCase {
                                   count: existing.count + 2))
             await settle(0.4)
         }
-        print("DEBUG setNote: existing=\(existing) afterClear=\((field.value as? String) ?? "nil")")
         field.typeText(note)
         await settle(0.6)
-        print("DEBUG setNote: afterType=\((field.value as? String) ?? "nil")")
         // The sheet's own Done — the nav bar's, not the keyboard's (the
         // keyboard carries a "Done" too, and tapping that leaves the sheet up).
         let sheetDone = app.navigationBars.buttons["Done"].firstMatch
