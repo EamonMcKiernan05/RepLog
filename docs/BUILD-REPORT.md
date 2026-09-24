@@ -20,9 +20,9 @@ Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
 
 ## Build status
 
-**Status: the whole Mac gate is green at commit `f777dbc`** — `** BUILD
-SUCCEEDED **`, 36/36 unit tests, 10/10 UI tests including the in-simulator
-offline drill, in one `scripts/mac-tests.sh` run (§1.1 and §0.1). The dark-mode visual
+**Status: the whole Mac gate is green at commit `ff1cb43`** — `** BUILD
+SUCCEEDED **`, 36/36 unit tests, **12/12 UI tests** including the in-simulator
+offline drill, in one `scripts/mac-tests.sh` run (§1.1, §0.1 and §0.3). The dark-mode visual
 pass covers every screen against the 17 reference screenshots (§4), and the
 Dynamic Type / accessibility checks are in §5. What cannot be shown in a
 simulator is listed as device-only and is never claimed to work (§6).
@@ -314,6 +314,35 @@ from `383e39d` through the Mac's GUI session (ad-hoc profile valid to
 over HTTPS and matches, and the shipped binary contains the new copy ("Done
 finishes the workout and saves it.", "Replace Exercise"). Install page:
 <https://replog.eamonmckiernan.im/replog/>
+
+---
+
+## 0.3 Workout card legibility (owner report, 2026-09-24, against a reference screenshot)
+
+"increase the spacing for columns and rows a bit more, and shrink the size of
+the set number circle - everything feels a bit cramped / overcrowded. move the
+add note, graph, and star icon at the bottom of a workout to the right of the
+row like in repcount."
+
+| What | Before | Now |
+|---|---|---|
+| Set number circle | 28 pt in a 40 pt slot, `.footnote` number | 23 pt in a 32 pt slot, `.caption2` number |
+| Column gap | none — cells butted together at their 44 pt minimum | 14 pt between cells, same 44 pt minimum width |
+| Set row height | 6 pt above/below | 11 pt, plus 4 pt between a column's label and its value |
+| Row inset | 12 pt | 16 pt, matching the header and the card's own inset |
+| Second-line set note | 48 pt inset | 40 pt, following the smaller circle slot |
+| Exercise icons | their own row under "Add Set", left-aligned, no tap target | on the **"Add Set" row, right-aligned**, each in a 34 pt frame with a content shape and its own identifier |
+| Card header | 10 pt above/below | 12 pt |
+
+The label/value gap was changed in **both** the read-only column and the
+editing cell, so a typed row and a finished row line up identically. No
+identifier used by a test changed; the icon buttons gained identifiers
+(`exercise-note-button`, `exercise-history-button`, `exercise-pr-button`).
+
+**Evidence:** the visual tour at `ff1cb43` — `docs/visual/11-active-workout-populated.png`
+(the row rhythm, the smaller circle, and the icons on the Add Set row) and
+`docs/visual/07-active-workout.png` (a populated card top to bottom). Gate:
+`** BUILD SUCCEEDED **`, 36/36 unit, 12/12 UI, `All Mac tests passed.`
 
 ---
 
