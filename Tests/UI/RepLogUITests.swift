@@ -180,13 +180,20 @@ final class RepLogUITests: XCTestCase {
         await expectExists(field, "'\(id)' box not found")
         field.tap()
         await settle(0.6)
-        let existing = (field.value as? String) ?? ""
-        if !existing.isEmpty, existing != "—" {
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
-                                  count: existing.count + 2))
-            await settle(0.3)
-        }
+        await clearIfFilled(field)
         field.typeText(text)
+        await settle(0.3)
+    }
+
+    /// Select-all before typing over an existing value. Typing the delete key
+    /// (`XCUIKeyboardKey.delete`) does NOT clear a SwiftUI TextField here — the
+    /// new text was inserted at the caret instead, giving "135100" for a field
+    /// holding "100" (seen 2026-09-24). cmd+A replaces the selection on typing.
+    @MainActor
+    private func clearIfFilled(_ field: XCUIElement) async {
+        let existing = (field.value as? String) ?? ""
+        guard !existing.isEmpty, existing != "—" else { return }
+        field.typeKey("a", modifierFlags: .command)
         await settle(0.3)
     }
 
@@ -661,12 +668,7 @@ final class RepLogUITests: XCTestCase {
         let field = app.textFields["routine-exercise-notes-field"].firstMatch
         await expectExists(field, "routine exercise notes field")
         await tapSettled(field)
-        let existing = (field.value as? String) ?? ""
-        if !existing.isEmpty {
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue,
-                                  count: existing.count + 2))
-            await settle(0.4)
-        }
+        await clearIfFilled(field)
         field.typeText(note)
         await settle(0.6)
         // The sheet's own Done — the nav bar's, not the keyboard's (the
