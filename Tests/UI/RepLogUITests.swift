@@ -569,6 +569,54 @@ final class RepLogUITests: XCTestCase {
             "the note is drawn a second time outside the Notes box")
     }
 
+    /// Owner report (2026-09-24): "When editing a routine the exercise notes
+    /// don't reflect the actual exercise note set in the routine." The note a
+    /// routine exercise carries was never drawn on the routine and was dropped
+    /// when a workout started from it. Both halves are asserted here.
+    func testRoutineExerciseNoteIsShownAndCarriesIntoTheWorkout() async {
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
+        app.launch()
+        await settle(3)
+
+        let note = "belt on, pause every rep"
+        await tapSettled(app.tabBars.buttons.element(boundBy: 1))
+        await settle()
+        await tapSettled(app.buttons["routine-Push Day"])
+        await settle()
+
+        // Set the note the way the owner did: in the exercise editor.
+        let row = app.staticTexts["Competition Bench"].firstMatch
+        await expectExists(row, "Competition Bench row in the routine")
+        await tapSettled(row)
+        let field = app.textFields["routine-exercise-notes-field"].firstMatch
+        await expectExists(field, "routine exercise notes field")
+        await tapSettled(field)
+        field.typeText(note)
+        await settle(0.6)
+        // The sheet's own Done button, exactly as reported.
+        await tapSettled(app.buttons["Done"].firstMatch)
+        await settle()
+
+        // 1. The routine's row draws the note that was set.
+        await expectExists(app.staticTexts[note],
+                           "the routine's exercise row does not show the note set for it")
+
+        // 2. A workout started from the routine carries the note to the card.
+        let start = app.staticTexts["Start this Workout"].firstMatch
+        await expectExists(start, "Start this Workout button")
+        await tapSettled(start)
+        await settle(2.5)
+        let cardNote = app.textFields["exercise-note-field"].firstMatch
+        if cardNote.exists {
+            XCTAssertEqual((cardNote.value as? String) ?? "", note,
+                           "the workout card lost the routine's note for the exercise")
+        } else {
+            await expectExists(app.staticTexts[note],
+                               "the routine's note is not on the workout card")
+        }
+    }
+
     // MARK: - Offline drill (plan §7.5)
 
     /// The lift-sync service for this drill: a real uvicorn on a private

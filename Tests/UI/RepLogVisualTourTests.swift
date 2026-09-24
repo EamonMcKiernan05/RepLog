@@ -498,6 +498,41 @@ final class RepLogVisualTourTests: XCTestCase {
         print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
     }
 
+    /// The routine detail row under each style (owner report, 2026-09-24).
+    /// A note is typed into one exercise first — the row only shows it when
+    /// there is one.
+    func testRoutineRowVariants() async {
+        continueAfterFailure = true
+        for style in 1...3 {
+            app.terminate()
+            app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES",
+                                   "-RoutineRow", "\(style)"]
+            app.launch()
+            await settle(4)
+
+            await tapAny([app.tabBars.buttons.element(boundBy: 1)], "routines tab")
+            await settle(1.2)
+            await tapAny([app.buttons["routine-Push Day"]], "routine row")
+            await settle(1.2)
+
+            await tapLabel("Competition Bench")
+            await settle(1.5)
+            let field = app.textFields["routine-exercise-notes-field"].firstMatch
+            if await waitFor(field, timeout: 5) {
+                await tapAny([field], "routine exercise notes field")
+                await settle(0.8)
+                field.typeText("belt on, pause every rep")
+                await settle(0.8)
+                _ = await tapAny([app.buttons["keyboard-done"]], "keyboard done", timeout: 3)
+                await settle(0.6)
+            }
+            _ = await tapAny([app.buttons["Done"].firstMatch], "sheet Done")
+            await settle(1.5)
+            shot("routine-row-\(style)")
+        }
+        print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
+    }
+
     @MainActor
     private func waitFor(_ element: XCUIElement, timeout: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)

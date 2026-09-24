@@ -171,10 +171,22 @@ struct RoutineDetailView: View {
                                         .font(.body.weight(.bold))
                                     Text("\(re.warmupSets + re.workingSets) Sets")
                                         .font(.subheadline)
-                                    ForEach(re.schemeLines, id: \.self) { line in
-                                        Text(line)
-                                            .font(.caption)
-                                            .foregroundStyle(Palette.textSecondary)
+                                    // The exercise's own note for this routine
+                                    // comes first: it is what was set in the
+                                    // editor, and the row never drew it (owner
+                                    // report, 2026-09-24).
+                                    if RoutineRowStyle.current.noteFirst {
+                                        noteLine(re)
+                                    }
+                                    if RoutineRowStyle.current.showsScheme {
+                                        ForEach(re.schemeLines, id: \.self) { line in
+                                            Text(line)
+                                                .font(.caption)
+                                                .foregroundStyle(Palette.textSecondary)
+                                        }
+                                    }
+                                    if !RoutineRowStyle.current.noteFirst {
+                                        noteLine(re)
                                     }
                                 }
                                 Spacer()
@@ -245,12 +257,28 @@ struct RoutineDetailView: View {
         }
     }
 
+    /// The exercise's note for this routine, or nothing when it has none.
+    /// Same type as the read-only note line on the workout card.
+    @ViewBuilder
+    private func noteLine(_ re: RoutineExercise) -> some View {
+        if !re.notes.isEmpty {
+            Text(re.notes)
+                .font(.footnote)
+                .foregroundStyle(Palette.textPrimary)
+                .multilineTextAlignment(.leading)
+        }
+    }
+
     private func startWorkout() {
         let session = Session(date: .now, routineName: routine.name)
         var order = 0
         for re in routine.routineExercises.sorted(by: { $0.sortOrder < $1.sortOrder }) {
             guard let ex = re.exercise else { continue }
             let entry = ExerciseEntry(exercise: ex, sortOrder: order)
+            // The routine's note for this exercise travels into the workout,
+            // where the card shows it under the name (owner report,
+            // 2026-09-24: the note set in the routine was dropped here).
+            entry.notes = re.notes
             // Same rule as the "+" path: rows from the counts, values only from
             // a scheme row that carries a real weight (`SchemePrefill`).
             let scheme = re.scheme

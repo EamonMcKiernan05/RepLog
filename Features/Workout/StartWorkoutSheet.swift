@@ -67,6 +67,9 @@ struct StartWorkoutSheet: View {
         for re in routine.routineExercises.sorted(by: { $0.sortOrder < $1.sortOrder }) {
             guard let ex = re.exercise else { continue }
             let entry = ExerciseEntry(exercise: ex, sortOrder: order)
+            // The routine's note for this exercise travels into the workout
+            // (owner report, 2026-09-24).
+            entry.notes = re.notes
             // Set ROWS come from the routine's warm-up/working counts. The
             // VALUES only pre-fill when the scheme row carries a real weight:
             // a "0 x 4" row is not a prescription and writing it in put a
