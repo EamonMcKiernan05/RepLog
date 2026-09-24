@@ -28,6 +28,8 @@ Final committed set: `docs/visual/` — one file per screen, plus
 | 10-rpe-inline.png | RPE typed in place — chips 6/7/7.5/8/8.5/9 sit under the editing row |
 | 10b-set-cell-typed.png | A weight typed straight into its set cell (caret in the box, keyboard up) |
 | 11-active-workout-populated.png | Active workout with RPE + a set note |
+| 11b-exercise-menu.png | The exercise card's "…" menu (Move / Replace / Delete / Edit Note / History / Charts / Personal Records / Weight Unit) |
+| 11c-end-time-picker.png | The End Time row's clock picker — Done sets the end time and finishes the session |
 | 12-rest-timer.png | Rest timer sheet |
 | 12b-finish-confirm.png | The finish checkmark's confirmation dialog (asks first) |
 | 12c-log-in-progress.png | Log with the open workout marked "In progress", and the sync control top-right |

@@ -199,6 +199,108 @@ over HTTPS and matches. Install page: <https://replog.eamonmckiernan.im/replog/>
 
 ---
 
+## 0.2 Owner round 2 — End Time finishes the session, no 0x4 pre-fill, the note under the name, a working exercise menu (2026-09-24)
+
+Owner report from the phone, with a screenshot of the reference app's exercise
+panel.
+
+### 0.2.1 "click on the 'end time' row ... and it will automatically mark the session as finished"
+
+The row was plain text with no gesture on it. It is now a button
+(`ActiveWorkoutView.endTimeRow`, identifier `end-time-row`, with the chevron
+that says it is tappable) which opens `EndTimePickerSheet` **at the current
+time**. Done sets the end time and runs the same completion path as the
+checkmark: save, stop the rest timer, queue the session for sync, end the Live
+Activity, write to Health when enabled, and pop back to the Log. A picked time
+earlier than the start rolls to the next day, so a workout that ran past
+midnight cannot end before it began.
+
+**Evidence:** `testEndTimeRowFinishesTheWorkout` (33.2 s — asserts the row is
+tappable, the picker appears, and the session lands in the Log without the
+"In progress" marker) and capture `11c-end-time-picker.png`.
+
+### 0.2.2 "remove the autofilled 0 and 4 under weight and reps for new sessions"
+
+**Cause:** a routine exercise's stored scheme row defaulted to `[0, 4]` —
+"0 kg x 4" — and starting a workout wrote it straight into set 1, where it
+looked like something the owner had entered and counted as a real set. Two
+changes:
+
+- `RoutinesViews.addExercise` no longer seeds `[[0, 4]]`; schemes are no longer
+  editable in the app, so a new exercise simply has none.
+- Both start paths (the "+" sheet and the routine's "Start this Workout") now
+  go through **`Engine/SchemePrefill`**: a scheme row with no weight pre-fills
+  nothing, so the row shows its placeholder instead of a committed zero. Set
+  ROWS still come from the routine's warm-up/working counts, and a scheme row
+  with a real weight still pre-fills weight and reps as before.
+
+**Evidence:** `Tests/Unit/SchemePrefillTests.swift` — 7 tests, including "a
+zero-weight scheme row pre-fills nothing", "a half-written row pre-fills
+nothing", and the row-count formula. The unit suite went 36 -> 43.
+
+### 0.2.3 "the '1x4' under 'low bar squat' title should be where the exercise note is displayed"
+
+The line under the exercise name **is** the exercise note now: displayed and
+typed in place with the same inline field ("Add Note" while empty), in the
+position RepCount uses. `plannedScheme` is no longer rendered or written, and
+the separate "Add Note" row is gone — one place for the note, under the name.
+
+### 0.2.4 "the three dots on the end of the title row on exercises doesnt do anything"
+
+**Cause:** it was a bare `Image(systemName: "ellipsis")` with no frame and no
+content shape, so its hit target was the glyph itself — which is why it read as
+dead — and it offered only four items. It is now a 44 pt target
+(`exercise-menu`) opening the reference panel's action set:
+
+| Action | What it does |
+|---|---|
+| **Move** | `MoveExercisesSheet` — drag-to-reorder the workout's exercises; written back on Done |
+| **Replace** | exercise picker; the sets, notes and unit override already logged stay with the entry |
+| **Delete** | confirm, then removes the exercise from the session |
+| **Edit Note** | puts the caret in the note under the name |
+| **History** | `ExerciseHistoryView` |
+| **Charts** | `ExerciseChartsSheet` — the statistics screen *pushes* `ExerciseDetailView`, which has no title-bar button of its own, so the sheet wrapper supplies Done |
+| **Personal Records** | `PRView` |
+| **Weight Unit** | per-exercise kg/lb override (nil = follow the global unit); storage stays kg |
+
+**Evidence:** `testExerciseMenuOffersTheReferenceActions` (32.2 s — opens the
+menu and asserts all eight actions are present) and capture
+`11b-exercise-menu.png`.
+
+### 0.2.5 Gate at `383e39d` — one `bash scripts/mac-tests.sh` run
+
+```
+** BUILD SUCCEEDED **
+✔ Test run with 43 tests in 6 suites passed after 0.287 seconds.
+Test Case '-[RepLogUITests.RepLogUITests testEditModeRevealsRowDelete]' passed (52.414 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testEndTimeRowFinishesTheWorkout]' passed (33.175 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testExerciseMenuOffersTheReferenceActions]' passed (32.196 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testExerciseSearchFilters]' passed (22.731 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testFinishAsksBeforeEnding]' passed (37.539 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testOfflineDrill]' passed (100.139 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testOpenWorkoutReopensEditorAfterLeavingIt]' passed (47.235 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testRPEChipsDisplayWholeValues]' passed (31.782 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testRPEEntryTypes85AndReadsBack]' passed (30.431 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testSessionRowOpensDetail]' passed (43.938 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testSetNoteEntry]' passed (30.516 seconds).
+Test Case '-[RepLogUITests.RepLogUITests testSyncURLAndTokenFields]' passed (34.760 seconds).
+   Executed 12 tests, with 0 failures (0 unexpected) in 496.856 (496.874) seconds
+** TEST SUCCEEDED **
+All Mac tests passed.
+```
+
+### 0.2.6 Published
+
+**1.1.0 (build 3)** — `im.eamon.replog`, 686,575 bytes, sha256
+`b1c6bd13e8104660e0fd703f87bd11df4714676014ab9da06faf6de0a75156cb`, archived
+from `383e39d` through the Mac's GUI session (ad-hoc profile valid to
+2027-09-23 with the owner's UDID). The **served** file's sha256 was read back
+over HTTPS and matches, and the shipped binary contains the new copy ("Done
+finishes the workout and saves it.", "Replace Exercise"). Install page:
+<https://replog.eamonmckiernan.im/replog/>
+
+---
+
 ## 1. Test evidence (all real, all run)
 
 ### 1.1 The gate — `bash scripts/mac-tests.sh` (one run, pasted raw)
