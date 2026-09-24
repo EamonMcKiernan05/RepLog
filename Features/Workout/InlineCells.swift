@@ -64,6 +64,7 @@ struct InlineCell: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
+                .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
             // The empty state is drawn as a sibling, not as the field's
             // `prompt:` — with a custom prompt style, iOS renders the text
             // being typed in the prompt's grey while the keyboard is up, so a
@@ -109,7 +110,8 @@ struct InlineCell: View {
                 }
             }
         }
-        .frame(minWidth: cellWidth ?? 44, maxWidth: wide ? .infinity : cellWidth)
+        .frame(minWidth: cellWidth ?? 44, maxWidth: wide ? .infinity : cellWidth,
+               alignment: wide ? .leading : .center)
         // The whole box is the tap target, not just the glyphs.
         .contentShape(Rectangle())
         .onTapGesture { focus.wrappedValue = focusValue }

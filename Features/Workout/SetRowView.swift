@@ -167,12 +167,15 @@ struct SetRowView: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
+                .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
             Text(value.isEmpty ? "—" : value)
                 .font(Typography.mono(wide ? layout.notesSize : layout.numberSize,
                                       value.isEmpty ? .regular : .bold))
                 .foregroundStyle(isPlaceholder ? Palette.textSecondary.opacity(0.6) : Palette.textPrimary)
                 .lineLimit(1)
         }
+        // A wide cell's label rides above its own value — centred in a cell
+        // that fills the row, it drifted ~100 pt away from the value under it.
         .frame(minWidth: wide ? nil : layout.numberWidth,
                maxWidth: wide ? .infinity : layout.numberWidth,
                alignment: wide ? .leading : .center)
