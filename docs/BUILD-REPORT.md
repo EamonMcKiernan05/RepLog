@@ -20,7 +20,7 @@ Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
 
 ## Build status
 
-**Status: the whole Mac gate is green at commit `ff1cb43`** — `** BUILD
+**Status: the whole Mac gate is green at commit `5095eef`** — `** BUILD
 SUCCEEDED **`, 36/36 unit tests, **12/12 UI tests** including the in-simulator
 offline drill, in one `scripts/mac-tests.sh` run (§1.1, §0.1 and §0.3). The dark-mode visual
 pass covers every screen against the 17 reference screenshots (§4), and the
@@ -343,6 +343,74 @@ identifier used by a test changed; the icon buttons gained identifiers
 (the row rhythm, the smaller circle, and the icons on the Add Set row) and
 `docs/visual/07-active-workout.png` (a populated card top to bottom). Gate:
 `** BUILD SUCCEEDED **`, 36/36 unit, 12/12 UI, `All Mac tests passed.`
+
+---
+
+## 0.4 Set-row columns and the Notes column (owner report, 2026-09-24)
+
+Two rounds against reference screenshots. He picked from captured variants
+rather than a description, so both the geometry and the Notes treatment were
+chosen from real renders.
+
+### 0.4.1 Set-row columns — variant 4 chosen
+
+Asked: "stretch the columns so they sit a bit closer to the set number circles
+... the gap either side of kg, reps, and rpe column should be equal, and notes
+should be slightly wider. shrink the font size for weight, reps, and rpe by
+1-2pts, and shrink the font size for notes another 1-2."
+
+Four variants were built and captured (`-RowLayout <1...4>`, one build, one
+capture run per variant) with the gutter and the type size as the axes. He
+picked **variant 4 — a 20 pt gutter, numbers at 15 pt**:
+
+| Change | Before | Now |
+|---|---|---|
+| Column gap | a spacer pushed the columns right, cells butted at 44 pt | a uniform 20 pt between the circle and every column |
+| Numeric column width | minimum 44 pt, moved with the digits | a fixed three-digit width (28 pt at 15 pt type), so "5" and "140" hold the same place |
+| Number size | 17 pt | 15 pt |
+| Row height | 11 pt above/below | unchanged (11 pt) |
+
+### 0.4.2 The Notes column — option 3 chosen
+
+Asked: one copy of the note only; the note's type "about the same size as the
+title of the 'notes' column", in a font matching the rest of the app; the title
+level with Kg/Reps/RPE; and the title and the note pulled together "until the
+first letter in the note is centered under the 'notes' column title".
+
+Four treatments (`-NotesStyle <1...4>`) were captured with an RPE and a note
+typed in. He picked **option 3 — the label and the note flush left together,
+the note in the caption size**:
+
+| Fix | Cause | Now |
+|---|---|---|
+| The note appeared twice | a `Text` under each row repeated the note that was already in the Notes box | the second line is deleted; the UI test asserts the note is in the box **and** that nothing repeats it |
+| "Notes" sat lower than Kg/Reps/RPE | the row was centre-aligned, so the shorter Notes cell (smaller value type) dropped its label | the row is top-aligned and the circle cell reserves the same title line, so all four titles share one pixel row (measured: all start at y 441.3 pt) |
+| The note floated in the middle of its column | the field was centre-aligned inside the wide Notes cell | left-aligned; the note and its title share the column's leading edge (measured: title left 220.0 pt, note 219.3 pt) |
+| Note type too large | 17 pt monospaced | the caption size in the app's own text font |
+
+### 0.4.3 Gate at `5095eef`
+
+One `scripts/mac-tests.sh` run after the change: `** BUILD SUCCEEDED **`,
+36/36 unit, **12/12 UI**, `All Mac tests passed.`
+
+The first run of this gate was **red** — `testSetNoteEntry` asserted the note
+rendered as a second line under the row, which is exactly what the owner asked
+to delete. The test was rewritten to assert the new rule (in the box once, and
+nowhere else) and the gate re-run green. A stale test that contradicts a
+deliberate behaviour change is a test to fix, not a reason to keep the
+behaviour.
+
+### 0.4.4 Published
+
+**1.1.2 (build 5)** — 685,901 bytes, sha256
+`635f5c11aa840931e709c145bbe7b55047fc17e00bf682d3654a2ebd08a90a3a`, archived
+from `5095eef`; the served file's sha256 was read back over HTTPS and matches,
+and the install page reads 1.1.2 built 2026-09-24 15:23 UTC.
+
+**Scaffolding note:** both choices live behind `RowLayout.default` /
+`NotesStyle.default` with the other variants still compiled in and selectable
+by launch argument, so the alternatives can be re-shot without a code change.
+That scaffolding comes out once the look is signed off on the phone.
 
 ---
 
