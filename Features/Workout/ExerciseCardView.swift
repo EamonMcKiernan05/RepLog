@@ -1,9 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// One exercise card in the workout (plan §6.2): name + "…" menu, planned
-/// scheme lines, the type-appropriate set rows, "Add Set", the exercise note
-/// and the per-exercise icon row (notes / history / PR).
+/// One exercise card in the workout (plan §6.2): name + "…" menu, the
+/// exercise note under the name, the type-appropriate set rows, and a footer
+/// row with "Add Set" on the left and the per-exercise icons (note / history /
+/// PR) on the right.
 ///
 /// Every value is typed straight into its box — the note line and the set
 /// cells are all inputs, so nothing opens a sheet. The RPE quick chips (6,
@@ -47,8 +48,6 @@ struct ExerciseCardView: View {
             }
             if isEditing {
                 addSetRow
-                Divider()
-                iconRow
             } else if !entry.notes.isEmpty {
                 // Read-only: the note still shows, just not as an input.
                 HStack {
@@ -128,7 +127,7 @@ struct ExerciseCardView: View {
             if isEditing { exerciseMenu }
         }
         .padding(.horizontal)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
     }
 
     /// The card's "…" — the reference app's exercise panel (owner screenshot,
@@ -166,21 +165,54 @@ struct ExerciseCardView: View {
         .accessibilityIdentifier("exercise-menu")
     }
 
+    /// "Add Set" on the left, the exercise's own icons on the RIGHT of the
+    /// same row (owner request, 2026-09-24 — the reference app puts them
+    /// there; they used to sit on their own row underneath).
     private var addSetRow: some View {
-        Button {
-            addSet()
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "plus.circle")
-                Text("Add Set")
+        HStack(spacing: 0) {
+            Button {
+                addSet()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle")
+                    Text("Add Set")
+                }
+                .font(.body)
+                .foregroundStyle(Palette.accent)
+                .contentShape(Rectangle())
             }
-            .font(.body)
-            .foregroundStyle(Palette.accent)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("add-set")
+
+            Spacer(minLength: 12)
+
+            HStack(spacing: 22) {
+                iconButton("text.alignleft", id: "exercise-note-button") {
+                    focusExerciseNote()
+                }
+                iconButton("chart.line.uptrend.xyaxis", id: "exercise-history-button") {
+                    showHistory = true
+                }
+                iconButton("star", id: "exercise-pr-button") {
+                    showPR = true
+                }
+            }
         }
         .padding(.horizontal)
-        .padding(.vertical, 10)
-        .accessibilityIdentifier("add-set")
+        .padding(.vertical, 12)
+    }
+
+    /// A 44pt target around a bare glyph, so the icons are hittable rather
+    /// than decorative (same trap as the card's "…").
+    private func iconButton(_ systemName: String, id: String,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.body)
+                .foregroundStyle(Palette.accent)
+                .frame(width: 34, height: 34)
+                .contentShape(Rectangle())
+        }
+        .accessibilityIdentifier(id)
     }
 
     /// Quick RPE chips, shown under the row being edited (the sheet's chips,
@@ -212,25 +244,8 @@ struct ExerciseCardView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 8)
-    }
-
-    private var iconRow: some View {
-        HStack(spacing: 20) {
-            Button { focusExerciseNote() } label: {
-                Image(systemName: "text.alignleft").foregroundStyle(Palette.accent)
-            }
-            Button { showHistory = true } label: {
-                Image(systemName: "chart.line.uptrend.xyaxis").foregroundStyle(Palette.accent)
-            }
-            Button { showPR = true } label: {
-                Image(systemName: "star").foregroundStyle(Palette.accent)
-            }
-            Spacer()
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 10)
     }
 
     /// The notes buttons now put the caret in the inline note instead of

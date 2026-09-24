@@ -23,16 +23,18 @@ struct SetRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 0) {
+            // Column gap + row height were both too tight to read at arm's
+            // length on the phone (owner report, 2026-09-24).
+            HStack(spacing: 14) {
                 // Circled index
                 ZStack {
                     Circle().stroke(Palette.textSecondary.opacity(0.5), lineWidth: 1.5)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 23, height: 23)
                     Text("\(set.setNumber)")
-                        .font(.footnote.weight(.semibold))
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(set.isDrop ? Palette.accent : Palette.textPrimary)
                 }
-                .frame(width: 40)
+                .frame(width: 32)
 
                 if set.isDrop {
                     Image(systemName: "arrow.down")
@@ -114,18 +116,18 @@ struct SetRowView: View {
                     commit: commitNotes
                 )
             }
-            .padding(.vertical, 6)
+            .padding(.vertical, 11)
 
             // A non-empty note also renders as a second line under the row.
             if !set.notes.isEmpty {
                 Text(set.notes)
                     .font(.footnote)
                     .foregroundStyle(Palette.textPrimary)
-                    .padding(.horizontal, 48)
+                    .padding(.horizontal, 40)
                     .padding(.bottom, 8)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 16)
         .contentShape(Rectangle())
     }
 
@@ -157,7 +159,7 @@ struct SetRowView: View {
     @ViewBuilder
     private func column(label: String, value: String, isPlaceholder: Bool,
                         id: String?) -> some View {
-        VStack(spacing: 1) {
+        VStack(spacing: 4) {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)

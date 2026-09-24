@@ -51,7 +51,7 @@ struct InlineCell: View {
     private var isEmpty: Bool { shown.isEmpty }
 
     var body: some View {
-        VStack(spacing: 1) {
+        VStack(spacing: 4) {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
