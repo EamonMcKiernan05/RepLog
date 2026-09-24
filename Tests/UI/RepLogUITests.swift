@@ -215,9 +215,55 @@ final class RepLogUITests: XCTestCase {
     @MainActor
     private func finishWorkout() async {
         await tapSettled(app.buttons["finish-workout"])
-        let confirm = app.buttons["Finish"]
-        await expectExists(confirm, "finish confirmation dialog not shown")
-        await tapSettled(confirm)
+        await confirmDialog("finish-confirm", "finish confirmation dialog not shown")
+        await settle(1.5)
+    }
+
+    /// Tap a button inside a `confirmationDialog`.
+    ///
+    /// Two iOS 26 traps, both measured on the iPhone 17 Pro simulator
+    /// (2026-09-24): the dialog's button is exposed TWICE in the accessibility
+    /// tree (two elements, same identifier, same frame), so a plain
+    /// `app.buttons["id"].tap()` fails with "Multiple matching elements" —
+    /// hence `.firstMatch`; and its `.cancel` button is not exposed at all
+    /// (0 matches for a "Cancel" label across every element type), so
+    /// cancelling has to be done by dismissing the sheet (see `dismissDialog`).
+    @MainActor
+    private func confirmDialog(_ identifier: String, _ message: String) async {
+        let button = app.buttons[identifier].firstMatch
+        await expectExists(button, message)
+        await tapSettled(button)
+    }
+
+    /// Dismiss an open confirmation dialog WITHOUT confirming: tap outside it
+    /// (an iOS action sheet dismisses on an outside tap), and if it refuses to
+    /// go, drag the sheet down.
+    @MainActor
+    private func dismissDialog() async {
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+        await settle(1.2)
+        let stillUp = app.buttons["finish-confirm"].firstMatch.exists
+            || app.buttons["row-delete-confirm"].firstMatch.exists
+            || app.buttons["delete-workout-confirm"].firstMatch.exists
+        if stillUp {
+            app.sheets.firstMatch.swipeDown()
+            await settle(1.2)
+        }
+    }
+
+    /// Leave the pushed workout screen: the owner's edge swipe first, then the
+    /// nav bar's back button, then the Log tab. The test is about what the Log
+    /// shows afterwards, not about the gesture — and the swipe is
+    /// timing-sensitive on a busy simulator (it silently missed in the
+    /// 2026-09-24 gate run, which read as "no rows in the Log").
+    @MainActor
+    private func leaveWorkoutScreen() async {
+        await swipeBackFromPushedScreen()
+        if await wait(for: firstSessionRow(), timeout: 6) { return }
+        let back = app.navigationBars.buttons.element(boundBy: 0)
+        if back.exists { await tapSettled(back) }
+        if await wait(for: firstSessionRow(), timeout: 6) { return }
+        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
         await settle(1.5)
     }
 
@@ -319,10 +365,11 @@ final class RepLogUITests: XCTestCase {
         await addFirstExercise()
 
         await tapSettled(app.buttons["finish-workout"])
-        let cancel = app.buttons["Cancel"]
-        await expectExists(cancel, "finish confirmation dialog not shown")
-        await tapSettled(cancel)
-        await settle(1)
+        await expectExists(app.buttons["finish-confirm"].firstMatch,
+                           "finish confirmation dialog not shown")
+        await dismissDialog()
+        XCTAssertFalse(app.buttons["finish-confirm"].firstMatch.exists,
+                       "the finish dialog was still up after cancelling it")
         // Cancelling must not end the workout.
         await expectExists(app.buttons["add-exercise"],
                            "cancelling the finish dialog closed the workout")
@@ -341,7 +388,7 @@ final class RepLogUITests: XCTestCase {
         await startFreshWorkout()
         await addFirstExercise()
 
-        await swipeBackFromPushedScreen()
+        await leaveWorkoutScreen()
 
         let row = await expectSessionRow("open workout not listed in the Log")
         XCTAssertTrue(row.label.contains("In progress"),
@@ -378,9 +425,7 @@ final class RepLogUITests: XCTestCase {
         let rowDelete = app.buttons["row-delete-\(sid)"]
         await expectExists(rowDelete, "Edit mode revealed no delete for the row")
         await tapSettled(rowDelete)
-        let confirm = app.buttons["Delete"]
-        await expectExists(confirm, "row delete confirmation not shown")
-        await tapSettled(confirm)
+        await confirmDialog("row-delete-confirm", "row delete confirmation not shown")
         await settle(1.5)
         XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
                        "deleted workout should be gone from the Log")
@@ -662,9 +707,7 @@ final class RepLogUITests: XCTestCase {
         await expectExists(app.buttons["session-detail-menu"], "session detail not open")
         await tapSettled(app.buttons["session-detail-menu"])
         await tapSettled(app.buttons["delete-workout"])
-        let dialogDelete = app.buttons["Delete"]
-        await expectExists(dialogDelete, "delete confirmation not shown")
-        await tapSettled(dialogDelete)
+        await confirmDialog("delete-workout-confirm", "delete confirmation not shown")
         await settle(3)
 
         // Gone from the phone, and the detail screen left with it (it used to

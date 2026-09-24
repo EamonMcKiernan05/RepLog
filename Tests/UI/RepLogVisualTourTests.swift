@@ -279,8 +279,12 @@ final class RepLogVisualTourTests: XCTestCase {
         await tapAny([app.buttons["finish-workout"]], "finish workout")
         await settle(1.2)
         shot("12b-finish-confirm")
-        await tapAny([app.buttons["Cancel"]], "cancel finish")
-        await settle(1)
+        // The dialog's .cancel button is not exposed to XCUITest on iOS 26
+        // (measured 2026-09-24: 0 matches for a "Cancel" label across every
+        // element type, and the dialog's other button is duplicated in the
+        // tree), so cancel it by tapping outside the sheet.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+        await settle(1.2)
 
         // Swipe back to the Log: the open workout is marked in progress...
         let backLeft = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5))
