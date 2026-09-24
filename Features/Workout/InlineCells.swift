@@ -67,14 +67,13 @@ struct InlineCell: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
-                .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
-                // Pull the label right by half its own width so its centre
+                // Push the label right by half its own width so its centre
                 // lands over the note's first character (owner, 2026-09-24).
-                .alignmentGuide(.leading) { d in
-                    wide && NotesStyle.current.labelPlacement == .centredOverValue
-                        ? d.width / 2
-                        : d[.leading]
-                }
+                // A fixed shift, not a measured one: the label is always
+                // "Notes" at the caption size, and a measured value here would
+                // have to come from an alignment guide on a frame.
+                .padding(.leading, NotesStyle.current.labelShift(wide: wide))
+                .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
             // The empty state is drawn as a sibling, not as the field's
             // `prompt:` — with a custom prompt style, iOS renders the text
             // being typed in the prompt's grey while the keyboard is up, so a

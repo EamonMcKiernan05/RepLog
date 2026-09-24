@@ -31,6 +31,14 @@ struct NotesStyle: Equatable {
     /// The note's own type.
     let font: Font
 
+    /// How far right the label moves so its centre sits over the note's first
+    /// character: half of "Notes" at the caption size. Zero for the flush
+    /// treatment, and zero for the numeric columns.
+    func labelShift(wide: Bool) -> CGFloat {
+        guard wide, labelPlacement == .centredOverValue else { return 0 }
+        return 16
+    }
+
     static let all: [NotesStyle] = [
         NotesStyle(labelPlacement: .centredOverValue, font: .caption),
         NotesStyle(labelPlacement: .centredOverValue, font: .footnote),

@@ -166,12 +166,8 @@ struct SetRowView: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
+                .padding(.leading, NotesStyle.current.labelShift(wide: wide))
                 .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
-                .alignmentGuide(.leading) { d in
-                    wide && NotesStyle.current.labelPlacement == .centredOverValue
-                        ? d.width / 2
-                        : d[.leading]
-                }
             Text(value.isEmpty ? "—" : value)
                 .font(wide ? NotesStyle.current.font
                            : Typography.mono(layout.numberSize, value.isEmpty ? .regular : .bold))
