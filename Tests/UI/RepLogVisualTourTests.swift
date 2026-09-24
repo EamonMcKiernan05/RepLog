@@ -283,7 +283,11 @@ final class RepLogVisualTourTests: XCTestCase {
         // (measured 2026-09-24: 0 matches for a "Cancel" label across every
         // element type, and the dialog's other button is duplicated in the
         // tree), so cancel it by tapping outside the sheet.
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+        // dy 0.85, not 0.12: the iOS 26 dialog is a card pinned near the TOP of
+        // the screen (its button starts at y=132pt of 874), so a tap at 0.12
+        // lands INSIDE it and does nothing — the swipe then missed and 12c/12d
+        // captured the workout screen instead of the Log (2026-09-24).
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85)).tap()
         await settle(1.2)
 
         // Swipe back to the Log: the open workout is marked in progress...
