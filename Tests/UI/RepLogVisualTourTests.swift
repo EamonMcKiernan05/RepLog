@@ -498,6 +498,58 @@ final class RepLogVisualTourTests: XCTestCase {
         print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
     }
 
+    /// TEMPORARY (migration check, removed once the scheme columns are gone).
+    /// Phase 1: with the OLD schema, leave a store on disk holding a marker.
+    @MainActor
+    func testMigrationSnapshotOldSchema() async {
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
+        app.launch()
+        await settle(4)
+        _ = await tapAny([app.tabBars.buttons.element(boundBy: 1)], "routines tab")
+        await settle(1.2)
+        _ = await tapAny([app.buttons["routine-Push Day"]], "routine row")
+        await settle(1.5)
+        _ = await tapLabel("Competition Bench")
+        await settle(1.5)
+        let field = app.textFields["routine-exercise-notes-field"].firstMatch
+        _ = await tapAny([field], "notes field")
+        await settle(0.8)
+        field.typeText("MIGRATION-PROBE-4242")
+        await settle(0.6)
+        _ = await tapAny([app.navigationBars.buttons["Done"].firstMatch], "sheet Done")
+        await settle(1.5)
+        let onRow = app.staticTexts["MIGRATION-PROBE-4242"].exists
+        print("MIGRATION old schema: store written, marker on row=\(onRow)")
+    }
+
+    /// TEMPORARY (migration check). Phase 2: with the NEW schema (scheme columns
+    /// dropped) and NO reset, the app must open the SAME store and still show
+    /// the marker. An in-memory fallback would show an empty routine list, so
+    /// finding the marker proves the on-disk store migrated.
+    @MainActor
+    func testMigrationSurvivedNewSchema() async {
+        app.terminate()
+        app.launchArguments = []
+        app.launch()
+        await settle(4)
+        let logged = await waitFor(app.tabBars.buttons.element(boundBy: 1), timeout: 10)
+        print("MIGRATION new schema: app opened=\(logged)")
+        _ = await tapAny([app.tabBars.buttons.element(boundBy: 1)], "routines tab")
+        await settle(1.5)
+        let routine = app.buttons["routine-Push Day"].firstMatch
+        let routineThere = await waitFor(routine, timeout: 8)
+        print("MIGRATION new schema: routine present=\(routineThere)")
+        if routineThere {
+            _ = await tapAny([routine], "routine row")
+            await settle(1.5)
+            let marker = await waitFor(app.staticTexts["MIGRATION-PROBE-4242"], timeout: 8)
+            print("MIGRATION new schema: MARKER SURVIVED=\(marker)")
+            let note = app.textFields["routine-exercise-notes-field"].firstMatch
+            print("MIGRATION new schema: note field on screen=\(note.exists)")
+        }
+    }
+
     /// The routine detail row under each style (owner report, 2026-09-24).
     /// A note is typed into one exercise first — the row only shows it when
     /// there is one.

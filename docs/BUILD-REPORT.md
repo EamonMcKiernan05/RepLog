@@ -414,6 +414,83 @@ That scaffolding comes out once the look is signed off on the phone.
 
 ---
 
+## 0.5 Routine exercise notes, and the scheme removed (owner report, 2026-09-24)
+
+Report: *"When editing a routine the exercise notes don't reflect the actual
+exercise note set in the routine."* Two defects, both real, both fixed.
+
+### 0.5.1 The note was never drawn on the routine, and was dropped by a workout
+
+1. **The routine's exercise row drew the set scheme, never the note.** The row
+   printed `re.schemeLines` — so the "1x4" the owner was reading was a stale
+   `[[0, 4]]` scheme row, not his note. The note he had set in the editor had
+   nowhere to appear.
+2. **Starting a workout from a routine dropped the note entirely.** Both start
+   paths (`RoutinesViews.startWorkout()` and `StartWorkoutSheet.start(from:)`)
+   built each `ExerciseEntry` and never copied `re.notes` across.
+
+Fixed: the row draws the note (chosen from three captured variants — see
+0.5.3), and both start paths copy it into the entry, where the card shows it
+under the exercise name.
+
+### 0.5.2 The scheme is gone
+
+Owner: *"There should be no 'scheme' — the exercise should only have options
+for number of sets and a note."*
+
+Removed from every code path: `RoutineExercise.scheme` / `.schemeLines`, the
+scheme-driven set-count rule, the value pre-fill in both start paths, the
+duplicate's scheme copy, and `Engine/SchemePrefill.swift` with
+`Features/Routines/RoutineRowStyle.swift`. A new session's rows now come from
+`warmupSets + workingSets` alone and start EMPTY — which also retires the whole
+"0 kg × 4 got committed into new sessions" family of bugs at the root.
+
+`RoutineExercise.schemeJSON` and `ExerciseEntry.plannedScheme` stay as stored
+properties with a comment: nothing reads or writes them, and keeping the
+columns means the store's schema is unchanged for installs that already hold
+data. Dropping them would need a migration for no gain.
+
+### 0.5.3 Which row layout — chosen from captures, not described
+
+Three orders were built behind `-RoutineRow <1...3>` and captured on identical
+data: note only (1), note then scheme (2), scheme then note (3). The owner
+picked **1** — the note takes the slot, no scheme lines — so the style hook and
+option 1's competitors are gone.
+
+### 0.5.4 Notes are per routine, not per exercise
+
+Owner: *"The exercise note should be specific to the routine as well... session
+1's squat notes can say '3x5 go light' and session 2's squat notes can say '4x4
+go heavy, no belt' — same exercise, routine-specific notes."*
+
+This was already the model (`RoutineExercise.notes`), and it is now proved:
+`testNotesArePerRoutineNotPerExercise` sets a note on Push Day's Competition
+Bench, duplicates the routine, gives the copy a different note, and asserts
+neither routine sees the other's.
+
+### 0.5.5 A note typed then "Done" was not reliably committed
+
+`InlineTextField` only wrote its draft when the box lost focus. The sheet's own
+Done button dismisses the editor without clearing focus, so the commit depended
+on SwiftUI behaviour that is not guaranteed. Both belts are now in place: the
+draft commits `onDisappear` of the field, and the exercise editor's Done clears
+focus before dismissing. Every inline note field in the app inherits the
+first fix (routine name, routine notes, set counts, workout/session notes).
+
+### 0.5.6 Test-harness lesson (cost two red runs)
+
+The keyboard carries a **Done** button of its own. Tapping `app.buttons["Done"]`
+picked that one, so the sheet never closed and the assertion failed against the
+screen behind it. Tap the sheet's Done in the nav bar:
+`app.navigationBars.buttons["Done"]`. Likewise `Start this Workout` is a
+Button, not a staticText.
+
+### 0.5.7 Published
+
+**1.1.3 (build 6)** — published after a green gate at `ef19eeb`.
+
+---
+
 ## 1. Test evidence (all real, all run)
 
 ### 1.1 The gate — `bash scripts/mac-tests.sh` (one run, pasted raw)
