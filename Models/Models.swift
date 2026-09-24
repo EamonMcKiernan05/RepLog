@@ -130,9 +130,6 @@ final class ExerciseEntry {
     var exercise: Exercise?
     var sortOrder: Int
     var supersetId: String?
-    /// Vestigial, like `RoutineExercise.schemeJSON`: nothing reads or writes
-    /// it since the planned-scheme concept went (owner, 2026-09-24).
-    var plannedScheme: String? = nil
     var notes: String
     var unitOverrideRaw: String?      // per-exercise kg/lb override
     var sets: [SetEntry] = []
@@ -223,14 +220,6 @@ final class RoutineExercise {
     var sortOrder: Int
     var warmupSets: Int
     var workingSets: Int
-    /// Vestigial. A routine exercise used to carry a set SCHEME
-    /// ([[weightKg, reps], ...]) that pre-filled the first sets of a new
-    /// session. The owner removed the concept on 2026-09-24: an exercise in a
-    /// routine is a number of sets and a note, nothing else. Nothing reads or
-    /// writes this. The column stays so the store's schema is unchanged for
-    /// installs that already hold data — dropping it would need a migration
-    /// for no gain.
-    var schemeJSON: String = "[]"
     var notes: String
 
     init(exercise: Exercise?, sortOrder: Int, warmupSets: Int = 0,
