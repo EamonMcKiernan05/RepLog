@@ -17,12 +17,20 @@ struct ActiveWorkoutView: View {
     /// workout (owner request, 2026-09-24).
     @State private var showEndTime = false
     @State private var endTimeDraft: Date = .now
+    @State private var confirmDelete = false
+    /// True when this screen opened on an already-finished workout: every edit
+    /// is then a correction to an existing record, not a live workout.
+    @State private var editingExistingRecord = false
     /// Which inline cell (a set cell, an exercise note, the workout note) has
     /// the keyboard. One value for the screen: every card shares it and the
     /// keyboard's Done button clears it.
     @FocusState private var focus: CellFocus?
     @State private var timer = RestTimerController()
     @State private var health = HealthService()
+
+    /// A session with no end time is being worked on; one with an end time is a
+    /// record being corrected. Same editor for both (owner, 2026-09-24).
+    private var isFinished: Bool { session.endTime != nil }
 
     var body: some View {
         ScrollView {
@@ -44,6 +52,10 @@ struct ActiveWorkoutView: View {
         .background(Palette.bg)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            editingExistingRecord = isFinished
+            // Reviewing an old workout must not look like training is happening:
+            // no Live Activity, and no Health permission prompt.
+            guard !isFinished else { return }
             // Live Activity for the in-progress workout (Dynamic Island + lock
             // screen). Best-effort; no-op if unsupported.
             WorkoutLiveActivityController.start(
@@ -58,20 +70,24 @@ struct ActiveWorkoutView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    // Ask first: the checkmark used to call finish() straight
-                    // away and end the workout on a misplaced tap.
-                    confirmFinish = true
-                } label: {
-                    Image(systemName: "checkmark")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.black)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Palette.accent))
+            // Only an OPEN workout can be finished. On a finished record the
+            // back button is the way out: every edit is saved as it is made.
+            if !isFinished {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        // Ask first: the checkmark used to call finish() straight
+                        // away and end the workout on a misplaced tap.
+                        confirmFinish = true
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(.black)
+                            .frame(width: 36, height: 36)
+                            .background(Circle().fill(Palette.accent))
+                    }
+                    .accessibilityLabel("Finish workout")
+                    .accessibilityIdentifier("finish-workout")
                 }
-                .accessibilityLabel("Finish workout")
-                .accessibilityIdentifier("finish-workout")
             }
             ToolbarItem(placement: .principal) {
                 Text(session.date.formatted(.dateTime.day().month(.abbreviated)))
@@ -95,8 +111,17 @@ struct ActiveWorkoutView: View {
                         } label: {
                             Label("Workout Notes", systemImage: "text.alignleft")
                         }
+                        // Moved here from the read-only detail screen, which
+                        // this editor replaced.
+                        Button(role: .destructive) {
+                            confirmDelete = true
+                        } label: {
+                            Label("Delete Workout", systemImage: "trash")
+                        }
+                        .accessibilityIdentifier("delete-workout")
                     } label: {
                         Image(systemName: "ellipsis.circle")
+                            .accessibilityIdentifier("workout-menu")
                     }
                 }
                 .buttonStyle(.bordered)
@@ -129,6 +154,15 @@ struct ActiveWorkoutView: View {
             EndTimePickerSheet(initial: endTimeDraft) { picked in
                 finish(at: endDate(from: picked))
             }
+        }
+        .confirmationDialog("Delete this workout?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { deleteWorkout() }
+                .accessibilityIdentifier("delete-workout-confirm")
+        }
+        .onDisappear {
+            // A correction to an existing record has to be re-queued for upload;
+            // sync is manual, so nothing leaves the phone by itself.
+            if editingExistingRecord { sync.sessionEdited(session) }
         }
         .confirmationDialog("Finish this workout?", isPresented: $confirmFinish, titleVisibility: .visible) {
             Button("Finish", role: .destructive) { finish() }
@@ -328,10 +362,29 @@ struct ActiveWorkoutView: View {
         return d
     }
 
+    /// Delete from the phone only: `SyncEngine.sessionDeleted` drops it from the
+    /// upload queue and never talks to the service, so a copy that already
+    /// reached the sync database stays there (owner rule, 2026-09-23).
+    private func deleteWorkout() {
+        sync.sessionDeleted(session)
+        store.context.delete(session)
+        store.save()
+        dismiss()
+    }
+
     private func finish(at endTime: Date = .now) {
+        // Correcting a finished record is not a finish: the end time is simply
+        // changed, nothing goes to Health a second time, and there is no Live
+        // Activity to end.
+        let wasOpen = !isFinished
         session.endTime = endTime
         store.save()
         timer.stop()
+        guard wasOpen else {
+            sync.sessionEdited(session)
+            dismiss()
+            return
+        }
         sync.sessionFinished(session)
         // End the Live Activity for this workout.
         WorkoutLiveActivityController.end()

@@ -109,17 +109,17 @@ struct LogTabView: View {
                 // view with the item-based destination further down or SwiftUI
                 // silently drops it and the row taps do nothing.
                 //
-                // An OPEN workout (no end time) opens the editor, not the
-                // read-only detail: that screen has no finish control and used
-                // to hide its End Time row, which stranded the workout after a
-                // back-swipe — the owner could not end it at all.
+                // EVERY session opens the same editor, finished or not (owner,
+                // 2026-09-24: "update things so I can edit a finished workout
+                // the same way I can an active one"). The editor knows which
+                // state it is in: a finished record gets no finish control, no
+                // Live Activity and no second Health write, and a correction
+                // re-queues it for upload. The read-only detail screen is gone
+                // with it — its one unique action (Delete Workout) moved into
+                // the editor's menu.
                 .navigationDestination(for: String.self) { id in
                     if let session = sessions.first(where: { $0.id == id }) {
-                        if session.endTime == nil {
-                            ActiveWorkoutView(session: session)
-                        } else {
-                            SessionDetailView(session: session)
-                        }
+                        ActiveWorkoutView(session: session)
                     }
                 }
             }

@@ -343,8 +343,8 @@ final class RepLogVisualTourTests: XCTestCase {
         await settle(2.5)
         await tapAny([firstSessionRow()], "session row")
         await settle(1.5)
-        shot("13-session-detail")
-        await tapAny([app.navigationBars.buttons.element(boundBy: 0)], "back from detail")
+        shot("13-finished-workout-editor")
+        await tapAny([app.navigationBars.buttons.element(boundBy: 0)], "back from the finished workout")
         await settle(1)
 
         if !quick {

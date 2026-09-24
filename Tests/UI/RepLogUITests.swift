@@ -340,7 +340,12 @@ final class RepLogUITests: XCTestCase {
     /// (plan §6.1). Regression test: the row was a Button setting the item of
     /// .navigationDestination(item:) and the push never fired.
     @MainActor
-    func testSessionRowOpensDetail() async {
+    /// Owner request (2026-09-24): "update things so I can edit a finished
+    /// workout the same way I can an active one". A finished workout opens the
+    /// SAME editor, its values are editable and stay edited, and it offers no
+    /// Finish control (it is already finished).
+    @MainActor
+    func testFinishedWorkoutOpensTheEditableScreen() async {
         // Finish one workout so the Log has a row to tap.
         await completeOnboarding()
         await startFreshWorkout()
@@ -353,10 +358,26 @@ final class RepLogUITests: XCTestCase {
         await expectExists(app.buttons["plus"], "Log tab not shown after finishing")
         let row = await expectSessionRow("session row not shown in Log after finishing")
 
-        // Tap it — the detail view must push.
         await tapSettled(row)
-        let detail = app.buttons["session-detail-menu"]
-        await expectExists(detail, "session detail did not open after tapping the row")
+        await expectExists(app.buttons["add-exercise"],
+                           "the finished workout did not open the editor")
+        await expectExists(app.buttons["add-set"],
+                           "the finished workout's cards are not editable")
+        XCTAssertFalse(app.buttons["finish-workout"].exists,
+                       "a finished workout must not offer Finish again")
+
+        // Change a value, leave, and come back: the edit must have stuck.
+        await typeInCell("weight-cell", "135")
+        await dismissKeyboard()
+        await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
+        await settle()
+        let again = await expectSessionRow("row missing after leaving the editor")
+        await tapSettled(again)
+        await settle()
+        let weight = app.textFields["weight-cell"].firstMatch
+        await expectExists(weight, "weight cell after reopening the finished workout")
+        XCTAssertEqual((weight.value as? String) ?? "", "135",
+                       "the edit to a finished workout did not persist")
     }
 
     // MARK: - Finishing, leaving and deleting a workout (owner report, 2026-09-23)
@@ -909,14 +930,15 @@ final class RepLogUITests: XCTestCase {
         let rowToDelete = app.buttons["session-row-\(sid)"]
         await expectExists(rowToDelete, "uploaded session's row (session-row-\(sid)) not in the Log")
         await tapSettled(rowToDelete)
-        await expectExists(app.buttons["session-detail-menu"], "session detail not open")
-        await tapSettled(app.buttons["session-detail-menu"])
+        await expectExists(app.buttons["workout-menu"], "the workout editor did not open")
+        await tapSettled(app.buttons["workout-menu"])
         await tapSettled(app.buttons["delete-workout"])
         await confirmDialog("delete-workout-confirm", "delete confirmation not shown")
         await settle(3)
 
-        // Gone from the phone, and the detail screen left with it (it used to
-        // stay on a deleted model, which read as "delete did nothing").
+        // Gone from the phone, and the editor screen left with it (the old
+        // detail screen used to stay on a deleted model, which read as "delete
+        // did nothing").
         XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
                        "deleted session should be gone from the Log")
         // The detail screen must have dismissed. The assertion is on the Log's
@@ -926,8 +948,8 @@ final class RepLogUITests: XCTestCase {
         // the 2026-09-24 failure recording — reported separately, not worked
         // around here).
         await expectExists(app.buttons["log-edit"], "not back on the Log after deleting")
-        XCTAssertFalse(app.buttons["session-detail-menu"].exists,
-                       "the session detail screen was still up after deleting")
+        XCTAssertFalse(app.buttons["workout-menu"].exists,
+                       "the workout editor was still up after deleting")
         // The database copy is untouched and no delete was ever sent.
         let rowsAfterDelete = await drillCSVDataRows()
         XCTAssertEqual(rowsAfterDelete, 1,
