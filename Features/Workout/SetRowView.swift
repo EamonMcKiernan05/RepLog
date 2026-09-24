@@ -26,25 +26,32 @@ struct SetRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Uniform gap between every column, and no spacer: the columns
-            // sit next to the set-number circle instead of being pushed right
-            // (owner report, 2026-09-24).
-            HStack(spacing: layout.gutter) {
-                // Circled index
-                ZStack {
-                    Circle().stroke(Palette.textSecondary.opacity(0.5), lineWidth: 1.5)
-                        .frame(width: 23, height: 23)
-                    Text("\(set.setNumber)")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(set.isDrop ? Palette.accent : Palette.textPrimary)
+            // Uniform gap between every column, no spacer, and TOP aligned:
+            // with the row centred, the Notes cell's smaller value made its
+            // label sit lower than Kg/Reps/RPE (owner report, 2026-09-24).
+            HStack(alignment: .top, spacing: layout.gutter) {
+                // Circled index, with an empty label line above it so the
+                // circle sits level with the values.
+                VStack(spacing: 4) {
+                    Text(" ").font(Typography.label).hidden()
+                    ZStack {
+                        Circle().stroke(Palette.textSecondary.opacity(0.5), lineWidth: 1.5)
+                            .frame(width: 23, height: 23)
+                        Text("\(set.setNumber)")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(set.isDrop ? Palette.accent : Palette.textPrimary)
+                    }
+                    .frame(width: 23)
                 }
-                .frame(width: 23)
 
                 if set.isDrop {
-                    Image(systemName: "arrow.down")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Palette.accent)
-                        .frame(width: 16)
+                    VStack(spacing: 4) {
+                        Text(" ").font(Typography.label).hidden()
+                        Image(systemName: "arrow.down")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Palette.accent)
+                            .frame(width: 16)
+                    }
                 }
 
                 // Columns per type
@@ -119,15 +126,6 @@ struct SetRowView: View {
                 )
             }
             .padding(.vertical, 11)
-
-            // A non-empty note also renders as a second line under the row.
-            if !set.notes.isEmpty {
-                Text(set.notes)
-                    .font(.footnote)
-                    .foregroundStyle(Palette.textPrimary)
-                    .padding(.horizontal, 23 + layout.gutter)
-                    .padding(.bottom, 8)
-            }
         }
         .padding(.horizontal, 16)
         .contentShape(Rectangle())
@@ -148,8 +146,9 @@ struct SetRowView: View {
                 value: value,
                 keyboard: keyboard,
                 wide: wide,
-                valueSize: wide ? layout.notesSize : layout.numberSize,
+                valueSize: layout.numberSize,
                 fixedWidth: wide ? nil : layout.numberWidth,
+                valueFont: wide ? NotesStyle.current.font : nil,
                 focus: focus,
                 focusValue: CellFocus(owner: owner, field: field),
                 commit: commit
@@ -163,14 +162,19 @@ struct SetRowView: View {
     @ViewBuilder
     private func column(label: String, value: String, isPlaceholder: Bool,
                         id: String?, wide: Bool) -> some View {
-        VStack(spacing: 4) {
+        VStack(alignment: wide ? .leading : .center, spacing: 4) {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
                 .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
+                .alignmentGuide(.leading) { d in
+                    wide && NotesStyle.current.labelPlacement == .centredOverValue
+                        ? d.width / 2
+                        : d[.leading]
+                }
             Text(value.isEmpty ? "—" : value)
-                .font(Typography.mono(wide ? layout.notesSize : layout.numberSize,
-                                      value.isEmpty ? .regular : .bold))
+                .font(wide ? NotesStyle.current.font
+                           : Typography.mono(layout.numberSize, value.isEmpty ? .regular : .bold))
                 .foregroundStyle(isPlaceholder ? Palette.textSecondary.opacity(0.6) : Palette.textPrimary)
                 .lineLimit(1)
         }

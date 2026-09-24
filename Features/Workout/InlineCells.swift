@@ -38,6 +38,9 @@ struct InlineCell: View {
     /// its place whether it reads "5" or "140". nil keeps the old 44 pt
     /// minimum, and the wide Notes column fills what is left.
     var fixedWidth: CGFloat? = nil
+    /// Type for the value. nil = the monospaced number face at `valueSize`;
+    /// the Notes column passes the app's own text font (see `NotesStyle`).
+    var valueFont: Font? = nil
     let focus: FocusState<CellFocus?>.Binding
     let focusValue: CellFocus
     /// Parse-and-write. Called on submit and on focus loss — never per
@@ -60,11 +63,18 @@ struct InlineCell: View {
     private var cellWidth: CGFloat? { wide ? nil : fixedWidth }
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(alignment: wide ? .leading : .center, spacing: 4) {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
                 .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
+                // Pull the label right by half its own width so its centre
+                // lands over the note's first character (owner, 2026-09-24).
+                .alignmentGuide(.leading) { d in
+                    wide && NotesStyle.current.labelPlacement == .centredOverValue
+                        ? d.width / 2
+                        : d[.leading]
+                }
             // The empty state is drawn as a sibling, not as the field's
             // `prompt:` — with a custom prompt style, iOS renders the text
             // being typed in the prompt's grey while the keyboard is up, so a
@@ -72,7 +82,7 @@ struct InlineCell: View {
             ZStack(alignment: wide ? .leading : .center) {
                 if isEmpty {
                     Text("—")
-                        .font(Typography.mono(valueSize))
+                        .font(valueFont ?? Typography.mono(valueSize))
                         .foregroundStyle(Palette.textSecondary.opacity(0.6))
                         .allowsHitTesting(false)
                 }
@@ -87,7 +97,7 @@ struct InlineCell: View {
                     )
                 )
                 .textFieldStyle(.plain)
-                .font(Typography.mono(valueSize, .bold))
+                .font(valueFont ?? Typography.mono(valueSize, .bold))
                 .foregroundStyle(Palette.textPrimary)
                 .keyboardType(keyboard)
                 .multilineTextAlignment(alignment)

@@ -458,13 +458,13 @@ final class RepLogVisualTourTests: XCTestCase {
             shot("layout-v\(variant)")
         }
 
-        // The two candidates again, this time with an RPE and a note typed in:
-        // the Notes value is the smallest type in the row and needs to be seen
-        // with something in it.
-        for variant in [2, 3] {
+        // The chosen layout (variant 4) again, this time with an RPE and a
+        // note typed in — once per Notes-column treatment under review. The
+        // note is only visible with something in it.
+        for style in 1...4 {
             app.terminate()
             app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES",
-                                   "-RowLayout", "\(variant)"]
+                                   "-RowLayout", "4", "-NotesStyle", "\(style)"]
             app.launch()
             await settle(4)
             await tapAny([app.buttons["plus"]], "log plus")
@@ -492,7 +492,7 @@ final class RepLogVisualTourTests: XCTestCase {
             }
             _ = await tapAny([app.buttons["keyboard-done"]], "keyboard done", timeout: 4)
             await settle(1)
-            shot("layout-v\(variant)-with-a-note")
+            shot("notes-\(style)")
         }
 
         print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
