@@ -91,7 +91,7 @@ struct ProfileTabView: View {
                     HStack {
                         Text("RepLog")
                         Spacer()
-                        Text("1.1.1")
+                        Text("1.1.2")
                             .font(.caption)
                             .foregroundStyle(Palette.textSecondary)
                     }

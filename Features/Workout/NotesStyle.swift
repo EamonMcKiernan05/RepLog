@@ -49,7 +49,11 @@ struct NotesStyle: Equatable {
         NotesStyle(labelPlacement: .centredOverValue, font: Typography.mono(12)),
     ]
 
-    static let `default` = all[0]
+    /// Option 3 — chosen by the owner on 2026-09-24: the label and the note
+    /// sit flush left together in the note's own caption size. The
+    /// launch-argument hook stays for now so the alternatives can still be
+    /// re-shot; it comes out once the look is signed off on the phone.
+    static let `default` = all[2]
 
     /// `-NotesStyle N`, 1-based. Anything else → the default.
     static let current: NotesStyle = {
