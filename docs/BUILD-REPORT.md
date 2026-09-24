@@ -20,7 +20,7 @@ Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
 
 ## Build status
 
-**Status: the whole Mac gate is green at commit `42964ea`** — `** BUILD
+**Status: the whole Mac gate is green at commit `8356c66`** — `** BUILD
 SUCCEEDED **`, 36/36 unit tests, **12/12 UI tests** including the in-simulator
 offline drill, in one `scripts/mac-tests.sh` run (§1.1, §0.1 and §0.3). The dark-mode visual
 pass covers every screen against the 17 reference screenshots (§4), and the
@@ -525,6 +525,60 @@ reads 1.1.3 built 2026-09-24 18:07 UTC.
 **Expect an empty app on first launch of this build** — the schema change
 cannot migrate an older store, so it starts a fresh one (154 seeded exercises,
 no routines, no sessions). That is the authorised behaviour, not a fault.
+
+---
+
+## 0.6 A finished workout is edited with the same screen as an active one
+
+Owner: *"Can we update things so I can edit a finished workout the same way I
+can an active one?"*
+
+The Log used to route a session by state — no end time to the editor, has one
+to a read-only detail screen. Every row now opens `ActiveWorkoutView`, and the
+read-only screen is deleted. Its one unique action, **Delete Workout**, moved
+into the editor's ⋯ menu (same identifiers, `delete-workout` /
+`delete-workout-confirm`, so the delete path is covered exactly as before).
+
+The editor knows which state it is in, rather than offering a live workout's
+controls over a record:
+
+- **No finish control** on a finished session. Every edit commits as it is
+  made, so the back button is the way out. The checkmark still asks before
+  ending a live workout — that path is untouched.
+- **No Live Activity** and no Health permission prompt when opening an old
+  workout; reviewing last Tuesday must not put a timer on the lock screen.
+- **Editing an end time** on a finished session changes the record. It does not
+  write a second workout to Health, and it does not re-run the finish path.
+- **A correction re-queues the session for upload.** `SyncEngine.sessionEdited`
+  existed and nothing called it: an edit to an already-uploaded workout stayed
+  marked "uploaded" and the service kept the stale copy. `onDisappear` now
+  marks the record edited when the screen opened on a finished session.
+
+Also in this round: **the set-number circle is centred on the row vertically**
+(owner, same day). It used to ride an empty label line so it sat level with the
+values; the cells are two lines tall, so it now stretches to the row's height
+and centres (`maxHeight: .infinity` inside the top-aligned `HStack`). The drop-set
+arrow sits in the same badge column and was centred with it.
+
+### 0.6.1 Test harness: clearing a filled field
+
+`clearIfFilled` typed `XCUIKeyboardKey.delete` (U+007F) to empty a field. That
+does not clear a SwiftUI `TextField` here — the new text was inserted at the
+caret, so a field holding "100" became "135100". It passed in isolation and
+failed in the gate, which is the worst shape a flaky helper can have. It now
+types U+0008 (what a text field actually treats as delete), **reads the field
+back** to confirm it is empty, and falls back to select-all only if it is not.
+The finished-workout test proves persistence with an insert into an empty box
+and asserts an unedited value is untouched, so it does not depend on the
+clearing path at all.
+
+### 0.6.2 Published
+
+**1.1.4 (build 7)** — 671,516 bytes, sha256
+`192bc05d3963251a178ee382744d43702bdb41b87d0a5cce4748dd9895176a98`, archived from
+`8356c66` after a green gate (36 unit, 14/14 UI, `All Mac tests passed.`). The
+served file's sha256 was read back over HTTPS and matches; the install page
+reads 1.1.4 built 2026-09-24 19:05 UTC.
 
 ---
 
