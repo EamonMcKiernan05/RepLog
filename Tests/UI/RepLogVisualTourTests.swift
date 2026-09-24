@@ -498,6 +498,41 @@ final class RepLogVisualTourTests: XCTestCase {
         print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
     }
 
+    /// TEMPORARY diagnostic: what actually happens to a note typed into the
+    /// routine exercise editor. Removed once the defect is pinned down.
+    @MainActor
+    func testProbeRoutineNote() async {
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
+        app.launch()
+        await settle(4)
+        _ = await tapAny([app.tabBars.buttons.element(boundBy: 1)], "routines tab")
+        await settle(1.2)
+        _ = await tapAny([app.buttons["routine-Push Day"]], "routine row")
+        await settle(1.5)
+        _ = await tapLabel("Competition Bench")
+        await settle(1.5)
+
+        let field = app.textFields["routine-exercise-notes-field"].firstMatch
+        print("PROBE field exists=\(field.exists) value=\((field.value as? String) ?? "nil")")
+        _ = await tapAny([field], "notes field")
+        await settle(0.8)
+        field.typeText("belt on")
+        await settle(0.8)
+        print("PROBE typed, field value=\((field.value as? String) ?? "nil")")
+
+        _ = await tapAny([app.buttons["Done"].firstMatch], "sheet Done")
+        await settle(2)
+        let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }
+        print("PROBE routine-detail static texts: \(labels)")
+
+        // Reopen the same exercise and read the field back.
+        _ = await tapAny([app.staticTexts["Competition Bench"].firstMatch], "bench row again")
+        await settle(2)
+        let again = app.textFields["routine-exercise-notes-field"].firstMatch
+        print("PROBE reopened field exists=\(again.exists) value=\((again.value as? String) ?? "nil")")
+    }
+
     /// The routine detail row under each style (owner report, 2026-09-24).
     /// A note is typed into one exercise first — the row only shows it when
     /// there is one.
