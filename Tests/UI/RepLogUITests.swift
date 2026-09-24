@@ -608,7 +608,9 @@ final class RepLogUITests: XCTestCase {
                            "the routine's exercise row does not show the note set for it")
 
         // 2. A workout started from the routine carries the note to the card.
-        let start = app.staticTexts["Start this Workout"].firstMatch
+        // It is a Button whose label is the text — a staticText query for it
+        // finds nothing (the probe proved that).
+        let start = app.buttons["Start this Workout"].firstMatch
         await expectExists(start, "Start this Workout button")
         await tapSettled(start)
         await settle(2.5)
