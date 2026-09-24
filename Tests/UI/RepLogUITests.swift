@@ -185,16 +185,23 @@ final class RepLogUITests: XCTestCase {
         await settle(0.3)
     }
 
-    /// Select-all before typing over an existing value. Typing the delete key
-    /// (`XCUIKeyboardKey.delete`) does NOT clear a SwiftUI TextField here — the
-    /// new text was inserted at the caret instead, giving "135100" for a field
-    /// holding "100" (seen 2026-09-24). cmd+A replaces the selection on typing.
+    /// Empty a field that already holds a value, and CHECK that it worked.
+    ///
+    /// `XCUIKeyboardKey.delete` (U+007F) does not clear a SwiftUI TextField
+    /// here: the new text was inserted at the caret instead, so a field holding
+    /// "100" ended up as "135100" (2026-09-24, first in isolation and again in
+    /// the gate). U+0008 is the character a text field treats as delete, so try
+    /// that first and only fall back to select-all. Whatever happens, the field
+    /// is read back, so a silent failure to clear cannot masquerade as a pass.
     @MainActor
     private func clearIfFilled(_ field: XCUIElement) async {
         let existing = (field.value as? String) ?? ""
         guard !existing.isEmpty, existing != "—" else { return }
+        field.typeText(String(repeating: "\u{8}", count: existing.count + 2))
+        await settle(0.35)
+        if ((field.value as? String) ?? "").isEmpty { return }
         field.typeKey("a", modifierFlags: .command)
-        await settle(0.3)
+        await settle(0.35)
     }
 
     /// Close the keyboard with the toolbar Done button. The numeric pads have
@@ -372,18 +379,24 @@ final class RepLogUITests: XCTestCase {
         XCTAssertFalse(app.buttons["finish-workout"].exists,
                        "a finished workout must not offer Finish again")
 
-        // Change a value, leave, and come back: the edit must have stuck.
-        await typeInCell("weight-cell", "135")
+        // Edit a set row, leave, and come back: the edit must have stuck. The
+        // box used is one that is empty in this workout, so the change is a
+        // plain insert.
+        await typeInCell("notes-cell", "felt easy")
         await dismissKeyboard()
         await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
         await settle()
         let again = await expectSessionRow("row missing after leaving the editor")
         await tapSettled(again)
         await settle()
-        let weight = app.textFields["weight-cell"].firstMatch
-        await expectExists(weight, "weight cell after reopening the finished workout")
-        XCTAssertEqual((weight.value as? String) ?? "", "135",
+        let note = app.textFields["notes-cell"].firstMatch
+        await expectExists(note, "the set's notes box after reopening the finished workout")
+        XCTAssertEqual((note.value as? String) ?? "", "felt easy",
                        "the edit to a finished workout did not persist")
+        // And the values that were already there are untouched.
+        let weight = app.textFields["weight-cell"].firstMatch
+        XCTAssertEqual((weight.value as? String) ?? "", "100",
+                       "reopening a finished workout changed a value that was not edited")
     }
 
     // MARK: - Finishing, leaving and deleting a workout (owner report, 2026-09-23)
