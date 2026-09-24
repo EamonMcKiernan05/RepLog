@@ -598,13 +598,16 @@ final class RepLogUITests: XCTestCase {
         let menu = app.buttons["routine-menu"].firstMatch
         await expectExists(menu, "routine menu")
         await tapSettled(menu)
-        await settle(0.8)
+        await settle(1.2)
+        print("DEBUG menu open: buttons=\(app.buttons.allElementsBoundByIndex.map { $0.label })")
         await tapSettled(app.buttons["Duplicate"].firstMatch)
-        await settle(1.5)
+        await settle(2)
 
         // Back to the list and into the copy.
+        print("DEBUG after duplicate: navButtons=\(app.navigationBars.buttons.allElementsBoundByIndex.map { $0.label })")
         await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
-        await settle()
+        await settle(1.5)
+        print("DEBUG list: buttons=\(app.buttons.allElementsBoundByIndex.map { $0.label })")
         let copy = app.buttons["routine-Push Day Copy"].firstMatch
         await expectExists(copy, "the duplicated routine in the list")
         await tapSettled(copy)
