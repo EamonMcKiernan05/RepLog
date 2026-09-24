@@ -154,8 +154,18 @@ final class DataStore {
         return try? context.fetch(d).first
     }
 
+    /// Bumped on every save. A list built from a FETCH (`routines()`,
+    /// `sessions()`, `allExercises()`) has no other way to know the SET of rows
+    /// changed: SwiftData models are observable one by one, and inserting a new
+    /// one touches no property the list is reading. A view that shows such a
+    /// list reads this in its body, so a change made on another screen
+    /// re-renders it. That is the defect behind "duplicate a routine and the
+    /// list never shows it" (found 2026-09-24).
+    private(set) var revision: Int = 0
+
     func save() {
         try? context.save()
+        revision += 1
     }
 }
 

@@ -10,6 +10,10 @@ struct RoutinesTabView: View {
 
     var body: some View {
         @Bindable var store = store
+        // Read so this list re-renders when routines are inserted or removed
+        // elsewhere — Duplicate on the detail view inserts a routine and only
+        // `revision` changes (see DataStore.save).
+        let _ = store.revision
         NavigationStack {
             List {
                 ForEach(store.routines()) { routine in

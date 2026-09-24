@@ -594,26 +594,19 @@ final class RepLogUITests: XCTestCase {
         await setNote(first, on: "Competition Bench")
         await expectExists(app.staticTexts[first], "Push Day's own note on its row")
 
-        // Duplicate the routine: the copy holds the same exercise.
+        // Duplicate the routine: the copy holds the same exercise. This also
+        // covers the 2026-09-24 defect where a duplicate never appeared in the
+        // list — the copy was in the store but the list was never re-fetched.
         let menu = app.buttons["routine-menu"].firstMatch
         await expectExists(menu, "routine menu")
         await tapSettled(menu)
         await settle(1.2)
-        print("DEBUG menu open: buttons=\(app.buttons.allElementsBoundByIndex.map { $0.label })")
         await tapSettled(app.buttons["Duplicate"].firstMatch)
-        await settle(2)
+        await settle(1.5)
 
-        // Back to the list and into the copy.
-        print("DEBUG after duplicate: navButtons=\(app.navigationBars.buttons.allElementsBoundByIndex.map { $0.label })")
+        // Back to the list, which must already show the copy.
         await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
         await settle(1.5)
-        print("DEBUG list: buttons=\(app.buttons.allElementsBoundByIndex.map { $0.label })")
-        // Is the copy in the STORE at all? The Log's "+" lists every routine.
-        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
-        await settle()
-        await tapSettled(app.buttons["plus"])
-        await settle(2)
-        print("DEBUG start sheet: buttons=\(app.buttons.allElementsBoundByIndex.map { $0.label })")
         let copy = app.buttons["routine-Push Day Copy"].firstMatch
         await expectExists(copy, "the duplicated routine in the list")
         await tapSettled(copy)
