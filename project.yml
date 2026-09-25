@@ -7,7 +7,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "1.1.6"
+    MARKETING_VERSION: "1.1.7"
     CURRENT_PROJECT_VERSION: "9"
     GENERATE_INFOPLIST_FILE: NO
     # Eamon's Apple Developer team (Individual, paid). With Automatic
@@ -40,7 +40,7 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: RepLog
-        CFBundleShortVersionString: "1.1.6"
+        CFBundleShortVersionString: "1.1.7"
         CFBundleVersion: "9"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
@@ -78,7 +78,7 @@ targets:
       path: Widget/RepLogWidget-Info.plist
       properties:
         CFBundleDisplayName: RepLog Widget
-        CFBundleShortVersionString: "1.1.6"
+        CFBundleShortVersionString: "1.1.7"
         CFBundleVersion: "9"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
