@@ -162,7 +162,11 @@ final class RepLogUITests: XCTestCase {
         await expectExists(app.buttons["plus"], "'plus' toolbar button not found")
         await tapSettled(app.buttons["plus"])
         let row = app.buttons["routine-start-\(name)"]
-        await expectExists(row, "'\(name)' is not offered in the Start Workout sheet")
+        if !(await wait(for: row, timeout: 8)) {
+            let ids = app.buttons.allElementsBoundByIndex.map { "\($0.label)|$0.identifier".replacingOccurrences(of: "$0", with: $0.identifier) }
+            XCTFail("'\(name)' is not offered in the Start Workout sheet. Buttons: \(ids)")
+            return
+        }
         await tapSettled(row)
         await expectExists(app.buttons["add-exercise"], "active workout not shown after starting a routine")
     }
