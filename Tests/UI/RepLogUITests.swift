@@ -156,8 +156,6 @@ final class RepLogUITests: XCTestCase {
         await expectExists(app.buttons["add-exercise"], "Active workout not shown")
     }
 
-    /// Add the first exercise of the first category (Abs -> Ab Wheel).
-    @MainActor
     /// "+" → the named routine, and the workout screen must be up.
     @MainActor
     private func startWorkout(fromRoutine name: String) async {
@@ -199,6 +197,7 @@ final class RepLogUITests: XCTestCase {
                       "the test could not empty the box, so the hint cannot be checked")
     }
 
+    /// Add the first exercise of the first category (Abs -> Ab Wheel).
     @MainActor
     private func addFirstExercise() async {
         await tapSettled(app.buttons["add-exercise"])
