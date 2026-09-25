@@ -710,6 +710,16 @@ Test evidence on the final commit, per class (see the note on the runner below):
 `testDeleteWorkoutFromTheEditorMenu`, `RepLogAccessibilityTests`, and the visual
 tour — each green as its own run, and the UI suite green in chunks of five.
 
+**One intermittent test failure is real, and it is the only one seen.** A full
+UI run on the published commit failed exactly one assertion —
+`testRPEChipsDisplayWholeValues`, "RPE box should read '8' (not '8.0'), got ''" —
+with every other test green including the drill. It has failed once in the eight
+runs that included it: the chips animate in when the box takes focus, so a tap
+delivered before they settle lands as a miss. The test now retries that tap once,
+which also separates a miss from a chip that cannot set a value at all. Read the
+whole log for these before blaming the simulator — a green-sounding summary of a
+red run is how one real failure gets filed as noise.
+
 **The gate has to be chunked on this host.** A single long UI run dies with the
 simulator (`SimRenderServer`) after some number of tests — four, seven, fifteen,
 it varies — reporting `** TEST FAILED **` with `Executed N tests, with 0
