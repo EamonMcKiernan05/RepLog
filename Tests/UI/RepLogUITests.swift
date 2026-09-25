@@ -1215,6 +1215,18 @@ final class RepLogUITests: XCTestCase {
         await confirmDialog("delete-workout-confirm", "delete confirmation not shown")
         await settle(3)
 
+        // Be explicit about being back on the Log before reading it. The Log is
+        // a List now (2026-09-25), and a List that is off-screen behind a pushed
+        // screen keeps its last rendered cell in the accessibility tree — so
+        // reading it while the editor is still up says "the row is still
+        // there" even though the session is gone. The editor pops itself on
+        // delete; if it has not, pop it, then read the Log.
+        if app.buttons["workout-menu"].exists {
+            await leaveWorkoutScreen()
+        }
+        await settle(1.5)
+        await expectExists(app.buttons["log-edit"], "not back on the Log after deleting")
+
         // Gone from the phone, and the editor screen left with it (the old
         // detail screen used to stay on a deleted model, which read as "delete
         // did nothing").
