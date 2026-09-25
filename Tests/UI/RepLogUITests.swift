@@ -454,8 +454,10 @@ final class RepLogUITests: XCTestCase {
         // Press the revealed panel where it actually is: at the row's right
         // edge. (The button's own frame is the panel, but a tap aimed at it by
         // element can land on the row that slid aside.)
-        app.textFields.matching(identifier: "notes-cell").element(boundBy: 1)
-            .coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        let setCell = app.textFields.matching(identifier: "notes-cell").element(boundBy: 1)
+        setCell.coordinate(withNormalizedOffset: CGVector(dx: 1.0, dy: 0.5))
+            .withOffset(CGVector(dx: 55, dy: 0))
+            .tap()
         await settle(1.2)
         XCTAssertEqual(app.textFields.matching(identifier: "weight-cell").count, 1,
                        "pressing Delete on a set row did not remove it")
@@ -475,7 +477,7 @@ final class RepLogUITests: XCTestCase {
         let workoutDelete = app.buttons.matching(
             NSPredicate(format: "identifier BEGINSWITH 'swipe-delete-workout-'")).firstMatch
         await expectExists(workoutDelete, "swiping a workout did not reveal a Delete button")
-        workout.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.5)).tap()
+        workout.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
         await settle(1.5)
         await confirmDialog("row-delete-confirm", "pressing Delete did not ask before deleting the workout")
         await settle(2)
