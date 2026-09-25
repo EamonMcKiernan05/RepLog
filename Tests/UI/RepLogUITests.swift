@@ -182,6 +182,7 @@ final class RepLogUITests: XCTestCase {
 
     /// Empty a box that has focus, without the keyboard's delete key (see
     /// `clearIfFilled` for why). Select-all, then delete the selection.
+    @MainActor
     private func clearField(_ field: XCUIElement) async {
         field.typeKey("a", modifierFlags: .command)
         await settle(0.3)
