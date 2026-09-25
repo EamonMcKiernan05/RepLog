@@ -217,7 +217,9 @@ final class RepLogUITests: XCTestCase {
     /// time this exercise was done), and typing appends, so clear it first.
     @MainActor
     private func typeInCell(_ id: String, _ text: String) async {
-        let field = app.textFields[id]
+        // firstMatch: a workout can show several rows, and every row's weight
+        // box shares the identifier. "The cell" always means the top row's.
+        let field = app.textFields[id].firstMatch
         await expectExists(field, "'\(id)' box not found")
         field.tap()
         await settle(0.6)
