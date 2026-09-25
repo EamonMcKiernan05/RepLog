@@ -450,7 +450,11 @@ final class RepLogUITests: XCTestCase {
 
         // 5. Delete it: the previous entry comes back.
         await clearField(weight)
-        let hintIsBack = await wait(for: hints, timeout: 5)
+        var hintIsBack = false
+        for _ in 0..<15 {
+            if hints.count == rows { hintIsBack = true; break }
+            try? await Task.sleep(nanoseconds: 300_000_000)
+        }
         XCTAssertTrue(hintIsBack, "clearing the box did not bring the previous entry back")
         XCTAssertEqual(hints.count, rows, "the hint did not come back for the emptied box")
         XCTAssertEqual(hints.element(boundBy: 0).label, "120",
