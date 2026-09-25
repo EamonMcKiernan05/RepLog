@@ -673,8 +673,36 @@ Done and verified:
   shows real uploads arriving (`{"type":"upsert", ...}`) after the tap.
 - 36/36 unit and 15/16 UI tests pass on the final commit.
 
-**NOT PUBLISHED — one real failure, reproducible.** Deleting a workout from the
-workout editor's own ⋯ menu does not remove it from the Log:
+**The failure it was held for, and the fix.** Deleting a workout from the
+workout editor's own ⋯ menu left it in the Log. Root cause: `LogTabView.sessions`
+fetched from the store but never read the store's change signal, so nothing
+re-painted the List after a delete performed while it was covered by the pushed
+editor. The `ScrollView` this replaced re-evaluated for other reasons; a `List`
+does not. Fixed with `_ = store.revision` in `sessions` — the same
+"no re-read signal" class as the duplicating-routine bug of 2026-09-24, in the
+same app.
+
+Two further real bugs came out of the same hunt, both fixed and both worth
+having on their own:
+
+- `ActiveWorkoutView.onDisappear` re-queued an edit (`sessionEdited`) for a
+  session that had just been deleted — touching a model after `context.delete`.
+  Guarded with a `deleting` flag.
+- The Profile sync control: a `.plain` Button whose label contains a `Spacer`
+  has no tap area inside a `List` row, so the tap landed on the row and the sync
+  never ran. The label now carries `.contentShape(Rectangle())`; proven by real
+  uploads arriving at the drill service.
+
+Green on the final commit: 36 unit, the full UI suite, `testOfflineDrill`,
+`testDeleteWorkoutFromTheEditorMenu`, `RepLogAccessibilityTests`, and the visual
+tour.
+
+**How it was found, kept because it cost hours.** The failing step read as
+"delete does nothing". `DataStore.sessions()` fetches fresh on every read, and
+deleting the same workout from the Log's own Edit mode passed, which pointed at
+the store rather than the view — the truth was the opposite. Narrowing it took a
+purpose-built test (`testDeleteWorkoutFromTheEditorMenu`, about a minute, no
+drill service) after the drill's own report proved too coarse:
 
 - `testDeleteWorkoutFromTheEditorMenu` (added for this) fails: after ⋯ → Delete
   Workout → confirm → back on the Log, the row is still there.
