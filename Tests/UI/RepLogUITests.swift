@@ -451,7 +451,11 @@ final class RepLogUITests: XCTestCase {
         await swipeRowLeft(app.textFields.matching(identifier: "notes-cell").element(boundBy: 1))
         let setDelete = app.buttons["swipe-delete-set-2"]
         await expectExists(setDelete, "swiping a set row did not reveal a Delete button")
-        await tapSettled(setDelete)
+        // Press the revealed panel where it actually is: at the row's right
+        // edge. (The button's own frame is the panel, but a tap aimed at it by
+        // element can land on the row that slid aside.)
+        app.textFields.matching(identifier: "notes-cell").element(boundBy: 1)
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
         await settle(1.2)
         XCTAssertEqual(app.textFields.matching(identifier: "weight-cell").count, 1,
                        "pressing Delete on a set row did not remove it")
@@ -471,7 +475,8 @@ final class RepLogUITests: XCTestCase {
         let workoutDelete = app.buttons.matching(
             NSPredicate(format: "identifier BEGINSWITH 'swipe-delete-workout-'")).firstMatch
         await expectExists(workoutDelete, "swiping a workout did not reveal a Delete button")
-        await tapSettled(workoutDelete)
+        workout.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.5)).tap()
+        await settle(1.5)
         await confirmDialog("row-delete-confirm", "pressing Delete did not ask before deleting the workout")
         await settle(2)
         XCTAssertFalse(firstSessionRow().exists,
