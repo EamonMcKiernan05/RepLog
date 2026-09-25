@@ -21,6 +21,13 @@ struct ActiveWorkoutView: View {
     /// True when this screen opened on an already-finished workout: every edit
     /// is then a correction to an existing record, not a live workout.
     @State private var editingExistingRecord = false
+    /// Set on the way out when the workout is being DELETED.
+    ///
+    /// The re-queue in `.onDisappear` must not run then: it would queue an edit
+    /// for a session that no longer exists, and touching a model after
+    /// `context.delete` is a hard failure in SwiftData. Owner report,
+    /// 2026-09-25: "deleting a workout from its own menu leaves it in the Log".
+    @State private var deleting = false
     /// Which inline cell (a set cell, an exercise note, the workout note) has
     /// the keyboard. One value for the screen: every card shares it and the
     /// keyboard's Done button clears it.
@@ -165,8 +172,9 @@ struct ActiveWorkoutView: View {
         }
         .onDisappear {
             // A correction to an existing record has to be re-queued for upload;
-            // sync is manual, so nothing leaves the phone by itself.
-            if editingExistingRecord { sync.sessionEdited(session) }
+            // sync is manual, so nothing leaves the phone by itself. Never for a
+            // delete: the session is gone (see `deleting`).
+            if editingExistingRecord, !deleting { sync.sessionEdited(session) }
         }
         .confirmationDialog("Finish this workout?", isPresented: $confirmFinish, titleVisibility: .visible) {
             Button("Finish", role: .destructive) { finish() }
@@ -389,6 +397,7 @@ struct ActiveWorkoutView: View {
     /// upload queue and never talks to the service, so a copy that already
     /// reached the sync database stays there (owner rule, 2026-09-23).
     private func deleteWorkout() {
+        deleting = true
         sync.sessionDeleted(session)
         store.context.delete(session)
         store.save()
