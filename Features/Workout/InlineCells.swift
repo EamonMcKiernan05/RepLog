@@ -86,6 +86,9 @@ struct InlineCell: View {
                         .foregroundStyle(Palette.textSecondary.opacity(0.6))
                         .lineLimit(1)
                         .allowsHitTesting(false)
+                        // Addressable by test: the hint is a separate Text, so
+                        // this is the only way to assert what it says.
+                        .accessibilityIdentifier(hint.isEmpty ? "blank-\(id)" : "hint-\(id)")
                 }
                 TextField(
                     "",

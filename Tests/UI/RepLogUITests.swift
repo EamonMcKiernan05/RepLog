@@ -401,6 +401,11 @@ final class RepLogUITests: XCTestCase {
     /// deleted. It is a hint, never a value: an untouched box stays empty.
     @MainActor
     func testEmptyBoxesHintThePreviousPerformance() async {
+        // Demo data for the Push Day routine (and its Competition Bench).
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
+        app.launch()
+        await settle(4)
         await completeOnboarding()
 
         // 1. Push Day's Competition Bench: 100 x 5. This is the routine's own
@@ -420,26 +425,30 @@ final class RepLogUITests: XCTestCase {
         await dismissKeyboard()
         await finishWorkout()
 
-        // 3. Start Push Day again: the empty boxes hint step 2's 120.
+        // 3. Start Push Day again: the empty box hints step 2's 120.
         await startWorkout(fromRoutine: "Push Day")
         let weight = app.textFields["weight-cell"].firstMatch
         await expectExists(weight, "the routine's first exercise has no editable weight box")
         XCTAssertEqual((weight.value as? String) ?? "", "",
                        "an untouched box must stay EMPTY — the hint is not a value")
-        await expectExists(app.staticTexts["120"],
-                           "the empty box does not hint the last time the exercise was done")
+        let hint = app.staticTexts["hint-weight-cell"].firstMatch
+        await expectExists(hint, "the empty box shows no hint of the last performance")
+        XCTAssertEqual(hint.label, "120",
+                       "the hint is not the last time the EXERCISE was done")
 
         // 4. Type: the hint goes, only what was typed shows.
         await typeInCell("weight-cell", "90")
         XCTAssertEqual((weight.value as? String) ?? "", "90",
                        "the box does not show what was typed")
-        XCTAssertFalse(app.staticTexts["120"].exists,
+        XCTAssertFalse(app.staticTexts["hint-weight-cell"].exists,
                        "the hint stayed on screen while a value was being typed")
 
         // 5. Delete it: the previous entry comes back.
         await clearField(weight)
-        let hintIsBack = await wait(for: app.staticTexts["120"], timeout: 5)
+        let hintIsBack = await wait(for: app.staticTexts["hint-weight-cell"], timeout: 5)
         XCTAssertTrue(hintIsBack, "clearing the box did not bring the previous entry back")
+        XCTAssertEqual(app.staticTexts["hint-weight-cell"].firstMatch.label, "120",
+                       "the hint came back as something other than the last performance")
 
         // 6. "By Routine" asks the ROUTINE, not the newest session: 100, not 120.
         await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
@@ -457,10 +466,10 @@ final class RepLogUITests: XCTestCase {
         await settle()
 
         await startWorkout(fromRoutine: "Push Day")
-        await expectExists(app.staticTexts["100"],
-                           "'By Routine' did not hint the routine's own last session")
-        XCTAssertFalse(app.staticTexts["120"].exists,
-                       "'By Routine' is still hinting a session from another routine")
+        let byRoutine = app.staticTexts["hint-weight-cell"].firstMatch
+        await expectExists(byRoutine, "'By Routine' shows no hint at all")
+        XCTAssertEqual(byRoutine.label, "100",
+                       "'By Routine' is not hinting the routine's own last session (120 would mean it is still reading the newest session of the exercise)")
     }
 
     /// Owner request (2026-09-24): "update things so I can edit a finished
