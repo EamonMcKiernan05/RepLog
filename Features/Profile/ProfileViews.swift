@@ -68,15 +68,15 @@ struct ProfileTabView: View {
                                     Image(systemName: "arrow.triangle.2.circlepath")
                                         .foregroundStyle(Palette.textSecondary)
                                 }
-                                // Explicit hit shape: in a List row a
-                                // .plain Button whose label has a Spacer has
-                                // no tap area of its own — the tap lands on
-                                // the row and nothing happens (found
-                                // 2026-09-25: the drill tapped it, the sync
-                                // never ran and the service saw no request).
-                                .contentShape(Rectangle())
-                                .frame(maxWidth: .infinity)
                             }
+                            // Explicit hit shape: in a List row a .plain
+                            // Button whose label has a Spacer has no tap area
+                            // of its own — the tap lands on the row and
+                            // nothing happens (found 2026-09-25: the drill
+                            // tapped it, the sync never ran and the service
+                            // saw no request at all).
+                            .contentShape(Rectangle())
+                            .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.plain)
                         .disabled(sync.isSyncing)
