@@ -73,7 +73,9 @@ struct SwipeToDelete<Content: View>: View {
                 // gesture there never receives the drag at all. The dominance
                 // check keeps vertical scrolling safe — only a clearly
                 // horizontal, leftward drag moves the row.
-                .simultaneousGesture(
+                // A plain gesture, now that the row is not a NavigationLink: the
+            // link used to claim the whole touch.
+            .gesture(
                     DragGesture(minimumDistance: 18)
                         .onChanged { value in
                             let dx = value.translation.width
