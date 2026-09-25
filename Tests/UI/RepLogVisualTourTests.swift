@@ -498,6 +498,23 @@ final class RepLogVisualTourTests: XCTestCase {
         print("TOUR-CAPTURED (\(captured.count)): \(captured.joined(separator: ", "))")
     }
 
+    /// Empty boxes hinting the previous performance (owner request,
+    /// 2026-09-25).
+    @MainActor
+    func testHintCapture() async {
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
+        app.launch()
+        await settle(4)
+        _ = await tapAny([app.tabBars.buttons.element(boundBy: 0)], "log tab")
+        await settle(1.2)
+        _ = await tapAny([app.buttons["plus"]], "plus")
+        await settle(1.2)
+        _ = await tapAny([app.buttons["routine-start-Push Day"]], "start Push Day")
+        await settle(1.8)
+        shot("hints-in-empty-boxes")
+    }
+
     /// The editor opened on a FINISHED workout (owner request, 2026-09-24).
     @MainActor
     func testFinishedWorkoutEditorCapture() async {
