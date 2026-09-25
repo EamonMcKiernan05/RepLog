@@ -28,6 +28,10 @@ struct InlineCell: View {
     /// Canonical text, straight from the model.
     let value: String
     var keyboard: UIKeyboardType = .numberPad
+    /// What the empty box shows behind it: the last time this set was done
+    /// (owner, 2026-09-25). Decoration only — it is never the field's value and
+    /// it takes no taps. Empty falls back to the old "—".
+    var hint: String = ""
     /// Fills the rest of the row (the Notes column).
     var wide = false
     var alignment: TextAlignment = .center
@@ -43,10 +47,6 @@ struct InlineCell: View {
     var valueFont: Font? = nil
     let focus: FocusState<CellFocus?>.Binding
     let focusValue: CellFocus
-    /// What the empty box shows behind it: the last time this set was done
-    /// (owner, 2026-09-25). Decoration only — it is never the field's value and
-    /// it takes no taps. Empty falls back to the old "—".
-    var hint: String = ""
     /// Parse-and-write. Called on submit and on focus loss — never per
     /// keystroke: a half-typed "1." must not be parsed and written back, or
     /// the field would rewrite itself and eat the decimal point.
