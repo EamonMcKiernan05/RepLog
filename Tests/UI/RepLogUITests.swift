@@ -433,23 +433,27 @@ final class RepLogUITests: XCTestCase {
         await expectExists(weight, "the routine's first exercise has no editable weight box")
         XCTAssertEqual((weight.value as? String) ?? "", "",
                        "an untouched box must stay EMPTY — the hint is not a value")
-        let hint = app.staticTexts["hint-weight-cell"].firstMatch
-        await expectExists(hint, "the empty box shows no hint of the last performance")
-        XCTAssertEqual(hint.label, "120",
+        // Every set row in the card is empty, so every row carries a hint.
+        let hints = app.staticTexts.matching(identifier: "hint-weight-cell")
+        XCTAssertGreaterThan(hints.count, 0, "no empty weight box shows a hint")
+        XCTAssertEqual(hints.element(boundBy: 0).label, "120",
                        "the hint is not the last time the EXERCISE was done")
+        let rows = hints.count
 
-        // 4. Type: the hint goes, only what was typed shows.
+        // 4. Type into the first box: ITS hint goes (only the box being typed
+        //    in loses it), and the box shows what was typed.
         await typeInCell("weight-cell", "90")
         XCTAssertEqual((weight.value as? String) ?? "", "90",
                        "the box does not show what was typed")
-        XCTAssertFalse(app.staticTexts["hint-weight-cell"].exists,
-                       "the hint stayed on screen while a value was being typed")
+        XCTAssertEqual(hints.count, rows - 1,
+                       "the hint did not go when a value was typed over it")
 
         // 5. Delete it: the previous entry comes back.
         await clearField(weight)
-        let hintIsBack = await wait(for: app.staticTexts["hint-weight-cell"], timeout: 5)
+        let hintIsBack = await wait(for: hints, timeout: 5)
         XCTAssertTrue(hintIsBack, "clearing the box did not bring the previous entry back")
-        XCTAssertEqual(app.staticTexts["hint-weight-cell"].firstMatch.label, "120",
+        XCTAssertEqual(hints.count, rows, "the hint did not come back for the emptied box")
+        XCTAssertEqual(hints.element(boundBy: 0).label, "120",
                        "the hint came back as something other than the last performance")
 
         // 6. "By Routine" asks the ROUTINE, not the newest session: 100, not 120.
@@ -468,9 +472,9 @@ final class RepLogUITests: XCTestCase {
         await settle()
 
         await startWorkout(fromRoutine: "Push Day")
-        let byRoutine = app.staticTexts["hint-weight-cell"].firstMatch
-        await expectExists(byRoutine, "'By Routine' shows no hint at all")
-        XCTAssertEqual(byRoutine.label, "100",
+        let byRoutineHint = app.staticTexts.matching(identifier: "hint-weight-cell").firstMatch
+        await expectExists(byRoutineHint, "'By Routine' shows no hint at all")
+        XCTAssertEqual(byRoutineHint.label, "100",
                        "'By Routine' is not hinting the routine's own last session (120 would mean it is still reading the newest session of the exercise)")
     }
 
