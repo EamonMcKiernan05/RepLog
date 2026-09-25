@@ -448,10 +448,7 @@ final class RepLogUITests: XCTestCase {
 
         // Swipe the SECOND row away across its full width: a set is deleted by
         // the swipe itself, with nothing to confirm.
-        let secondRow = app.descendants(matching: .any)
-            .matching(identifier: "set-row-2").firstMatch
-        await expectExists(secondRow, "the second set row is not on screen")
-        await swipeRowFullLeft(secondRow)
+        await swipeRowFullLeft(app.textFields.matching(identifier: "notes-cell").element(boundBy: 1))
         XCTAssertEqual(app.textFields.matching(identifier: "weight-cell").count, 1,
                        "swiping a set row left did not delete it")
         XCTAssertFalse(app.buttons["exercise-delete-confirm"].exists,

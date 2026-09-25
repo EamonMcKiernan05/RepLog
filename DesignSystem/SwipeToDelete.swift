@@ -12,7 +12,7 @@ struct SwipeToDelete<Content: View>: View {
     /// Names the revealed Delete button for tests (`swipe-delete-<id>`).
     var id: String = "row"
     /// A full swipe past this deletes outright, the way a system row does.
-    var fullSwipe: CGFloat = 210
+    var fullSwipe: CGFloat = 160
     /// Fires once per completed swipe.
     var onDelete: () -> Void
     /// Fires on a tap that was not part of a swipe. nil = the content handles

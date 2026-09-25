@@ -47,7 +47,6 @@ struct ExerciseCardView: View {
                     hints: hint(for: set),
                     onDelete: isEditing ? { deleteSet(set) } : nil
                 )
-                .accessibilityIdentifier("set-row-\(set.setNumber)")
                 if isEditing, focus.wrappedValue == CellFocus(owner: ObjectIdentifier(set), field: .rpe) {
                     rpeChipRow(set)
                 }
