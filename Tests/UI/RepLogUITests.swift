@@ -131,6 +131,20 @@ final class RepLogUITests: XCTestCase {
         return row
     }
 
+    /// Switch to the Profile tab and prove it is on screen.
+    ///
+    /// Where the sync control lives since 2026-09-25. A tab tap can be
+    /// swallowed while the previous screen settles, and a loaded-but-not-shown
+    /// Profile still reports its elements — `sync-now` came back with a hit
+    /// point of (-1, -1) and the tap failed — so prove it is hittable first.
+    @MainActor
+    private func openProfileTab() async {
+        for _ in 0..<3 {
+            await tapSettled(app.tabBars.buttons.element(boundBy: 3))
+            if app.buttons["sync-now"].isHittable { return }
+        }
+    }
+
     /// Walk onboarding (units -> privacy -> skip sync) to the Log tab.
     @MainActor
     private func completeOnboarding() async {
@@ -1130,7 +1144,7 @@ final class RepLogUITests: XCTestCase {
         // The queue survived the restart and is visible where the sync control
         // lives: Profile (owner, 2026-09-25 — the Log's toolbar is a single +).
         // Its label is the real state, so it reads "1 to sync".
-        await tapSettled(app.tabBars.buttons.element(boundBy: 3))
+        await openProfileTab()
         let syncNow = app.buttons["sync-now"]
         await expectExists(syncNow, "Profile's sync control not found before syncing")
         let queuedLabel = (syncNow.label as? String) ?? ""
@@ -1227,7 +1241,7 @@ final class RepLogUITests: XCTestCase {
                        "the database copy must survive, got \(rowsAfterReimport) row(s)")
 
         // And a further sync must not bring it back on the phone.
-        await tapSettled(app.tabBars.buttons.element(boundBy: 3))
+        await openProfileTab()
         let finalSync = app.buttons["sync-now"]
         if await wait(for: finalSync, timeout: 5) { await tapSettled(finalSync) }
         await settle(3)
