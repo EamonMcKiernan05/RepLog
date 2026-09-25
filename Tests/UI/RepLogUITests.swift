@@ -159,6 +159,7 @@ final class RepLogUITests: XCTestCase {
     /// Add the first exercise of the first category (Abs -> Ab Wheel).
     @MainActor
     /// "+" → the named routine, and the workout screen must be up.
+    @MainActor
     private func startWorkout(fromRoutine name: String) async {
         await expectExists(app.buttons["plus"], "'plus' toolbar button not found")
         await tapSettled(app.buttons["plus"])
@@ -169,6 +170,7 @@ final class RepLogUITests: XCTestCase {
     }
 
     /// "+" → exercise picker → category → exercise.
+    @MainActor
     private func addExercise(category: String, name: String) async {
         await tapSettled(app.buttons["add-exercise"])
         let cat = app.buttons["category-\(category)"]
@@ -197,6 +199,7 @@ final class RepLogUITests: XCTestCase {
                       "the test could not empty the box, so the hint cannot be checked")
     }
 
+    @MainActor
     private func addFirstExercise() async {
         await tapSettled(app.buttons["add-exercise"])
         let absCat = app.buttons["category-Abs"]
