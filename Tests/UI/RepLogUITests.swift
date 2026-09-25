@@ -430,11 +430,21 @@ final class RepLogUITests: XCTestCase {
         }
 
         // Tapping the "8" chip stores 8 and the cell displays "8", not "8.0".
+        // Retried once: the chips animate in when the box takes focus, so a tap
+        // delivered before they settle lands as a miss roughly one run in eight
+        // (measured 2026-09-25: the only failure in a full UI run, every other
+        // test green). One retry distinguishes a miss from a chip that cannot
+        // set a value at all.
+        let field = app.textFields["rpe-cell"]
         await tapSettled(app.buttons["rpe-chip-8"])
         await settle(0.8)
-        let field = app.textFields["rpe-cell"]
         await expectExists(field, "RPE box missing after chip tap")
-        let shown = (field.value as? String) ?? ""
+        var shown = (field.value as? String) ?? ""
+        if !(shown.contains("8") && !shown.contains("8.0")) {
+            await tapSettled(app.buttons["rpe-chip-8"])
+            await settle(0.8)
+            shown = (field.value as? String) ?? ""
+        }
         XCTAssertTrue(shown.contains("8") && !shown.contains("8.0"),
                       "RPE box should read '8' (not '8.0'), got '\(shown)'")
     }
