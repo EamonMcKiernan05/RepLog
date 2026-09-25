@@ -423,8 +423,10 @@ final class RepLogUITests: XCTestCase {
         let rows = app.textFields.matching(identifier: "weight-cell")
         XCTAssertEqual(rows.count, 2, "Add Set did not add a second row")
 
-        // Swipe the SECOND row away.
-        rows.element(boundBy: 1).swipeLeft()
+        // Swipe the SECOND row away. The swipe is made on the wide Notes box:
+        // XCUITest swipes across the ELEMENT's own width, and a weight cell is
+        // about 50 pt, which is under the delete threshold.
+        app.textFields.matching(identifier: "notes-cell").element(boundBy: 1).swipeLeft()
         await settle(1.5)
         XCTAssertEqual(app.textFields.matching(identifier: "weight-cell").count, 1,
                        "swiping a set row left did not delete it")
