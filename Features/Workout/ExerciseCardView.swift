@@ -44,7 +44,8 @@ struct ExerciseCardView: View {
                     unit: unit,
                     isEditing: isEditing,
                     focus: focus,
-                    hints: hint(for: set)
+                    hints: hint(for: set),
+                    onDelete: isEditing ? { deleteSet(set) } : nil
                 )
                 if isEditing, focus.wrappedValue == CellFocus(owner: ObjectIdentifier(set), field: .rpe) {
                     rpeChipRow(set)
@@ -257,6 +258,21 @@ struct ExerciseCardView: View {
     /// opening a sheet.
     private func focusExerciseNote() {
         focus.wrappedValue = CellFocus(owner: owner, field: .exerciseNote)
+    }
+
+    /// Delete one set, then renumber what is left so the rows read 1..n. The
+    /// hints are keyed by set number, so they have to stay aligned with the
+    /// rows.
+    private func deleteSet(_ set: SetEntry) {
+        entry.setEntries.removeAll { $0 === set }
+        store.context.delete(set)
+        for (index, remaining) in entry.setEntries
+            .sorted(by: { $0.sortOrder < $1.sortOrder })
+            .enumerated() {
+            remaining.setNumber = index + 1
+            remaining.sortOrder = index
+        }
+        store.save()
     }
 
     /// A new set starts EMPTY: the previous performance is a hint behind the

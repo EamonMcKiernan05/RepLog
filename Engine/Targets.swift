@@ -54,8 +54,10 @@ enum Targets {
     /// `.latest` it is the last session that contains the exercise whatever it
     /// was; with `.byRoutine` it is the last session of THIS routine (owner,
     /// 2026-09-25). Within that session the value at the SAME set index is
-    /// used, and a workout with more sets than last time repeats its last set —
-    /// the reference app's rule.
+    /// used. A workout with MORE sets than last time leaves the extras blank:
+    /// a set that has never been done has no previous performance to show
+    /// (owner, 2026-09-25 — repeating the last set's numbers there read as a
+    /// suggestion to do them again).
     static func hints(
         mode: TargetMode,
         routineName: String,
@@ -76,7 +78,8 @@ enum Targets {
         guard !last.isEmpty else { return [] }
 
         return (0..<setCount).map { index in
-            let past = last[min(index, last.count - 1)]
+            guard index < last.count else { return Hints() }
+            let past = last[index]
             var hint = Hints()
             if let kg = past.weightKg {
                 let v = unit.convert(fromKg: kg)

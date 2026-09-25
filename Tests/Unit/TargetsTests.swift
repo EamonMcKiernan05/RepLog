@@ -37,8 +37,8 @@ struct TargetsTests {
         #expect(hints[0].weight == "90")
     }
 
-    @Test("no history yields no hints, and set 3 of a 2-set session repeats set 2")
-    func emptyAndTiling() {
+    @Test("no history yields no hints, and a set never done before stays blank")
+    func emptyAndUnseenSets() {
         let none = Targets.hints(mode: .latest, routineName: "A", exerciseName: "Squat",
                                  history: [], unit: .kg, setCount: 2)
         #expect(none.isEmpty)
@@ -51,7 +51,7 @@ struct TargetsTests {
         #expect(hints.count == 3)
         #expect(hints[0].weight == "100")
         #expect(hints[1].weight == "90")
-        #expect(hints[2].weight == "90")   // tiles the last set
+        #expect(hints[2].isEmpty)   // never done before: no hint, not a repeat
         #expect(hints[1].notes.isEmpty)
     }
 

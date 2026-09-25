@@ -20,6 +20,8 @@ struct SetRowView: View {
     let focus: FocusState<CellFocus?>.Binding
     /// The previous performance for this set, shown behind empty boxes.
     var hints: Targets.Hints = .none
+    /// Swipe the row left to delete this set. nil = not editable, no swipe.
+    var onDelete: (() -> Void)? = nil
 
     private var owner: ObjectIdentifier { ObjectIdentifier(set) }
 
@@ -27,6 +29,15 @@ struct SetRowView: View {
     private var layout: RowLayout { RowLayout.current }
 
     var body: some View {
+        if let onDelete {
+            SwipeToDelete(onDelete: onDelete) { row }
+        } else {
+            row
+        }
+    }
+
+    /// No confirmation on a set: the swipe IS the decision (owner, 2026-09-25).
+    private var row: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Uniform gap between every column, no spacer, and TOP aligned:
             // with the row centred, the Notes cell's smaller value made its

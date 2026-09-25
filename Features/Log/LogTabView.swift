@@ -50,6 +50,14 @@ struct LogTabView: View {
 
                             VStack(spacing: 0) {
                                 ForEach(Array(month.sessions.enumerated()), id: \.element.id) { idx, session in
+                                    // Swipe left to delete this workout. Unlike
+                                    // a set row, this asks first: a workout is
+                                    // a whole session of work (owner,
+                                    // 2026-09-25).
+                                    SwipeToDelete(onDelete: {
+                                        pendingDelete = session
+                                        confirmRowDelete = true
+                                    }) {
                                     HStack(spacing: 0) {
                                         // Edit mode has something to do now: it
                                         // reveals a delete per row. It used to
@@ -85,6 +93,7 @@ struct LogTabView: View {
                                         .buttonStyle(.plain)
                                         .accessibilityIdentifier("session-row-\(session.id.prefix(8))")
                                         .accessibilityLabel(session.rowAccessibilityText)
+                                    }
                                     }
                                     if idx < month.sessions.count - 1 {
                                         Divider().padding(.leading, editMode == .active ? 128 : 76)

@@ -407,6 +407,43 @@ final class RepLogUITests: XCTestCase {
     /// Tapping a session row in the Log must push the session detail
     /// (plan §6.1). Regression test: the row was a Button setting the item of
     /// .navigationDestination(item:) and the push never fired.
+    /// Owner request (2026-09-25): swipe a set row left to delete it, with no
+    /// confirmation ("it should just delete on one slide"), and swipe a workout
+    /// in the Log to delete it, with one.
+    @MainActor
+    func testSwipeToDeleteASetAndAWorkout() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
+        await typeInCell("weight-cell", "50")
+        await tapSettled(app.buttons["add-set"])
+        await settle(1.2)
+        let rows = app.textFields.matching(identifier: "weight-cell")
+        XCTAssertEqual(rows.count, 2, "Add Set did not add a second row")
+
+        // Swipe the SECOND row away.
+        rows.element(boundBy: 1).swipeLeft()
+        await settle(1.5)
+        XCTAssertEqual(app.textFields.matching(identifier: "weight-cell").count, 1,
+                       "swiping a set row left did not delete it")
+        XCTAssertFalse(app.buttons["exercise-delete-confirm"].exists,
+                       "deleting a set asked for confirmation")
+        XCTAssertEqual((app.textFields["weight-cell"].firstMatch.value as? String) ?? "", "50",
+                       "the wrong set was deleted")
+
+        // Now the workout, which DOES ask first.
+        await dismissKeyboard()
+        await finishWorkout()
+        await expectExists(app.buttons["plus"], "not back on the Log after finishing")
+        let workout = await expectSessionRow("the finished workout is not in the Log")
+        workout.swipeLeft()
+        await settle(1.5)
+        await confirmDialog("row-delete-confirm", "swiping a workout did not ask before deleting")
+        await settle(2)
+        XCTAssertFalse(firstSessionRow().exists,
+                       "the workout was still in the Log after confirming the delete")
+    }
+
     /// Owner request (2026-09-25): an empty box shows the previous performance
     /// greyed out behind it — the last time the EXERCISE was done ("Latest") or
     /// the last time the ROUTINE was done ("By Routine") — only while the box
@@ -444,9 +481,14 @@ final class RepLogUITests: XCTestCase {
         await expectExists(weight, "the routine's first exercise has no editable weight box")
         XCTAssertEqual((weight.value as? String) ?? "", "",
                        "an untouched box must stay EMPTY — the hint is not a value")
-        // Every set row in the card is empty, so every row carries a hint.
+        // Sets that have never been done are BLANK, not a repeat of the last
+        // session's final set (owner report, 2026-09-25).
+        let setRows = app.textFields.matching(identifier: "weight-cell").count
         let hints = app.staticTexts.matching(identifier: "hint-weight-cell")
         XCTAssertGreaterThan(hints.count, 0, "no empty weight box shows a hint")
+        XCTAssertEqual(app.staticTexts.matching(identifier: "blank-weight-cell").count,
+                       setRows - 1,
+                       "a set that has never been done is showing a hint instead of nothing")
         XCTAssertEqual(hints.element(boundBy: 0).label, "120",
                        "the hint is not the last time the EXERCISE was done")
         let rows = hints.count
