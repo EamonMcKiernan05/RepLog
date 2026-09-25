@@ -681,6 +681,34 @@ final class RepLogUITests: XCTestCase {
         await expectExists(app.buttons["plus"], "workout did not finish after confirming")
     }
 
+    /// Deleting a workout from its own menu takes it out of the Log.
+    ///
+    /// The drill covers this as one step among many; on its own it is the
+    /// fastest way to see whether the editor's delete still lands (it stopped
+    /// landing on 2026-09-25, which the drill could only report as "deleted
+    /// session should be gone from the Log").
+    @MainActor
+    func testDeleteWorkoutFromTheEditorMenu() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
+        await fillFirstSet(weight: "60", reps: "5", rpe: "7")
+        await dismissKeyboard()
+        await finishWorkout()
+        let row = await expectSessionRow("finished workout not in the Log")
+        let sid = row.identifier.replacingOccurrences(of: "session-row-", with: "")
+
+        await tapSettled(app.buttons["session-row-\(sid)"])
+        await expectExists(app.buttons["workout-menu"], "the workout editor did not open")
+        await tapSettled(app.buttons["workout-menu"])
+        await tapSettled(app.buttons["delete-workout"])
+        await confirmDialog("delete-workout-confirm", "delete confirmation not shown")
+        await settle(3)
+        await expectExists(app.buttons["log-edit"], "not back on the Log after deleting")
+        XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
+                       "the workout is still in the Log after deleting it from its menu")
+    }
+
     /// Leaving an open workout must not strand it: the Log marks it in progress,
     /// and tapping it reopens the EDITOR. It used to open the read-only detail,
     /// which hid the End Time row and had no control that could end it — the
