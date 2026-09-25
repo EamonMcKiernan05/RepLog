@@ -516,9 +516,15 @@ final class RepLogUITests: XCTestCase {
         let setRows = app.textFields.matching(identifier: "weight-cell").count
         let hints = app.staticTexts.matching(identifier: "hint-weight-cell")
         XCTAssertGreaterThan(hints.count, 0, "no empty weight box shows a hint")
-        XCTAssertEqual(app.staticTexts.matching(identifier: "blank-weight-cell").count,
-                       setRows - 1,
-                       "a set that has never been done is showing a hint instead of nothing")
+        // Every row is either a hint (last time's set) or blank (a set that has
+        // never been done). The routine prescribes more sets than the last
+        // session had, so some MUST be blank: without that rule the extras
+        // would repeat the last set's numbers (owner report, 2026-09-25).
+        let blanks = app.staticTexts.matching(identifier: "blank-weight-cell").count
+        XCTAssertLessThan(hints.count, setRows,
+                          "every box is hinting — a set that was never done must be blank")
+        XCTAssertEqual(hints.count + blanks, setRows,
+                       "every row should be either a hint or blank")
         XCTAssertEqual(hints.element(boundBy: 0).label, "120",
                        "the hint is not the last time the EXERCISE was done")
         let rows = hints.count
