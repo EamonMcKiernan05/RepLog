@@ -30,6 +30,8 @@ struct SwipeToDelete<Content: View>: View {
     @State private var swiped = false
 
     private let limit: CGFloat = 150
+    /// How wide the revealed Delete panel is, and where a partial swipe parks.
+    private let reveal: CGFloat = 112
 
     var body: some View {
         ZStack(alignment: .trailing) {
@@ -52,7 +54,11 @@ struct SwipeToDelete<Content: View>: View {
                     .background(Palette.destructive)
                 }
                 .accessibilityIdentifier("swipe-delete-\(id)")
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                // Only as wide as the revealed panel: given the whole row, its
+                // tap area covers the row and a tap aimed at Delete lands on
+                // the row instead (2026-09-25).
+                .frame(width: reveal)
+                .frame(maxHeight: .infinity, alignment: .trailing)
             }
             tappable
         }
@@ -104,7 +110,7 @@ struct SwipeToDelete<Content: View>: View {
                                 onDelete()
                             } else if offset <= -40 {
                                 withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                    offset = -112
+                                    offset = -reveal
                                 }
                             } else {
                                 withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
