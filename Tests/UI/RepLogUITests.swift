@@ -182,7 +182,6 @@ final class RepLogUITests: XCTestCase {
 
     /// Empty a box that has focus, without the keyboard's delete key (see
     /// `clearIfFilled` for why). Select-all, then delete the selection.
-    @MainActor
     private func clearField(_ field: XCUIElement) async {
         field.typeKey("a", modifierFlags: .command)
         await settle(0.3)
@@ -436,8 +435,8 @@ final class RepLogUITests: XCTestCase {
 
         // 5. Delete it: the previous entry comes back.
         await clearField(weight)
-        XCTAssertTrue(await wait(for: app.staticTexts["120"], timeout: 5),
-                      "clearing the box did not bring the previous entry back")
+        let hintIsBack = await wait(for: app.staticTexts["120"], timeout: 5)
+        XCTAssertTrue(hintIsBack, "clearing the box did not bring the previous entry back")
 
         // 6. "By Routine" asks the ROUTINE, not the newest session: 100, not 120.
         await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
