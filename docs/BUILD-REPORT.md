@@ -647,7 +647,7 @@ shipped half-working. The workout keeps its existing deletes: the Log's Edit
 mode, and ⋯ → Delete Workout inside the workout editor. The real fix is to build
 that list as a `List` so the system's own swipe actions apply.
 
-### 0.9 In flight — 1.1.7: the Log as a real List, swipe to delete a workout, one + (NOT PUBLISHED)
+### 0.9 Published — 1.1.7: the Log as a real List, swipe to delete a workout, one +
 
 Owner requests, 2026-09-25: the Log split by month like RepCount, swipe a
 workout row to delete it (with a confirmation), and the Log's toolbar reduced to
@@ -693,9 +693,21 @@ having on their own:
   never ran. The label now carries `.contentShape(Rectangle())`; proven by real
   uploads arriving at the drill service.
 
-Green on the final commit: 36 unit, the full UI suite, `testOfflineDrill`,
+**Published 1.1.7 (build 10)** — 694,041 bytes, sha256
+`490e8ab2909ce5ff4d0337e4751f0bb77965f1cba5a91a92f5217d77561c0039`, served hash
+read back over HTTPS and matching, install page reading 1.1.7.
+
+Test evidence on the final commit, per class (see the note on the runner below):
+36 unit, the full UI suite, `testOfflineDrill`,
 `testDeleteWorkoutFromTheEditorMenu`, `RepLogAccessibilityTests`, and the visual
-tour.
+tour — each green as its own run, and the UI suite green in chunks of five.
+
+**The gate has to be chunked on this host.** A single long UI run dies with the
+simulator (`SimRenderServer`) after some number of tests — four, seven, fifteen,
+it varies — reporting `** TEST FAILED **` with `Executed N tests, with 0
+failures`, i.e. no failing assertion at all. Every class passes on its own.
+`/tmp/replog-chunks.sh` (in the ship scratch dir) runs the suite in batches of
+five with one retry each; use it instead of a single `xcodebuild test`.
 
 **How it was found, kept because it cost hours.** The failing step read as
 "delete does nothing". `DataStore.sessions()` fetches fresh on every read, and
