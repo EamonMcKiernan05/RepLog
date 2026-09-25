@@ -708,7 +708,10 @@ make iOS treat an install as "already there".
 Test evidence on the final commit, per class (see the note on the runner below):
 36 unit, the full UI suite, `testOfflineDrill`,
 `testDeleteWorkoutFromTheEditorMenu`, `RepLogAccessibilityTests`, and the visual
-tour — each green as its own run, and the UI suite green in chunks of five.
+tour — each green as its own run. The chunked full-suite run was started twice
+and stopped part-way both times (the owner needed the Mac rebooted), so the
+suite as a SINGLE sequence is not yet evidenced on this commit: the per-class
+runs above are.
 
 **One intermittent test failure is real, and it is the only one seen.** A full
 UI run on the published commit failed exactly one assertion —
