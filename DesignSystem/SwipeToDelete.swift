@@ -63,6 +63,16 @@ struct SwipeToDelete<Content: View>: View {
             tappable
         }
         .clipped()
+        // While the row is out of the way, the revealed strip is the delete
+        // target in its own right: the Button inside it is only 112 pt wide and
+        // a press aimed at it by element landed on the row that slid aside
+        // (2026-09-25). `fired` keeps this from double-firing with the Button.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard offset < 0, !fired else { return }
+            fired = true
+            onDelete()
+        }
     }
 
     @ViewBuilder
