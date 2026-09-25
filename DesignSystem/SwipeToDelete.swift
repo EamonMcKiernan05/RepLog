@@ -97,7 +97,5 @@ struct SwipeToDelete<Content: View>: View {
                             }
                         }
                 )
-        }
-        .clipped()
     }
 }
