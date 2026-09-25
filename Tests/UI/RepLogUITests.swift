@@ -471,9 +471,13 @@ final class RepLogUITests: XCTestCase {
         await finishWorkout()
         await expectExists(app.buttons["plus"], "not back on the Log after finishing")
         let workout = await expectSessionRow("the finished workout is not in the Log")
-        // A workout row: slide it, press the Delete it reveals, and THAT asks
-        // before it does anything.
-        await swipeRowLeft(workout)
+        // A workout row: slide it (not far enough to delete outright), press
+        // the Delete it reveals, and THAT asks before it does anything.
+        let from = workout.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
+        let to = workout.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.5))
+        from.press(forDuration: 0.08, thenDragTo: to,
+                   withVelocity: .slow, thenHoldForDuration: 0.05)
+        await settle(1.6)
         let workoutDelete = app.buttons.matching(
             NSPredicate(format: "identifier BEGINSWITH 'swipe-delete-workout-'")).firstMatch
         await expectExists(workoutDelete, "swiping a workout did not reveal a Delete button")
