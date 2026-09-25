@@ -416,8 +416,10 @@ final class RepLogUITests: XCTestCase {
         await startFreshWorkout()
         await addFirstExercise()
         await typeInCell("weight-cell", "50")
+        // The keyboard covers Add Set: put it away first.
+        await dismissKeyboard()
         await tapSettled(app.buttons["add-set"])
-        await settle(1.2)
+        await settle(1.5)
         let rows = app.textFields.matching(identifier: "weight-cell")
         XCTAssertEqual(rows.count, 2, "Add Set did not add a second row")
 
