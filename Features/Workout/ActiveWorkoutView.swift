@@ -33,7 +33,10 @@ struct ActiveWorkoutView: View {
     private var isFinished: Bool { session.endTime != nil }
 
     var body: some View {
-        ScrollView {
+        // One pass over history for the whole screen: every card's hint line is
+        // built here, so a card does not fetch its own history on each render.
+        let hints = hintsByEntry
+        return ScrollView {
             VStack(spacing: 16) {
                 sessionCard
                 ForEach(session.exerciseEntries.sorted(by: { $0.sortOrder < $1.sortOrder })) { entry in
@@ -41,6 +44,7 @@ struct ActiveWorkoutView: View {
                         entry: entry,
                         unit: entry.displayUnit(global: settings.unit),
                         isEditing: true,
+                        hints: hints[ObjectIdentifier(entry)] ?? [],
                         focus: $focus
                     )
                 }
@@ -302,40 +306,59 @@ struct ActiveWorkoutView: View {
     private func addExercise(_ exercise: Exercise) {
         let next = (session.exerciseEntries.map { $0.sortOrder }.max() ?? -1) + 1
         let entry = ExerciseEntry(exercise: exercise, sortOrder: next)
-        // Seed a first set row prefilled from the last time this exercise was
-        // done (plan §3.1 line 3 / T2.4: "placeholders from your last
-        // performance"). Without this the card shows no rows and the RPE /
-        // notes columns can't be reached until the user taps "Add Set".
-        let first = SetEntry(setNumber: 1)
-        entry.setEntries.append(first)   // establishes first.exerciseEntry == entry
-        applyPlaceholder(to: first)      // now the back-reference resolves the name
+        // One set row to start with, so the card is not empty and the RPE and
+        // notes columns are reachable without tapping Add Set. It starts EMPTY:
+        // the last time's numbers show behind the boxes as a hint, and only
+        // what the owner types is recorded.
+        entry.setEntries.append(SetEntry(setNumber: 1))
         session.exerciseEntries.append(entry)
         store.save()
     }
 
-    /// Fill a fresh set's weight/reps from the last time this exercise was
-    /// done (Targets, Latest mode) — same rule "Add Set" uses.
-    private func applyPlaceholder(to set: SetEntry) {
-        let name = set.exerciseEntry?.exercise?.name ?? ""
-        let history = store.sessions()
+    /// Which past sessions the hints come from: the routine's own "weight and
+    /// reps" setting (owner, 2026-09-25). A workout not started from a routine
+    /// has no routine to ask, so it follows the last time the exercise was done.
+    private var targetMode: TargetMode {
+        guard !session.routineName.isEmpty else { return .latest }
+        return store.routines().first { $0.name == session.routineName }?.targetMode ?? .latest
+    }
+
+    /// The hint line for every exercise in this workout.
+    ///
+    /// Empty on a FINISHED session: this is a record being corrected, not a
+    /// workout being planned, and "last time" behind a box in a record you are
+    /// fixing only invites mistakes.
+    private var hintsByEntry: [ObjectIdentifier: [Targets.Hints]] {
+        guard !isFinished else { return [:] }
+        let past = store.sessions()
             .filter { $0.id != session.id }
-            .flatMap { $0.exerciseEntries }
-            .filter { $0.exercise?.name == name }
-            .flatMap { e in
-                e.setEntries.map { ($0.weightKg, $0.reps, $0.rpe, e.session?.routineName) }
+            .flatMap { s in
+                s.exerciseEntries.flatMap { e in
+                    e.setEntries.map { st in
+                        Targets.PastSet(exerciseName: e.exercise?.name ?? "",
+                                        sessionDate: s.date,
+                                        routineName: s.routineName,
+                                        setNumber: st.setNumber,
+                                        weightKg: st.weightKg,
+                                        reps: st.reps,
+                                        rpe: st.rpe,
+                                        notes: st.notes)
+                    }
+                }
             }
-            .reversed()
-        // .reversed() yields a ReversedCollection; Targets.placeholder wants
-        // an Array (no implicit conversion at a call site, only at a typed
-        // return).
-        let ph = Targets.placeholder(
-            mode: .latest,
-            routineName: session.routineName,
-            setIndex: set.setNumber - 1,
-            history: Array(history)
-        )
-        if ph.weight != nil { set.weightKg = ph.weight }
-        if ph.reps != nil { set.reps = ph.reps }
+        var out: [ObjectIdentifier: [Targets.Hints]] = [:]
+        for entry in session.exerciseEntries {
+            let name = entry.exercise?.name ?? ""
+            out[ObjectIdentifier(entry)] = Targets.hints(
+                mode: targetMode,
+                routineName: session.routineName,
+                exerciseName: name,
+                history: past,
+                unit: entry.displayUnit(global: settings.unit),
+                setCount: entry.setEntries.count
+            )
+        }
+        return out
     }
 
     private func addSuperset(_ exercises: [Exercise]) {

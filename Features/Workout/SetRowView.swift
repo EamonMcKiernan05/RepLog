@@ -18,6 +18,8 @@ struct SetRowView: View {
     /// being typed, and the card can reveal the RPE chips under the row being
     /// edited.
     let focus: FocusState<CellFocus?>.Binding
+    /// The previous performance for this set, shown behind empty boxes.
+    var hints: Targets.Hints = .none
 
     private var owner: ObjectIdentifier { ObjectIdentifier(set) }
 
@@ -64,6 +66,7 @@ struct SetRowView: View {
                         id: "weight-cell",
                         field: .weight,
                         keyboard: .decimalPad,
+                        hint: hints.weight,
                         commit: commitWeight
                     )
                 }
@@ -74,6 +77,7 @@ struct SetRowView: View {
                         id: "reps-cell",
                         field: .reps,
                         keyboard: .numberPad,
+                        hint: hints.reps,
                         commit: commitReps
                     )
                 }
@@ -113,6 +117,7 @@ struct SetRowView: View {
                         id: "rpe-cell",
                         field: .rpe,
                         keyboard: .decimalPad,
+                        hint: hints.rpe,
                         commit: commitRPE
                     )
                 }
@@ -123,6 +128,7 @@ struct SetRowView: View {
                     id: "notes-cell",
                     field: .notes,
                     keyboard: .default,
+                    hint: hints.notes,
                     wide: true,
                     commit: commitNotes
                 )
@@ -139,6 +145,7 @@ struct SetRowView: View {
     @ViewBuilder
     private func cell(label: String, value: String, id: String,
                       field: CellFocus.Field, keyboard: UIKeyboardType,
+                      hint: String = "",
                       wide: Bool = false,
                       commit: @escaping (String) -> Void) -> some View {
         if isEditing {
@@ -147,6 +154,7 @@ struct SetRowView: View {
                 id: id,
                 value: value,
                 keyboard: keyboard,
+                hint: hint,
                 wide: wide,
                 // A typed note is left-aligned: centred, it floated in the
                 // middle of the column instead of under its own label.
@@ -223,14 +231,8 @@ struct SetRowView: View {
         return SetRowView.rpeText(rpe)
     }
 
-    /// RPE reads as `8`, never `8.0` (plan §3.2).
-    static func rpeText(_ v: Double) -> String {
-        let tenths = Int((v * 10).rounded())
-        if tenths % 10 == 0 {
-            return String(tenths / 10)
-        }
-        return String(format: "%.1f", v)
-    }
+    /// RPE reads as `8`, never `8.0` (plan §3.2) — one rule, in `Targets`.
+    static func rpeText(_ v: Double) -> String { Targets.rpeText(v) }
 
     // MARK: - Commits
     //

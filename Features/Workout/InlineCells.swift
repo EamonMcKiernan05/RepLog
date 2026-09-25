@@ -43,6 +43,10 @@ struct InlineCell: View {
     var valueFont: Font? = nil
     let focus: FocusState<CellFocus?>.Binding
     let focusValue: CellFocus
+    /// What the empty box shows behind it: the last time this set was done
+    /// (owner, 2026-09-25). Decoration only — it is never the field's value and
+    /// it takes no taps. Empty falls back to the old "—".
+    var hint: String = ""
     /// Parse-and-write. Called on submit and on focus loss — never per
     /// keystroke: a half-typed "1." must not be parsed and written back, or
     /// the field would rewrite itself and eat the decimal point.
@@ -73,10 +77,14 @@ struct InlineCell: View {
             // being typed in the prompt's grey while the keyboard is up, so a
             // value you are entering looks like a placeholder.
             ZStack(alignment: wide ? .leading : .center) {
+                // Shown only while the box is empty, and gone the moment there
+                // is a draft or a value. Delete the text and it comes back
+                // (owner, 2026-09-25).
                 if isEmpty {
-                    Text("—")
+                    Text(hint.isEmpty ? "—" : hint)
                         .font(valueFont ?? Typography.mono(valueSize))
                         .foregroundStyle(Palette.textSecondary.opacity(0.6))
+                        .lineLimit(1)
                         .allowsHitTesting(false)
                 }
                 TextField(

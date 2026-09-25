@@ -15,6 +15,10 @@ struct ExerciseCardView: View {
     let entry: ExerciseEntry
     var unit: WeightUnit
     var isEditing: Bool
+    /// One entry per set (index 0 = set 1): the previous performance, shown
+    /// behind empty boxes. Empty in a finished session — a record being
+    /// corrected is not a workout being planned.
+    var hints: [Targets.Hints] = []
     /// Shared with the whole screen (see `CellFocus`).
     let focus: FocusState<CellFocus?>.Binding
 
@@ -39,7 +43,8 @@ struct ExerciseCardView: View {
                     type: entry.setType,
                     unit: unit,
                     isEditing: isEditing,
-                    focus: focus
+                    focus: focus,
+                    hints: hint(for: set)
                 )
                 if isEditing, focus.wrappedValue == CellFocus(owner: ObjectIdentifier(set), field: .rpe) {
                     rpeChipRow(set)
@@ -254,41 +259,21 @@ struct ExerciseCardView: View {
         focus.wrappedValue = CellFocus(owner: owner, field: .exerciseNote)
     }
 
+    /// A new set starts EMPTY: the previous performance is a hint behind the
+    /// box, not a value in it (`Targets.Hints`).
     private func addSet() {
         let next = (entry.setEntries.map { $0.setNumber }.max() ?? 0) + 1
         let set = SetEntry(setNumber: next)
-        // Placeholder from targets (Latest mode by default).
-        applyPlaceholder(to: set)
         entry.setEntries.append(set)
         store.save()
     }
 
-    /// Fill a new set's weight/reps from the last time this exercise was
-    /// done (Targets, Latest mode).
-    private func applyPlaceholder(to set: SetEntry) {
-        let history = historyForExercise()
-        let ph = Targets.placeholder(
-            mode: .latest,
-            routineName: entry.session?.routineName ?? "",
-            setIndex: set.setNumber - 1,
-            history: Array(history)
-        )
-        if ph.weight != nil { set.weightKg = ph.weight }
-        if ph.reps != nil { set.reps = ph.reps }
-    }
-
-    private func historyForExercise() -> [(weight: Double?, reps: Int?, rpe: Double?, routineName: String?)] {
-        let name = entry.exercise?.name ?? ""
-        return store.sessions()
-            .filter { $0.id != entry.session?.id }
-            .flatMap { $0.exerciseEntries }
-            .filter { $0.exercise?.name == name }
-            .flatMap { entry in
-                entry.setEntries.map {
-                    ($0.weightKg, $0.reps, $0.rpe, entry.session?.routineName)
-                }
-            }
-            .reversed()
+    /// This set's hint line, matching by set NUMBER: set 3 shows what set 3
+    /// looked like last time.
+    private func hint(for set: SetEntry) -> Targets.Hints {
+        let index = set.setNumber - 1
+        guard hints.indices.contains(index) else { return .none }
+        return hints[index]
     }
 
     private func remove() {

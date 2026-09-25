@@ -4,36 +4,55 @@ import Foundation
 
 @Suite("Targets")
 struct TargetsTests {
-    @Test("Latest mode uses the most recent set of the exercise")
+    /// The hint rule, as `Targets.hints` resolves it: one entry per set, from
+    /// the chosen session, in the display unit. (The value path this used to
+    /// test — writing the previous numbers into a new set — is gone: the owner
+    /// wants them shown behind an empty box, never entered for him.)
+    private func past(_ weight: Double, _ reps: Int, _ rpe: Double,
+                      routine: String, date: Date, set: Int = 1) -> Targets.PastSet {
+        Targets.PastSet(exerciseName: "Squat", sessionDate: date, routineName: routine,
+                        setNumber: set, weightKg: weight, reps: reps, rpe: rpe, notes: "")
+    }
+
+    @Test("Latest mode hints from the most recent session of the exercise")
     func latest() {
-        let history: [(weight: Double?, reps: Int?, rpe: Double?, routineName: String?)] = [
-            (100, 5, 8, "A"),   // newest first
-            (90, 5, 7, "B"),
-        ]
-        let ph = Targets.placeholder(mode: .latest, routineName: "A",
-                                     setIndex: 0, history: history)
-        #expect(ph.weight == 100)
-        #expect(ph.reps == 5)
-        #expect(ph.rpe == 8)
+        let now = Date()
+        let history = [past(90, 5, 7, routine: "B", date: now.addingTimeInterval(-86_400)),
+                       past(100, 5, 8, routine: "A", date: now)]
+        let hints = Targets.hints(mode: .latest, routineName: "A", exerciseName: "Squat",
+                                  history: history, unit: .kg, setCount: 1)
+        #expect(hints.count == 1)
+        #expect(hints[0].weight == "100")
+        #expect(hints[0].reps == "5")
+        #expect(hints[0].rpe == "8")
     }
 
-    @Test("By Routine mode filters to the named routine")
+    @Test("By Routine mode hints from that routine's last session")
     func byRoutine() {
-        let history: [(weight: Double?, reps: Int?, rpe: Double?, routineName: String?)] = [
-            (100, 5, 8, "B"),   // newest, but wrong routine
-            (90, 5, 7, "A"),    // the A routine's last set
-        ]
-        let ph = Targets.placeholder(mode: .byRoutine, routineName: "A",
-                                     setIndex: 0, history: history)
-        #expect(ph.weight == 90)
+        let now = Date()
+        let history = [past(100, 5, 8, routine: "B", date: now),          // newest, wrong routine
+                       past(90, 5, 7, routine: "A", date: now.addingTimeInterval(-86_400))]
+        let hints = Targets.hints(mode: .byRoutine, routineName: "A", exerciseName: "Squat",
+                                  history: history, unit: .kg, setCount: 1)
+        #expect(hints[0].weight == "90")
     }
 
-    @Test("empty history yields empty placeholder")
-    func empty() {
-        let ph = Targets.placeholder(mode: .latest, routineName: "A",
-                                     setIndex: 0, history: [])
-        #expect(ph.weight == nil)
-        #expect(ph.reps == nil)
+    @Test("no history yields no hints, and set 3 of a 2-set session repeats set 2")
+    func emptyAndTiling() {
+        let none = Targets.hints(mode: .latest, routineName: "A", exerciseName: "Squat",
+                                 history: [], unit: .kg, setCount: 2)
+        #expect(none.isEmpty)
+
+        let now = Date()
+        let history = [past(100, 5, 8, routine: "A", date: now, set: 1),
+                       past(90, 4, 7, routine: "A", date: now, set: 2)]
+        let hints = Targets.hints(mode: .latest, routineName: "A", exerciseName: "Squat",
+                                  history: history, unit: .kg, setCount: 3)
+        #expect(hints.count == 3)
+        #expect(hints[0].weight == "100")
+        #expect(hints[1].weight == "90")
+        #expect(hints[2].weight == "90")   // tiles the last set
+        #expect(hints[1].notes.isEmpty)
     }
 
     @Test("exactSets returns the source session's sets in order")
