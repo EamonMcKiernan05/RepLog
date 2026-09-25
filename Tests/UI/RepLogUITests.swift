@@ -431,9 +431,10 @@ final class RepLogUITests: XCTestCase {
     /// (plan §6.1). Regression test: the row was a Button setting the item of
     /// .navigationDestination(item:) and the push never fired.
     /// Owner request (2026-09-25): swipe a set row left to delete it, with
-    /// nothing to confirm ("it should just delete on one slide").
+    /// nothing to confirm ("it should just delete on one slide"); swipe a
+    /// workout row in the Log and THAT asks first.
     @MainActor
-    func testSwipeToDeleteASet() async {
+    func testSwipeToDeleteASetAndAWorkout() async {
         await completeOnboarding()
         await startFreshWorkout()
         await addFirstExercise()
@@ -465,13 +466,34 @@ final class RepLogUITests: XCTestCase {
         XCTAssertEqual((app.textFields["weight-cell"].firstMatch.value as? String) ?? "", "50",
                        "the wrong set was deleted")
 
-        // The workout itself is still finished and still in the Log, and the
-        // delete paths that exist for it are unchanged: the Log's Edit mode and
-        // the workout's own menu.
+        // Now the workout. Its row is a real List row, so the slide is the
+        // system's own swipe action — and because a workout is a whole session
+        // of work, this one DOES ask first.
         await dismissKeyboard()
         await finishWorkout()
         await expectExists(app.buttons["plus"], "not back on the Log after finishing")
-        await expectSessionRow("the finished workout is not in the Log")
+        let workout = await expectSessionRow("the finished workout is not in the Log")
+        let sid = workout.identifier.replacingOccurrences(of: "session-row-", with: "")
+        workout.swipeLeft()
+        let swipeDelete = app.buttons["swipe-delete-\(sid)"]
+        await expectExists(swipeDelete, "swiping a workout did not reveal Delete")
+        await tapSettled(swipeDelete)
+        await confirmDialog("row-delete-confirm", "deleting a workout did not ask first")
+        await settle(2)
+        XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
+                       "the workout was still in the Log after confirming the delete")
+
+        // And a cancelled confirmation leaves it alone.
+        let again = await expectSessionRow("the workout is missing from the Log")
+        again.swipeLeft()
+        await tapSettled(app.buttons["swipe-delete-\(sid)"])
+        await settle(1.5)
+        if app.buttons["row-delete-confirm"].exists {
+            await tapSettled(app.buttons["Cancel"])
+        }
+        await settle(1.5)
+        XCTAssertTrue(app.buttons["session-row-\(sid)"].exists,
+                      "cancelling the confirmation removed the workout anyway")
     }
 
     /// Owner request (2026-09-25): an empty box shows the previous performance
