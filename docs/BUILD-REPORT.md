@@ -647,6 +647,54 @@ shipped half-working. The workout keeps its existing deletes: the Log's Edit
 mode, and ⋯ → Delete Workout inside the workout editor. The real fix is to build
 that list as a `List` so the system's own swipe actions apply.
 
+### 0.9 In flight — 1.1.7: the Log as a real List, swipe to delete a workout, one + (NOT PUBLISHED)
+
+Owner requests, 2026-09-25: the Log split by month like RepCount, swipe a
+workout row to delete it (with a confirmation), and the Log's toolbar reduced to
+a single `+`.
+
+Done and verified:
+
+- **`LogTabView` is a `List`** (`.insetGrouped`, one `Section` per month, header
+  above each card). This is what makes the delete swipe the system's own: every
+  hand-rolled gesture lost to the row's own tap, because a Log row must be
+  tappable to open the workout and in a `ScrollView` the two claims to the touch
+  fight. Layout verified against the owner's RepCount screenshot from a visual
+  capture run.
+- **Swipe a workout row left → Delete → confirmation.** Cancel keeps it, confirm
+  removes it. `testSwipeToDeleteASetAndAWorkout` (the set side of it: a set row
+  slides, the revealed Delete is pressed, the set goes, nothing to confirm).
+- **The Log's toolbar is a single `+`.** The manual sync control moved to
+  **Profile → Sync** (that section was already the status/config home); its
+  status row is now the tap target. A `.plain` Button whose label has a `Spacer`
+  inside a `List` row has NO tap area of its own — the tap lands on the row and
+  nothing happens — so the label carries `.contentShape(Rectangle())` and
+  `.frame(maxWidth: .infinity)`. **Proven working**: the drill's service log
+  shows real uploads arriving (`{"type":"upsert", ...}`) after the tap.
+- 36/36 unit and 15/16 UI tests pass on the final commit.
+
+**NOT PUBLISHED — one real failure, reproducible.** Deleting a workout from the
+workout editor's own ⋯ menu does not remove it from the Log:
+
+- `testDeleteWorkoutFromTheEditorMenu` (added for this) fails: after ⋯ → Delete
+  Workout → confirm → back on the Log, the row is still there.
+- `testOfflineDrill` fails at the same step, the same way, three runs running.
+- It is the DELETE that does not land, not the Log failing to repaint:
+  `DataStore.sessions()` fetches fresh from the context on every read, and
+  deleting the same workout from the LOG's own Edit mode works
+  (`testEditModeRevealsRowDelete` passes). So the session is still in the store.
+- The two tests that tap the confirmation, `confirmDialog`, use `.firstMatch`
+  deliberately: iOS 26 exposes a confirmationDialog's button twice, same
+  identifier, same frame. A stale first match would explain a tap that lands on
+  nothing — worth checking first next time.
+- The Log's `List` is the only change in this release that touches how the Log
+  is built; the editor's delete path is untouched. It is therefore more likely
+  that the delete never fires than that a working delete is rendered stale.
+
+1.1.6 stays live. Next session: bisect the editor's delete against
+`ef19eeb`/`42964ea` (green gates) with `testDeleteWorkoutFromTheEditorMenu`,
+which is now the fastest way to see it.
+
 ### 0.8.1 Published
 
 **1.1.6 (build 9)** — 693,024 bytes, sha256
