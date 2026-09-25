@@ -157,13 +157,20 @@ final class RepLogUITests: XCTestCase {
     }
 
     /// "+" → the named routine, and the workout screen must be up.
+    ///
+    /// Starts by selecting the Log tab: the ROUTINES screen also has a "+"
+    /// (Add routine), and it carries the same identifier, so tapping "plus"
+    /// from there opens the New Routine sheet and the routine never appears in
+    /// the start list (found the hard way, 2026-09-25).
     @MainActor
     private func startWorkout(fromRoutine name: String) async {
+        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
+        await settle()
         await expectExists(app.buttons["plus"], "'plus' toolbar button not found")
         await tapSettled(app.buttons["plus"])
         let row = app.buttons["routine-start-\(name)"]
         if !(await wait(for: row, timeout: 8)) {
-            let ids = app.buttons.allElementsBoundByIndex.map { "\($0.label)|$0.identifier".replacingOccurrences(of: "$0", with: $0.identifier) }
+            let ids = app.buttons.allElementsBoundByIndex.map { "\($0.label) [\($0.identifier)]" }
             XCTFail("'\(name)' is not offered in the Start Workout sheet. Buttons: \(ids)")
             return
         }
