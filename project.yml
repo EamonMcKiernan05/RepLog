@@ -8,7 +8,7 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "1.1.7"
-    CURRENT_PROJECT_VERSION: "9"
+    CURRENT_PROJECT_VERSION: "10"
     GENERATE_INFOPLIST_FILE: NO
     # Eamon's Apple Developer team (Individual, paid). With Automatic
     # signing this lets Xcode create the explicit App ID + profile the
@@ -41,7 +41,7 @@ targets:
       properties:
         CFBundleDisplayName: RepLog
         CFBundleShortVersionString: "1.1.7"
-        CFBundleVersion: "9"
+        CFBundleVersion: "10"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -79,7 +79,7 @@ targets:
       properties:
         CFBundleDisplayName: RepLog Widget
         CFBundleShortVersionString: "1.1.7"
-        CFBundleVersion: "9"
+        CFBundleVersion: "10"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         NSSupportsLiveActivities: true
