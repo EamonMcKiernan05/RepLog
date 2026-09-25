@@ -124,18 +124,19 @@ struct LogTabView: View {
                     .accessibilityIdentifier("log-edit")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 8) {
-                        syncButton
-                        Button {
-                            showStartSheet = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .fontWeight(.semibold)
-                        }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.circle)
-                        .accessibilityIdentifier("plus")
+                    // A single +, as asked (owner, 2026-09-25: "remove the 'n
+                    // to sync' button on the top of the log page. Just make it
+                    // a single + button"). The sync control moved to Profile:
+                    // sync is manual, so it needs a home somewhere.
+                    Button {
+                        showStartSheet = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.semibold)
                     }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.circle)
+                    .accessibilityIdentifier("plus")
                 }
             }
             // The item-based destination (active workout) lives here; the
@@ -214,49 +215,6 @@ struct LogTabView: View {
             }
             .accessibilityIdentifier("swipe-delete-\(session.id.prefix(8))")
         }
-    }
-
-    /// The Log's sync control (manual sync, 2026-09-23). Shows real state, and
-    /// keeps the "sync-now" identifier the offline drill taps.
-    private var syncButton: some View {
-        Button {
-            sync.syncNow()
-        } label: {
-            HStack(spacing: 6) {
-                if sync.isSyncing {
-                    ProgressView()
-                        .controlSize(.mini)
-                } else {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                }
-                Text(syncButtonTitle)
-            }
-            .font(.subheadline)
-            .foregroundStyle(Palette.textPrimary)
-            .fixedSize()
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Palette.card, in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .disabled(sync.isSyncing)
-        .accessibilityIdentifier("sync-now")
-        // No fixed accessibilityLabel: the button's label is its content, so
-        // VoiceOver (and the offline drill's assertion) hear the real state —
-        // "1 to sync", "Up to date · 2 minutes ago", "Auth failed — check your
-        // token" — not a constant "Sync now".
-    }
-
-    private var syncButtonTitle: String {
-        if sync.isSyncing { return "Syncing…" }
-        if sync.outbox.queuedCount > 0 {
-            let n = sync.outbox.queuedCount
-            return "\(n) to sync"
-        }
-        // The engine's status text carries the rest: the auth-failure state,
-        // "Sync off", and "Up to date · <relative time>" (or plain
-        // "Up to date" before the first sync).
-        return sync.statusText
     }
 
     /// Delete the pending row. Local only: `sessionDeleted` drops it from the

@@ -1127,15 +1127,15 @@ final class RepLogUITests: XCTestCase {
         XCTAssertEqual((healthResult?.1 as? HTTPURLResponse)?.statusCode, 200,
                        "drill service not reachable from the simulator at \(drillServiceURL)/v1/health")
 
-        // The queue survived the restart and is VISIBLE from the Log without
-        // opening Profile: the sync control reads "1 to sync". (Assert the
-        // BUTTON's label — an explicit accessibilityLabel makes the button a
-        // leaf element, so its inner Text is not separately queryable.)
+        // The queue survived the restart and is visible where the sync control
+        // lives: Profile (owner, 2026-09-25 — the Log's toolbar is a single +).
+        // Its label is the real state, so it reads "1 to sync".
+        await tapSettled(app.tabBars.buttons.element(boundBy: 3))
         let syncNow = app.buttons["sync-now"]
-        await expectExists(syncNow, "Log's sync control not found before syncing")
+        await expectExists(syncNow, "Profile's sync control not found before syncing")
         let queuedLabel = (syncNow.label as? String) ?? ""
         XCTAssertTrue(queuedLabel.contains("1 to sync"),
-                      "the Log's sync control should read '1 to sync' while one session is queued, got '\(queuedLabel)'")
+                      "the sync control should read '1 to sync' while one session is queued, got '\(queuedLabel)'")
 
         // Sync is manual (owner request, 2026-09-23): nothing uploads on launch
         // or when the network comes back, so prove the queue waits, then tap the
@@ -1199,12 +1199,10 @@ final class RepLogUITests: XCTestCase {
         // did nothing").
         XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
                        "deleted session should be gone from the Log")
-        // The detail screen must have dismissed. The assertion is on the Log's
-        // Edit button, not its "+": with the Log now EMPTY the toolbar's
-        // trailing group (the sync control + "+") collapses into an overflow
-        // button, so "+" is not a reliable marker of being on the Log (seen in
-        // the 2026-09-24 failure recording — reported separately, not worked
-        // around here).
+        // The detail screen must have dismissed. Since 2026-09-25 the Log's
+        // trailing toolbar is a single "+", so it no longer collapses into an
+        // overflow button when the Log is empty; Edit stays the steadier
+        // marker either way.
         await expectExists(app.buttons["log-edit"], "not back on the Log after deleting")
         XCTAssertFalse(app.buttons["workout-menu"].exists,
                        "the workout editor was still up after deleting")
@@ -1229,6 +1227,7 @@ final class RepLogUITests: XCTestCase {
                        "the database copy must survive, got \(rowsAfterReimport) row(s)")
 
         // And a further sync must not bring it back on the phone.
+        await tapSettled(app.tabBars.buttons.element(boundBy: 3))
         let finalSync = app.buttons["sync-now"]
         if await wait(for: finalSync, timeout: 5) { await tapSettled(finalSync) }
         await settle(3)

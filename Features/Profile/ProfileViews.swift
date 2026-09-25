@@ -13,6 +13,17 @@ struct ProfileTabView: View {
     @State private var showEditCategories = false
     @State private var showExport = false
 
+    /// The sync control's own text: the old Log button's wording, moved here
+    /// with it (owner, 2026-09-25: the Log's toolbar is a single +).
+    private var syncControlTitle: String {
+        if sync.isSyncing { return "Syncing…" }
+        if sync.outbox.queuedCount > 0 {
+            let n = sync.outbox.queuedCount
+            return "\(n) to sync"
+        }
+        return sync.statusText
+    }
+
     var body: some View {
         @Bindable var settings = settings
         @Bindable var sync = sync
@@ -32,15 +43,40 @@ struct ProfileTabView: View {
                 }
                 Section("Sync") {
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Circle()
-                                .fill(sync.authFailed ? Palette.destructive
-                                      : (settings.syncEnabled ? Palette.success : Palette.textSecondary))
-                                .frame(width: 8, height: 8)
-                            Text(sync.statusText)
-                                .font(.subheadline)
-                                .accessibilityIdentifier("sync-status")
+                        // Sync lives here now: the Log's toolbar is a single +
+                        // (owner, 2026-09-25: "remove the 'n to sync' button on
+                        // the top of the log page. Just make it a single +
+                        // button"). It is still manual — nothing uploads on
+                        // launch or when the network comes back — so the control
+                        // has to stay somewhere reachable.
+                        Button {
+                            sync.syncNow()
+                        } label: {
+                            HStack {
+                                Circle()
+                                    .fill(sync.authFailed ? Palette.destructive
+                                          : (settings.syncEnabled ? Palette.success : Palette.textSecondary))
+                                    .frame(width: 8, height: 8)
+                                Text(syncControlTitle)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Palette.textPrimary)
+                                Spacer()
+                                if sync.isSyncing {
+                                    ProgressView()
+                                        .controlSize(.mini)
+                                } else {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .foregroundStyle(Palette.textSecondary)
+                                }
+                            }
                         }
+                        .buttonStyle(.plain)
+                        .disabled(sync.isSyncing)
+                        .accessibilityIdentifier("sync-now")
+                        // The label is the real state — "1 to sync", "Up to
+                        // date · 2 minutes ago", "Auth failed — check your
+                        // token" — not a constant "Sync now".
+                        .accessibilityLabel(syncControlTitle)
                         if settings.syncEnabled {
                             HStack {
                                 Text("Server")
@@ -51,9 +87,6 @@ struct ProfileTabView: View {
                                     .lineLimit(1)
                             }
                         }
-                        // Sync moved to the Log's toolbar (2026-09-23) so it is
-                        // one tap away where workouts are listed. This screen
-                        // keeps the status and the server/token config.
                         Button {
                             showExport = true
                         } label: {
@@ -96,7 +129,7 @@ struct ProfileTabView: View {
                             .foregroundStyle(Palette.textSecondary)
                     }
                     HStack {
-                        Text("Sync is manual: tap the sync button on the Log when you want to upload.")
+                        Text("Sync is manual: tap the sync control above when you want to upload.")
                             .font(.caption)
                             .foregroundStyle(Palette.textSecondary)
                     }
