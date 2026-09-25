@@ -64,7 +64,10 @@ struct SwipeToDelete<Content: View>: View {
         if let onTap {
             row
                 .contentShape(Rectangle())
-                .onTapGesture { if !swiped { onTap() } }
+                // Simultaneous: an exclusive tap gesture here won the touch and
+                // the drag never fired at all (2026-09-25). A TapGesture fails
+                // on movement anyway, and `swiped` covers the release.
+                .simultaneousGesture(TapGesture().onEnded { if !swiped { onTap() } })
                 .accessibilityAddTraits(.isButton)
         } else {
             row
