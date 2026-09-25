@@ -52,7 +52,10 @@ struct SwipeToDelete<Content: View>: View {
         if let onTap {
             row
                 .contentShape(Rectangle())
-                .onTapGesture { if !swiped { onTap() } }
+                .onTapGesture {
+                    print("SWIPE tap swiped=\(swiped)")
+                    if !swiped { onTap() }
+                }
                 .accessibilityAddTraits(.isButton)
         } else {
             row
@@ -75,11 +78,13 @@ struct SwipeToDelete<Content: View>: View {
                         .onChanged { value in
                             let dx = value.translation.width
                             let dy = value.translation.height
+                            print("SWIPE onChanged dx=\(Int(dx)) dy=\(Int(dy))")
                             guard dx < 0, abs(dx) > abs(dy) * 1.5 else { return }
                             swiped = true
                             offset = max(-limit, dx)
                         }
                         .onEnded { _ in
+                            print("SWIPE onEnded offset=\(Int(offset))")
                             if offset <= -threshold, !fired {
                                 fired = true
                                 withAnimation(.easeOut(duration: 0.18)) { offset = -limit }
