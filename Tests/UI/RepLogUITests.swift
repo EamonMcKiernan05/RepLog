@@ -484,8 +484,10 @@ final class RepLogUITests: XCTestCase {
         await settle(1.5)
         XCTAssertTrue(app.buttons["row-delete-confirm"].exists,
                       "deleting a workout did not ask first")
-        await tapSettled(app.buttons["Cancel"])
-        await settle(1.5)
+        // Cancelling has to be done by dismissing it: iOS 26 does not expose a
+        // confirmationDialog's .cancel button at all (see dismissDialog).
+        await dismissDialog()
+        await settle(1.2)
         XCTAssertTrue(app.buttons["session-row-\(sid)"].exists,
                       "cancelling the confirmation removed the workout anyway")
 
