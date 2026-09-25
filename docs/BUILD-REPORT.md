@@ -20,7 +20,7 @@ Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
 
 ## Build status
 
-**Status: the whole Mac gate is green at commit `8356c66`** — `** BUILD
+**Status: the whole Mac gate is green at commit `0f29921`** — `** BUILD
 SUCCEEDED **`, 36/36 unit tests, **12/12 UI tests** including the in-simulator
 offline drill, in one `scripts/mac-tests.sh` run (§1.1, §0.1 and §0.3). The dark-mode visual
 pass covers every screen against the 17 reference screenshots (§4), and the
@@ -609,7 +609,20 @@ hint and only that one, and clearing it must bring 120 back. With the routine
 switched to By Routine the same box must hint **100** (the routine's own last),
 not 120. All four assertions pass.
 
-### 0.7.1 Two harness traps this cost
+### 0.7.1 Published
+
+**1.1.5 (build 8)** — 678,124 bytes, sha256
+`450cbe34b89b20bb3816fdbd4809a846ea109d534f919f302b3944cee482c754`, archived from
+`0f29921` after a green gate: 36 unit, **15/15 UI**, `All Mac tests passed.` The
+served file's sha256 was read back over HTTPS and matches; the install page
+reads 1.1.5 built 2026-09-25 12:38 UTC.
+
+Gate note: an earlier run of the same tree died at the UNIT step with `exit 3`
+and no failing test named. Re-running that step alone gave 36/36 passed. The
+Mac gate can fail on a wedged simulator between steps, so a bare `exit 3` with
+no failure output means "run that step again", not "the tests are broken".
+
+### 0.7.2 Two harness traps this cost
 
 - `typeInCell` used `app.textFields[id]`, which needs a SINGLE match. A routine
   workout shows several set rows and every row's weight box shares the
