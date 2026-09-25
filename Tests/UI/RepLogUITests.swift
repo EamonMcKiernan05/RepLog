@@ -203,6 +203,17 @@ final class RepLogUITests: XCTestCase {
         await settle(1.6)
     }
 
+    /// The same swipe taken right across the row: enough for a full-swipe
+    /// delete on a narrow element, which cannot be reached otherwise.
+    @MainActor
+    private func swipeRowFullLeft(_ element: XCUIElement) async {
+        let start = element.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+        let end = element.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.5))
+        start.press(forDuration: 0.08, thenDragTo: end,
+                    withVelocity: .slow, thenHoldForDuration: 0.05)
+        await settle(1.6)
+    }
+
     /// Empty a box that has focus, without the keyboard's delete key (see
     /// `clearIfFilled` for why). Select-all, then delete the selection.
     @MainActor
@@ -435,10 +446,12 @@ final class RepLogUITests: XCTestCase {
         let rows = app.textFields.matching(identifier: "weight-cell")
         XCTAssertEqual(rows.count, 2, "Add Set did not add a second row")
 
-        // Swipe the SECOND row away. The swipe is made on the wide Notes box:
-        // XCUITest swipes across the ELEMENT's own width, and a weight cell is
-        // about 50 pt, which is under the delete threshold.
-        await swipeRowLeft(app.textFields.matching(identifier: "notes-cell").element(boundBy: 1))
+        // Swipe the SECOND row away across its full width: a set is deleted by
+        // the swipe itself, with nothing to confirm.
+        let secondRow = app.descendants(matching: .any)
+            .matching(identifier: "set-row-2").firstMatch
+        await expectExists(secondRow, "the second set row is not on screen")
+        await swipeRowFullLeft(secondRow)
         XCTAssertEqual(app.textFields.matching(identifier: "weight-cell").count, 1,
                        "swiping a set row left did not delete it")
         XCTAssertFalse(app.buttons["exercise-delete-confirm"].exists,
