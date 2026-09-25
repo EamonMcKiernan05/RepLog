@@ -441,7 +441,11 @@ final class RepLogUITests: XCTestCase {
         await expectExists(app.buttons["plus"], "not back on the Log after finishing")
         let workout = await expectSessionRow("the finished workout is not in the Log")
         workout.swipeLeft()
-        await settle(1.5)
+        await settle(1.8)
+        if !app.buttons["row-delete-confirm"].exists {
+            let ids = app.buttons.allElementsBoundByIndex.map { "\($0.label) [\($0.identifier)]" }
+            print("DEBUG after swiping the workout: row still there=\(workout.exists) buttons=\(ids)")
+        }
         await confirmDialog("row-delete-confirm", "swiping a workout did not ask before deleting")
         await settle(2)
         XCTAssertFalse(firstSessionRow().exists,

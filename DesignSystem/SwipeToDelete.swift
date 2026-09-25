@@ -38,12 +38,17 @@ struct SwipeToDelete<Content: View>: View {
                 // it on the way.
                 .background(Palette.card)
                 .offset(x: offset)
-                .gesture(
+                // Simultaneous, not exclusive: these rows live in a ScrollView
+                // (the Log groups sessions by month in cards), and an exclusive
+                // gesture there never receives the drag at all. The dominance
+                // check keeps vertical scrolling safe — only a clearly
+                // horizontal, leftward drag moves the row.
+                .simultaneousGesture(
                     DragGesture(minimumDistance: 18)
                         .onChanged { value in
                             let dx = value.translation.width
-                            // Left only, and never beyond the limit.
-                            guard dx < 0 else { return }
+                            let dy = value.translation.height
+                            guard dx < 0, abs(dx) > abs(dy) * 1.5 else { return }
                             offset = max(-limit, dx)
                         }
                         .onEnded { _ in
