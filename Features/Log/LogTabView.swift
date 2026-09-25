@@ -12,7 +12,15 @@ struct LogTabView: View {
     @State private var pendingDelete: Session?
     @State private var confirmRowDelete = false
 
-    private var sessions: [Session] { store.sessions() }
+    private var sessions: [Session] {
+        // Read the store's change signal, or the List has nothing to observe:
+        // a delete performed while this view was covered by the pushed editor
+        // left the row it should have removed (owner report, 2026-09-25 —
+        // "deleting a workout from its own menu leaves it in the Log"). The
+        // ScrollView this replaced happened to re-evaluate; the List does not.
+        _ = store.revision
+        return store.sessions()
+    }
 
     private var months: [(title: String, sessions: [Session])] {
         let cal = Calendar.current
