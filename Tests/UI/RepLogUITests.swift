@@ -158,6 +158,45 @@ final class RepLogUITests: XCTestCase {
 
     /// Add the first exercise of the first category (Abs -> Ab Wheel).
     @MainActor
+    /// "+" → the named routine, and the workout screen must be up.
+    private func startWorkout(fromRoutine name: String) async {
+        await expectExists(app.buttons["plus"], "'plus' toolbar button not found")
+        await tapSettled(app.buttons["plus"])
+        let row = app.buttons["routine-start-\(name)"]
+        await expectExists(row, "'\(name)' is not offered in the Start Workout sheet")
+        await tapSettled(row)
+        await expectExists(app.buttons["add-exercise"], "active workout not shown after starting a routine")
+    }
+
+    /// "+" → exercise picker → category → exercise.
+    private func addExercise(category: String, name: String) async {
+        await tapSettled(app.buttons["add-exercise"])
+        let cat = app.buttons["category-\(category)"]
+        await expectExists(cat, "'\(category)' category not found")
+        await tapSettled(cat)
+        let pick = app.buttons["pick-\(name)"]
+        await expectExists(pick, "'\(name)' not found in \(category)")
+        await tapSettled(pick)
+        await settle()
+    }
+
+    /// Empty a box that has focus, without the keyboard's delete key (see
+    /// `clearIfFilled` for why). Select-all, then delete the selection.
+    @MainActor
+    private func clearField(_ field: XCUIElement) async {
+        field.typeKey("a", modifierFlags: .command)
+        await settle(0.3)
+        field.typeText(XCUIKeyboardKey.delete.rawValue)
+        await settle(0.4)
+        if !((field.value as? String) ?? "").isEmpty {
+            // Delete did not take: back out of the selection and try U+0008.
+            field.typeText(String(repeating: "\u{8}", count: 4))
+            await settle(0.4)
+        }
+        XCTAssertTrue(((field.value as? String) ?? "").isEmpty,
+                      "the test could not empty the box, so the hint cannot be checked")
+    }
+
     private func addFirstExercise() async {
         await tapSettled(app.buttons["add-exercise"])
         let absCat = app.buttons["category-Abs"]
@@ -353,6 +392,75 @@ final class RepLogUITests: XCTestCase {
     /// Tapping a session row in the Log must push the session detail
     /// (plan §6.1). Regression test: the row was a Button setting the item of
     /// .navigationDestination(item:) and the push never fired.
+    /// Owner request (2026-09-25): an empty box shows the previous performance
+    /// greyed out behind it — the last time the EXERCISE was done ("Latest") or
+    /// the last time the ROUTINE was done ("By Routine") — only while the box
+    /// is empty, gone the moment something is typed, and back when the text is
+    /// deleted. It is a hint, never a value: an untouched box stays empty.
+    @MainActor
+    func testEmptyBoxesHintThePreviousPerformance() async {
+        await completeOnboarding()
+
+        // 1. Push Day's Competition Bench: 100 x 5. This is the routine's own
+        //    history for that exercise.
+        await startWorkout(fromRoutine: "Push Day")
+        await typeInCell("weight-cell", "100")
+        await typeInCell("reps-cell", "5")
+        await dismissKeyboard()
+        await finishWorkout()
+
+        // 2. A workout with NO routine, same exercise, 120 x 3. It is newer, so
+        //    "Latest" now points somewhere other than Push Day's own last.
+        await startFreshWorkout()
+        await addExercise(category: "Bench Press", name: "Competition Bench")
+        await typeInCell("weight-cell", "120")
+        await typeInCell("reps-cell", "3")
+        await dismissKeyboard()
+        await finishWorkout()
+
+        // 3. Start Push Day again: the empty boxes hint step 2's 120.
+        await startWorkout(fromRoutine: "Push Day")
+        let weight = app.textFields["weight-cell"].firstMatch
+        await expectExists(weight, "the routine's first exercise has no editable weight box")
+        XCTAssertEqual((weight.value as? String) ?? "", "",
+                       "an untouched box must stay EMPTY — the hint is not a value")
+        await expectExists(app.staticTexts["120"],
+                           "the empty box does not hint the last time the exercise was done")
+
+        // 4. Type: the hint goes, only what was typed shows.
+        await typeInCell("weight-cell", "90")
+        XCTAssertEqual((weight.value as? String) ?? "", "90",
+                       "the box does not show what was typed")
+        XCTAssertFalse(app.staticTexts["120"].exists,
+                       "the hint stayed on screen while a value was being typed")
+
+        // 5. Delete it: the previous entry comes back.
+        await clearField(weight)
+        XCTAssertTrue(await wait(for: app.staticTexts["120"], timeout: 5),
+                      "clearing the box did not bring the previous entry back")
+
+        // 6. "By Routine" asks the ROUTINE, not the newest session: 100, not 120.
+        await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
+        await settle()
+        await tapSettled(app.tabBars.buttons.element(boundBy: 1))
+        await settle()
+        await tapSettled(app.buttons["routine-Push Day"])
+        await settle()
+        let modeRow = app.descendants(matching: .any)
+            .matching(identifier: "routine-target-mode").firstMatch
+        await expectExists(modeRow, "the routine's Weight and Reps row is not there")
+        await tapSettled(modeRow)
+        await settle(1.2)
+        await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
+        await settle()
+
+        await startWorkout(fromRoutine: "Push Day")
+        await expectExists(app.staticTexts["100"],
+                           "'By Routine' did not hint the routine's own last session")
+        XCTAssertFalse(app.staticTexts["120"].exists,
+                       "'By Routine' is still hinting a session from another routine")
+    }
+
     /// Owner request (2026-09-24): "update things so I can edit a finished
     /// workout the same way I can an active one". A finished workout opens the
     /// SAME editor, its values are editable and stay edited, and it offers no

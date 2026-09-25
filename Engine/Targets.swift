@@ -38,6 +38,14 @@ enum Targets {
         var reps: Int?
         var rpe: Double?
         var notes: String
+
+        /// A set with nothing in it was not done, so it is not "last time".
+        /// Without this, opening a workout and walking away from it would blank
+        /// the hints for that exercise.
+        var hasValue: Bool {
+            weightKg != nil || reps != nil || rpe != nil
+                || !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
 
     /// One `Hints` per set of one exercise, index 0 = set 1.
@@ -57,7 +65,7 @@ enum Targets {
         setCount: Int
     ) -> [Hints] {
         guard setCount > 0 else { return [] }
-        let mine = history.filter { $0.exerciseName == exerciseName }
+        let mine = history.filter { $0.exerciseName == exerciseName && $0.hasValue }
         let matching = mode == .byRoutine
             ? mine.filter { $0.routineName == routineName }
             : mine

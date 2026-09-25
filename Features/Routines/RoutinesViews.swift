@@ -145,6 +145,7 @@ struct RoutineDetailView: View {
                         routine.targetMode = routine.targetMode == .latest ? .byRoutine : .latest
                         store.save()
                     }
+                    .accessibilityIdentifier("routine-target-mode")
                     Divider()
                     InlineTextField(
                         placeholder: "Notes",

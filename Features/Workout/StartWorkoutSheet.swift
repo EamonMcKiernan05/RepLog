@@ -35,6 +35,7 @@ struct StartWorkoutSheet: View {
                             } label: {
                                 Label(routine.name, systemImage: "rectangle.stack")
                             }
+                            .accessibilityIdentifier("routine-start-\(routine.name)")
                         }
                     }
                 }
