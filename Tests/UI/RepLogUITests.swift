@@ -191,6 +191,18 @@ final class RepLogUITests: XCTestCase {
         await settle()
     }
 
+    /// Swipe a row from right to left the way a finger does: press, then drag.
+    /// XCUITest's `swipeLeft()` flicks fast enough that a NavigationLink row
+    /// reads it as a tap and navigates instead (2026-09-25).
+    @MainActor
+    private func swipeRowLeft(_ element: XCUIElement) async {
+        let start = element.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5))
+        let end = element.coordinate(withNormalizedOffset: CGVector(dx: 0.06, dy: 0.5))
+        start.press(forDuration: 0.08, thenDragTo: end,
+                    withVelocity: .slow, thenHoldForDuration: 0.05)
+        await settle(1.6)
+    }
+
     /// Empty a box that has focus, without the keyboard's delete key (see
     /// `clearIfFilled` for why). Select-all, then delete the selection.
     @MainActor
@@ -426,8 +438,7 @@ final class RepLogUITests: XCTestCase {
         // Swipe the SECOND row away. The swipe is made on the wide Notes box:
         // XCUITest swipes across the ELEMENT's own width, and a weight cell is
         // about 50 pt, which is under the delete threshold.
-        app.textFields.matching(identifier: "notes-cell").element(boundBy: 1).swipeLeft()
-        await settle(1.5)
+        await swipeRowLeft(app.textFields.matching(identifier: "notes-cell").element(boundBy: 1))
         XCTAssertEqual(app.textFields.matching(identifier: "weight-cell").count, 1,
                        "swiping a set row left did not delete it")
         XCTAssertFalse(app.buttons["exercise-delete-confirm"].exists,
@@ -440,8 +451,7 @@ final class RepLogUITests: XCTestCase {
         await finishWorkout()
         await expectExists(app.buttons["plus"], "not back on the Log after finishing")
         let workout = await expectSessionRow("the finished workout is not in the Log")
-        workout.swipeLeft()
-        await settle(1.8)
+        await swipeRowLeft(workout)
         if !app.buttons["row-delete-confirm"].exists {
             let ids = app.buttons.allElementsBoundByIndex.map { "\($0.label) [\($0.identifier)]" }
             print("DEBUG after swiping the workout: row still there=\(workout.exists) buttons=\(ids)")
