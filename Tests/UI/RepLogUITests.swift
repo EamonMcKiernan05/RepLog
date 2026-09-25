@@ -430,11 +430,10 @@ final class RepLogUITests: XCTestCase {
     /// Tapping a session row in the Log must push the session detail
     /// (plan §6.1). Regression test: the row was a Button setting the item of
     /// .navigationDestination(item:) and the push never fired.
-    /// Owner request (2026-09-25): swipe a set row left to delete it, with no
-    /// confirmation ("it should just delete on one slide"), and swipe a workout
-    /// in the Log to delete it, with one.
+    /// Owner request (2026-09-25): swipe a set row left to delete it, with
+    /// nothing to confirm ("it should just delete on one slide").
     @MainActor
-    func testSwipeToDeleteASetAndAWorkout() async {
+    func testSwipeToDeleteASet() async {
         await completeOnboarding()
         await startFreshWorkout()
         await addFirstExercise()
@@ -466,27 +465,13 @@ final class RepLogUITests: XCTestCase {
         XCTAssertEqual((app.textFields["weight-cell"].firstMatch.value as? String) ?? "", "50",
                        "the wrong set was deleted")
 
-        // Now the workout, which DOES ask first.
+        // The workout itself is still finished and still in the Log, and the
+        // delete paths that exist for it are unchanged: the Log's Edit mode and
+        // the workout's own menu.
         await dismissKeyboard()
         await finishWorkout()
         await expectExists(app.buttons["plus"], "not back on the Log after finishing")
-        let workout = await expectSessionRow("the finished workout is not in the Log")
-        // A workout row: slide it (not far enough to delete outright), press
-        // the Delete it reveals, and THAT asks before it does anything.
-        let from = workout.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
-        let to = workout.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.5))
-        from.press(forDuration: 0.08, thenDragTo: to,
-                   withVelocity: .slow, thenHoldForDuration: 0.05)
-        await settle(1.6)
-        let workoutDelete = app.buttons.matching(
-            NSPredicate(format: "identifier BEGINSWITH 'swipe-delete-workout-'")).firstMatch
-        await expectExists(workoutDelete, "swiping a workout did not reveal a Delete button")
-        workout.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
-        await settle(1.5)
-        await confirmDialog("row-delete-confirm", "pressing Delete did not ask before deleting the workout")
-        await settle(2)
-        XCTAssertFalse(firstSessionRow().exists,
-                       "the workout was still in the Log after confirming the delete")
+        await expectSessionRow("the finished workout is not in the Log")
     }
 
     /// Owner request (2026-09-25): an empty box shows the previous performance

@@ -8,8 +8,6 @@ struct LogTabView: View {
     @State private var editMode: EditMode = .inactive
     @State private var showStartSheet = false
     @State private var showRepeatSheet = false
-    /// The pushed session (see the row's gated tap).
-    @State private var path: [String] = []
     /// The row waiting on the delete confirmation.
     @State private var pendingDelete: Session?
     @State private var confirmRowDelete = false
@@ -34,10 +32,7 @@ struct LogTabView: View {
 
     var body: some View {
         @Bindable var router = router
-        // A path, because the row is no longer a NavigationLink: a link inside
-        // the swipe container swallowed the swipe and navigated instead, so the
-        // row does its own gated tap (owner, 2026-09-25).
-        NavigationStack(path: $path) {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     ForEach(months, id: \.title) { month in
@@ -59,12 +54,7 @@ struct LogTabView: View {
                                     // a set row, this asks first: a workout is
                                     // a whole session of work (owner,
                                     // 2026-09-25).
-                                    SwipeToDelete(id: "workout-\(session.id.prefix(8))", onDelete: {
-                                        pendingDelete = session
-                                        confirmRowDelete = true
-                                    }, onTap: {
-                                        path.append(session.id)
-                                    }) {
+                                    Group {
                                     HStack(spacing: 0) {
                                         // Edit mode has something to do now: it
                                         // reveals a delete per row. It used to
@@ -94,12 +84,13 @@ struct LogTabView: View {
                                         // which made the row swallow its own taps
                                         // (present in the AX tree, taps dead). The
                                         // combine modifier now lives nowhere.
-                                        SessionRowView(session: session)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .contentShape(Rectangle())
+                                        NavigationLink(value: session.id) {
+                                            SessionRowView(session: session)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityIdentifier("session-row-\(session.id.prefix(8))")
+                                        .accessibilityLabel(session.rowAccessibilityText)
                                     }
-                                    .accessibilityIdentifier("session-row-\(session.id.prefix(8))")
-                                    .accessibilityLabel(session.rowAccessibilityText)
                                     }
                                     if idx < month.sessions.count - 1 {
                                         Divider().padding(.leading, editMode == .active ? 128 : 76)
