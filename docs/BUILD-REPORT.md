@@ -572,6 +572,55 @@ The finished-workout test proves persistence with an insert into an empty box
 and asserts an unedited value is untouched, so it does not depend on the
 clearing path at all.
 
+## 0.7 The empty boxes hint the previous performance
+
+Owner (2026-09-25, with a screenshot of the reference app): *"depending on if
+'weight and reps' is set to 'latest' or 'by routine', the text boxes for kg,
+reps, rpe, and notes have the entries from either the last time that exercise
+was done, or the last time the routine was done, visible in the background of
+the box. this should only be visible while the box is empty and not
+interactable. as soon as i open the text box and start typing, it should be
+hidden and only show the text ive typed. if i then go back and delete the
+numbers/notes, the previous entry should appear again."*
+
+- `Targets.hints` resolves, per set index, the previous set — weight in the
+  display unit, reps, RPE and notes. The source is the routine's own "weight and
+  reps" setting: `.latest` takes the last session containing the EXERCISE,
+  `.byRoutine` the last session of THAT routine. Values come from the same set
+  index, and a workout with more sets than last time repeats its last set.
+- The hint is drawn by `InlineCell` in the empty state, where the grey "—"
+  already lived: not hit-testable, never the field's value, gone the moment
+  there is a draft, and back when the box is emptied. A set with nothing in it
+  is not "last time", so an abandoned workout cannot blank the hints.
+- **The old behaviour wrote those numbers INTO new sets.** `applyPlaceholder`
+  copied the previous weight/reps into every new row and every new exercise,
+  which is exactly how a session used to record "0 kg x 4" that nobody typed.
+  That is gone: new rows start empty and the previous values are only ever a
+  hint. Hints are off on a finished session — a record being corrected is not a
+  workout being planned.
+- The hint carries an identifier (`hint-<cell>`, `blank-<cell>` for "—") so a
+  test can assert what it says; it is a separate `Text`, not the field's value.
+
+E2E (`testEmptyBoxesHintThePreviousPerformance`): a Push Day session at 100x5,
+then a no-routine session at 120x3 for the same exercise, then Push Day again —
+where the first box must hint **120** (Latest reads the newest session of the
+exercise, whatever routine it was). Typing 90 into it must remove that box's
+hint and only that one, and clearing it must bring 120 back. With the routine
+switched to By Routine the same box must hint **100** (the routine's own last),
+not 120. All four assertions pass.
+
+### 0.7.1 Two harness traps this cost
+
+- `typeInCell` used `app.textFields[id]`, which needs a SINGLE match. A routine
+  workout shows several set rows and every row's weight box shares the
+  identifier, so the tap failed with "Multiple matching elements found". It now
+  addresses `.firstMatch` — "the cell" means the top row's.
+- `startWorkout(fromRoutine:)` tapped "plus", which exists on the Log **and**
+  (as Add routine) on the Routines tab with the same identifier. From the
+  Routines tab it opened the New Routine sheet and the routine was never in the
+  start list. The helper now selects the Log tab first. The failure message was
+  made to list the buttons actually on screen, which is what identified it.
+
 ### 0.6.2 Published
 
 **1.1.4 (build 7)** — 671,516 bytes, sha256
