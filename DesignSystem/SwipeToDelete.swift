@@ -18,10 +18,10 @@ struct SwipeToDelete<Content: View>: View {
     /// Fires on a tap that was not part of a swipe. nil = the content handles
     /// its own taps (a set row is all text fields).
     ///
-    /// A `NavigationLink` inside this container swallows the drag and navigates
-    /// instead (found 2026-09-25), so a row that both navigates and swipes has
-    /// to do its own tap: a drag sets `swiped`, and the tap that follows the
-    /// release is ignored.
+    /// When this is set the tap and the swipe are ONE gesture. Every other
+    /// shape failed on a scrolling row (2026-09-25): a NavigationLink swallowed
+    /// the whole touch and navigated, and a separate tap gesture beat the drag
+    /// so the row never moved. One gesture cannot outbid itself.
     var onTap: (() -> Void)?
     @ViewBuilder var content: Content
 
@@ -61,16 +61,10 @@ struct SwipeToDelete<Content: View>: View {
 
     @ViewBuilder
     private var tappable: some View {
-        if let onTap {
+        if onTap == nil {
             row
-                .contentShape(Rectangle())
-                // Simultaneous: an exclusive tap gesture here won the touch and
-                // the drag never fired at all (2026-09-25). A TapGesture fails
-                // on movement anyway, and `swiped` covers the release.
-                .simultaneousGesture(TapGesture().onEnded { if !swiped { onTap() } })
-                .accessibilityAddTraits(.isButton)
         } else {
-            row
+            row.accessibilityAddTraits(.isButton)
         }
     }
 
@@ -80,23 +74,30 @@ struct SwipeToDelete<Content: View>: View {
             // on the way.
             .background(Palette.card)
             .offset(x: offset)
-                // Simultaneous, not exclusive: these rows live in a ScrollView
-                // (the Log groups sessions by month in cards), and an exclusive
-                // gesture there never receives the drag at all. The dominance
-                // check keeps vertical scrolling safe — only a clearly
-                // horizontal, leftward drag moves the row.
-                // A plain gesture, now that the row is not a NavigationLink: the
-            // link used to claim the whole touch.
+            .contentShape(Rectangle())
             .gesture(
-                    DragGesture(minimumDistance: 18)
+                    // Distance 0 when the row has its own tap, so a tap is
+                    // delivered to this gesture rather than to a second one.
+                    DragGesture(minimumDistance: onTap == nil ? 18 : 0)
                         .onChanged { value in
                             let dx = value.translation.width
                             let dy = value.translation.height
+                            // Left and clearly horizontal only: a vertical drag
+                            // is the list scrolling.
                             guard dx < 0, abs(dx) > abs(dy) * 1.5 else { return }
                             swiped = true
                             offset = max(-limit, dx)
                         }
-                        .onEnded { _ in
+                        .onEnded { value in
+                            if !swiped {
+                                // Barely moved: a tap, not a swipe.
+                                if abs(value.translation.width) < 12,
+                                   abs(value.translation.height) < 12 {
+                                    onTap?()
+                                }
+                                offset = 0
+                                return
+                            }
                             if offset <= -fullSwipe, !fired {
                                 fired = true
                                 withAnimation(.easeOut(duration: 0.18)) { offset = -limit }
