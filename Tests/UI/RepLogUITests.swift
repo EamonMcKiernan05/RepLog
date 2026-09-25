@@ -1163,8 +1163,15 @@ final class RepLogUITests: XCTestCase {
         var attempt = 0
         while rows != 1 && attempt < 20 {
             if attempt % 4 == 0 {
+                // The control is disabled while a sync is in flight (by
+                // design), and a disabled element has no hit point: re-tapping
+                // it threw "not hittable" and killed the drill on 2026-09-25.
+                // Retry only when it is actually hittable — the loop exists to
+                // poll, not to hammer.
                 let syncNow = app.buttons["sync-now"]
-                if await wait(for: syncNow, timeout: 5) { await tapSettled(syncNow) }
+                if await wait(for: syncNow, timeout: 5), syncNow.isHittable {
+                    await tapSettled(syncNow)
+                }
             }
             try? await Task.sleep(nanoseconds: 1_000_000_000)
             rows = await drillCSVDataRows()
@@ -1243,7 +1250,9 @@ final class RepLogUITests: XCTestCase {
         // And a further sync must not bring it back on the phone.
         await openProfileTab()
         let finalSync = app.buttons["sync-now"]
-        if await wait(for: finalSync, timeout: 5) { await tapSettled(finalSync) }
+        if await wait(for: finalSync, timeout: 5), finalSync.isHittable {
+            await tapSettled(finalSync)
+        }
         await settle(3)
         XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
                        "a locally deleted session must not come back after syncing")
