@@ -451,12 +451,19 @@ final class RepLogUITests: XCTestCase {
         await finishWorkout()
         await expectExists(app.buttons["plus"], "not back on the Log after finishing")
         let workout = await expectSessionRow("the finished workout is not in the Log")
-        await swipeRowLeft(workout)
-        if !app.buttons["row-delete-confirm"].exists {
-            let ids = app.buttons.allElementsBoundByIndex.map { "\($0.label) [\($0.identifier)]" }
-            print("DEBUG after swiping the workout: row still there=\(workout.exists) buttons=\(ids)")
-        }
-        await confirmDialog("row-delete-confirm", "swiping a workout did not ask before deleting")
+        // A partial swipe leaves the Delete button exposed; pressing that is
+        // what asks. (A full swipe deletes without the second touch.)
+        let start = workout.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
+        let end = workout.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.5))
+        start.press(forDuration: 0.08, thenDragTo: end,
+                    withVelocity: .slow, thenHoldForDuration: 0.05)
+        await settle(1.6)
+        let revealed = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'swipe-delete-workout-'")
+        ).firstMatch
+        await expectExists(revealed, "the swipe did not reveal a Delete button on the workout row")
+        await tapSettled(revealed)
+        await confirmDialog("row-delete-confirm", "pressing Delete did not ask before deleting the workout")
         await settle(2)
         XCTAssertFalse(firstSessionRow().exists,
                        "the workout was still in the Log after confirming the delete")

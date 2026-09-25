@@ -30,7 +30,7 @@ struct SetRowView: View {
 
     var body: some View {
         if let onDelete {
-            SwipeToDelete(onDelete: onDelete) { row }
+            SwipeToDelete(id: "set-\(set.setNumber)", onDelete: onDelete) { row }
         } else {
             row
         }

@@ -9,8 +9,10 @@ import SwiftUI
 /// `onDelete` once. Callers decide whether that needs a confirmation — the Log
 /// asks first, a set row does not (owner, 2026-09-25).
 struct SwipeToDelete<Content: View>: View {
-    /// How far the row has to travel before the delete fires.
-    var threshold: CGFloat = 110
+    /// Names the revealed Delete button for tests (`swipe-delete-<id>`).
+    var id: String = "row"
+    /// A full swipe past this deletes outright, the way a system row does.
+    var fullSwipe: CGFloat = 210
     /// Fires once per completed swipe.
     var onDelete: () -> Void
     /// Fires on a tap that was not part of a swipe. nil = the content handles
@@ -32,15 +34,25 @@ struct SwipeToDelete<Content: View>: View {
     var body: some View {
         ZStack(alignment: .trailing) {
             if offset < 0 {
-                HStack(spacing: 6) {
-                    Image(systemName: "trash")
-                    Text("Delete")
+                // A partial swipe leaves this button exposed; a full swipe
+                // fires the delete without a second touch.
+                Button {
+                    guard !fired else { return }
+                    fired = true
+                    onDelete()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "trash")
+                        Text("Delete")
+                    }
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18)
+                    .frame(maxHeight: .infinity)
+                    .background(Palette.destructive)
                 }
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white)
-                .padding(.trailing, 20)
+                .accessibilityIdentifier("swipe-delete-\(id)")
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                .background(Palette.destructive)
             }
             tappable
         }
@@ -52,10 +64,7 @@ struct SwipeToDelete<Content: View>: View {
         if let onTap {
             row
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    print("SWIPE tap swiped=\(swiped)")
-                    if !swiped { onTap() }
-                }
+                .onTapGesture { if !swiped { onTap() } }
                 .accessibilityAddTraits(.isButton)
         } else {
             row
@@ -80,17 +89,19 @@ struct SwipeToDelete<Content: View>: View {
                         .onChanged { value in
                             let dx = value.translation.width
                             let dy = value.translation.height
-                            print("SWIPE onChanged dx=\(Int(dx)) dy=\(Int(dy))")
                             guard dx < 0, abs(dx) > abs(dy) * 1.5 else { return }
                             swiped = true
                             offset = max(-limit, dx)
                         }
                         .onEnded { _ in
-                            print("SWIPE onEnded offset=\(Int(offset))")
-                            if offset <= -threshold, !fired {
+                            if offset <= -fullSwipe, !fired {
                                 fired = true
                                 withAnimation(.easeOut(duration: 0.18)) { offset = -limit }
                                 onDelete()
+                            } else if offset <= -40 {
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                    offset = -112
+                                }
                             } else {
                                 withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                                     offset = 0

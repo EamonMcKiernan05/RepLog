@@ -59,7 +59,7 @@ struct LogTabView: View {
                                     // a set row, this asks first: a workout is
                                     // a whole session of work (owner,
                                     // 2026-09-25).
-                                    SwipeToDelete(onDelete: {
+                                    SwipeToDelete(id: "workout-\(session.id.prefix(8))", onDelete: {
                                         pendingDelete = session
                                         confirmRowDelete = true
                                     }, onTap: {
