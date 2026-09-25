@@ -683,10 +683,15 @@ workout editor's own ⋯ menu does not remove it from the Log:
   `DataStore.sessions()` fetches fresh from the context on every read, and
   deleting the same workout from the LOG's own Edit mode works
   (`testEditModeRevealsRowDelete` passes). So the session is still in the store.
+- `ActiveWorkoutView.deleteWorkout()` looks right (queue drop → `context.delete`
+  → `save()` → `dismiss()`), and the Log's near-identical path works. The one
+  thing the editor does that the Log does not: its `.onDisappear` calls
+  `sync.sessionEdited(session)` when `editingExistingRecord` is set, and on this
+  path it fires ON THE DELETED SESSION. If that re-saves or resurrects the
+  object, the delete is undone a moment later. Top suspect — check it first.
 - The two tests that tap the confirmation, `confirmDialog`, use `.firstMatch`
   deliberately: iOS 26 exposes a confirmationDialog's button twice, same
-  identifier, same frame. A stale first match would explain a tap that lands on
-  nothing — worth checking first next time.
+  identifier, same frame. Second suspect: a stale first match tapping nothing.
 - The Log's `List` is the only change in this release that touches how the Log
   is built; the editor's delete path is untouched. It is therefore more likely
   that the delete never fires than that a working delete is rendered stale.
