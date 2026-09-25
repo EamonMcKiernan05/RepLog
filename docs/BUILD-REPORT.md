@@ -693,9 +693,17 @@ having on their own:
   never ran. The label now carries `.contentShape(Rectangle())`; proven by real
   uploads arriving at the drill service.
 
-**Published 1.1.7 (build 10)** — 694,041 bytes, sha256
-`490e8ab2909ce5ff4d0337e4751f0bb77965f1cba5a91a92f5217d77561c0039`, served hash
-read back over HTTPS and matching, install page reading 1.1.7.
+**Published 1.1.7 (build 10)** — 694,021 bytes, sha256
+`53f73badc38e26b46821c17247247ee6032df602edcc38e9708aa8ff633d4480`, served hash
+read back over HTTPS and matching, install page reading 1.1.7, and the shipped
+`Info.plist` reading 1.1.7 build 10.
+
+**Bump the build number AND regenerate the project.** 1.1.7 first went out as
+build 9 — the same as 1.1.6 — because only the version strings were bumped:
+`CURRENT_PROJECT_VERSION`/`CFBundleVersion` in `project.yml` were left alone, and
+`archive.sh` archived the last generated `.pbxproj` rather than regenerating it.
+It now runs `xcodegen generate` first. A build number that does not move can
+make iOS treat an install as "already there".
 
 Test evidence on the final commit, per class (see the note on the runner below):
 36 unit, the full UI suite, `testOfflineDrill`,
