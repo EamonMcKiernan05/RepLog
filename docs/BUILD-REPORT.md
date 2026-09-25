@@ -609,6 +609,52 @@ hint and only that one, and clearing it must bring 120 back. With the routine
 switched to By Routine the same box must hint **100** (the routine's own last),
 not 120. All four assertions pass.
 
+### 0.8 Extras beyond last time are blank; swipe a set row to delete it
+
+Owner, two reports on 2026-09-25:
+
+**"if the new session has more sets than the last, the extra sets should be
+blank"** — `Targets.hints` used to tile the last set's numbers into every
+extra row. It now returns an empty hint past the last set that was actually
+done, so a set nobody has done before shows "—". Covered by
+`testEmptyBoxesHintThePreviousPerformance`, which asserts every row is either a
+hint (a set that was done) or blank, and that not every row is hinting.
+
+**"i want to be able to swipe right to left on the set row to delete it … no
+confirmation, it should just delete on one slide"** — `SwipeToDelete`
+(`DesignSystem/SwipeToDelete.swift`): slide a set row left and the red Delete
+panel is revealed; pressing it removes the set and renumbers the rest, so the
+hints stay aligned with the rows. A full-width slide deletes without the second
+touch. Covered by `testSwipeToDeleteASet`.
+
+Three things this cost, all worth knowing before touching these rows again:
+
+- The app's lists are `ScrollView`s, not `List`s, so `.swipeActions` is not
+  available: the interaction is hand-built.
+- `XCUIKeyboardKey.delete` does not clear a SwiftUI `TextField`; U+0008 does.
+  See §0.7.2.
+- A revealed Delete button given `.frame(maxWidth: .infinity)` has the ROW as
+  its hit area, so a press aimed at it lands on the row that slid aside. The
+  panel is exactly `reveal` (112 pt) wide, and the whole revealed strip is a tap
+  target in its own right.
+
+**Not done: the workout row's swipe in the Log.** Eight variants were tried —
+NavigationLink, gated tap, exclusive drag, simultaneous drag, and one gesture
+doing both tap and swipe. Each either let the row's own tap navigate instead, or
+never received the drag. A Log row must be tappable to open the workout, and in
+a hand-rolled `ScrollView` those two claims to the touch fight; nothing was
+shipped half-working. The workout keeps its existing deletes: the Log's Edit
+mode, and ⋯ → Delete Workout inside the workout editor. The real fix is to build
+that list as a `List` so the system's own swipe actions apply.
+
+### 0.8.1 Published
+
+**1.1.6 (build 9)** — 693,024 bytes, sha256
+`122b70115f4a7cd36d2ceaa3555df938830b230b6c1693bdb50c71251794a0ff`, archived from
+the green gate (36 unit, **16/16 UI**, `All Mac tests passed.`). Served hash read
+back over HTTPS and matching; the install page reads 1.1.6 built 2026-09-25
+17:23 UTC.
+
 ### 0.7.1 Published
 
 **1.1.5 (build 8)** — 678,124 bytes, sha256
