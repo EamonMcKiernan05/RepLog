@@ -905,6 +905,109 @@ final class RepLogUITests: XCTestCase {
             "the note is drawn a second time outside the Notes box")
     }
 
+    // MARK: - The keyboard's arrows (owner request, 2026-10-13)
+
+    /// The keyboard's chevrons walk the boxes in the order they appear on
+    /// screen: weight -> reps -> RPE, and back. What proves the step is WHERE
+    /// the typing lands — keystrokes only reach the focused box, so a
+    /// `typeText` into an unfocused one fails by itself.
+    @MainActor
+    func testKeyboardArrowsStepBetweenBoxes() async {
+        await completeOnboarding()
+        await startFreshWorkout()
+        await addFirstExercise()
+
+        // The bar exists while a box is focused, with both arrows.
+        await typeInCell("weight-cell", "60")
+        await expectExists(app.buttons["keyboard-next"], "the keyboard has no next arrow")
+        await expectExists(app.buttons["keyboard-prev"], "the keyboard has no previous arrow")
+
+        // → to reps, then → to RPE. Each value is typed into whatever box the
+        // arrow left focused.
+        await tapSettled(app.buttons["keyboard-next"])
+        await settle(1.0)
+        let repsBox = app.textFields["reps-cell"].firstMatch
+        repsBox.typeText("12")
+        await settle(0.5)
+
+        await tapSettled(app.buttons["keyboard-next"])
+        await settle(1.0)
+        let rpeBox = app.textFields["rpe-cell"].firstMatch
+        rpeBox.typeText("8")
+        await settle(0.5)
+
+        // ← twice: RPE -> reps -> weight. Overwrite weight with 55.
+        await tapSettled(app.buttons["keyboard-prev"])
+        await settle(0.8)
+        await tapSettled(app.buttons["keyboard-prev"])
+        await settle(0.8)
+        let weightBox = app.textFields["weight-cell"].firstMatch
+        await clearIfFilled(weightBox)
+        weightBox.typeText("55")
+        await settle(0.5)
+
+        await dismissKeyboard()
+
+        // Read it all back: every value landed in its own box, so the arrows
+        // really moved the focus.
+        let gotWeight = (app.textFields["weight-cell"].firstMatch.value as? String) ?? "nil"
+        let gotReps = (app.textFields["reps-cell"].firstMatch.value as? String) ?? "nil"
+        let gotRpe = (app.textFields["rpe-cell"].firstMatch.value as? String) ?? "nil"
+        XCTAssertEqual(gotWeight, "55", "weight box should read 55 (typed after ← ← returned to it), got '\(gotWeight)'")
+        XCTAssertEqual(gotReps, "12", "reps box should read 12 (typed after → from weight), got '\(gotReps)'")
+        XCTAssertEqual(gotRpe, "8", "RPE box should read 8 (typed after → from reps), got '\(gotRpe)'")
+    }
+
+    /// Owner report (2026-10-13): a box tapped low on the screen used to stay
+    /// behind the keyboard. Asserted geometrically — the focused box's bottom
+    /// edge must sit above the accessory bar — not by a look.
+    @MainActor
+    func testFocusedBoxIsScrolledAboveTheKeyboard() async {
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES"]
+        app.launch()
+        await settle(4)
+        await completeOnboarding()
+        await startWorkout(fromRoutine: "Push Day")
+
+        // To the bottom: the boxes near the keyboard's edge are the case that
+        // used to be blocked.
+        let scroll = app.scrollViews.firstMatch
+        XCTAssertTrue(scroll.exists, "the workout's scroll view was not found")
+        for _ in 0..<4 { scroll.swipeUp() }
+        await settle(1)
+
+        // The bottom-most visible weight box, low on the screen.
+        let screen = app.frame
+        let boxes = app.textFields.matching(identifier: "weight-cell")
+        var target: XCUIElement?
+        for i in stride(from: boxes.count - 1, through: 0, by: -1) {
+            let candidate = boxes.element(boundBy: i)
+            if candidate.isHittable, candidate.frame.minY > screen.height * 0.5 {
+                target = candidate
+                break
+            }
+        }
+        guard let target else {
+            XCTFail("no weight box sits low enough on the screen to test the keyboard overlap")
+            return
+        }
+        let before = target.frame
+        target.tap()
+        await settle(2)
+
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.exists, "the keyboard did not open for the tapped box")
+        let done = app.buttons["keyboard-done"]
+        XCTAssertTrue(done.exists, "the keyboard's accessory bar is missing")
+        // Clear of BOTH the keyboard and its accessory bar, whichever way the
+        // keyboard element's frame counts them.
+        let barTop = min(keyboard.frame.minY, done.frame.minY)
+        let after = target.frame
+        XCTAssertLessThanOrEqual(after.maxY, barTop + 1,
+            "the focused box is behind the keyboard: box bottom y=\(after.maxY), bar top y=\(barTop) (before the tap the box was y=\(before.minY)-\(before.maxY), screen \(screen.height))")
+    }
+
     /// Owner requirement (2026-09-24): the note belongs to the EXERCISE IN THAT
     /// ROUTINE, not to the exercise. Two routines can hold the same exercise and
     /// must keep their own notes — his example: session 1's squat says "3x5 go
