@@ -118,7 +118,7 @@ seeded demo data:
 ### 0.11.5 Gate (chunked — the runner dies with the simulator on this host)
 
 - Unit: 36/36 at `d5134df` (swift-testing: `Test run with 36 tests in 5 suites passed`), and a Release-configuration build for device (`-destination generic/platform=iOS`, `CODE_SIGNING_ALLOWED=NO`) also SUCCEEDED, so the archive step has no compile surprise waiting.
-- UI: the chunked suite is **19/19 green at `d5134df`** — b1 5/5 (including the hint test the seed fix unblocked), b2 5/5, b3 5/5 (including `testKeyboardArrowsStepBetweenBoxes`), b4 3/3 (including `testFocusedBoxIsScrolledAboveTheKeyboard`, which printed `KEYBOARD-GEOMETRY box=(79.7, 304.3, 18.7, 19.7) keyboard=(0.0, 583.0, 402.0, 233.0) done=(349.0, 524.0, 26.0, 36.0)` — the box's bottom edge 200 pt clear of the accessory bar), b5 1/1 (`testOfflineDrill`). Every batch rc=0, `CHUNKS-RESULT ALL-GREEN`.
+- UI: the chunked suite is **19/19 green at `d5134df`** — b1 5/5 (including the hint test the seed fix unblocked), b2 5/5, b3 5/5 (including `testKeyboardArrowsStepBetweenBoxes`), b4 3/3 (including `testFocusedBoxIsScrolledAboveTheKeyboard`, which printed `KEYBOARD-GEOMETRY box=(79.7, 304.3, 18.7, 19.7) keyboard=(0.0, 583.0, 402.0, 233.0) done=(349.0, 524.0, 26.0, 36.0)` — the box's bottom edge 200 pt clear of the accessory bar), b5 1/1 (`testOfflineDrill`). Every batch rc=0, `CHUNKS-RESULT ALL-GREEN`. The only change after `d5134df` is the capture flow in `RepLogVisualTourTests` (not part of the gate): the tour ran at `11357bc`, `testVisualTour` passed, and the three keyboard captures above were pulled from that run and committed; the rest of the set is unchanged from the previous pass.
 - Publish: PLACEHOLDER-PUBLISH
 
 ---
