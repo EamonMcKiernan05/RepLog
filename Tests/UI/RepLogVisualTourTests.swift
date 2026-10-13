@@ -217,6 +217,9 @@ final class RepLogVisualTourTests: XCTestCase {
                 await settle(1)
             }
             await tapAny([app.textFields["rpe-cell"].firstMatch], "rpe cell")
+            // Type so the software keyboard is really up: a bare tap leaves the
+            // keys parked off-screen on this simulator (2026-10-13).
+            app.textFields["rpe-cell"].firstMatch.typeText("8")
             await settle(1)
             shot("10-rpe-inline")
             await tapAny([app.buttons["rpe-chip-8"]], "rpe chip 8")
