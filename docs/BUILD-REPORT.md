@@ -119,7 +119,7 @@ seeded demo data:
 
 - Unit: 36/36 at `d5134df` (swift-testing: `Test run with 36 tests in 5 suites passed`), and a Release-configuration build for device (`-destination generic/platform=iOS`, `CODE_SIGNING_ALLOWED=NO`) also SUCCEEDED, so the archive step has no compile surprise waiting.
 - UI: the chunked suite is **19/19 green at `d5134df`** — b1 5/5 (including the hint test the seed fix unblocked), b2 5/5, b3 5/5 (including `testKeyboardArrowsStepBetweenBoxes`), b4 3/3 (including `testFocusedBoxIsScrolledAboveTheKeyboard`, which printed `KEYBOARD-GEOMETRY box=(79.7, 304.3, 18.7, 19.7) keyboard=(0.0, 583.0, 402.0, 233.0) done=(349.0, 524.0, 26.0, 36.0)` — the box's bottom edge 200 pt clear of the accessory bar), b5 1/1 (`testOfflineDrill`). Every batch rc=0, `CHUNKS-RESULT ALL-GREEN`. The only change after `d5134df` is the capture flow in `RepLogVisualTourTests` (not part of the gate): the tour ran at `11357bc`, `testVisualTour` passed, and the three keyboard captures above were pulled from that run and committed; the rest of the set is unchanged from the previous pass.
-- Publish: PLACEHOLDER-PUBLISH
+- Publish: live at https://replog.eamonmckiernan.im/replog/ — IPA sha256 `0d22496957a66a1eb7a3e2a82dd722a96fea7ce5a2ea163445bf64e10ef43d58` (703,717 bytes, 1.1.8/build 11 confirmed inside the shipped Info.plist). The public copy was downloaded back and its hash matches the archive byte-for-byte; meta.json and manifest.plist verified. Headless signing needed `security unlock-keychain -p` plus `set-key-partition-list -S apple-tool:,apple:,codesign:` in the same ssh session as the archive — without the partition list, codesign fails `errSecInternalComponent` even with the keychain unlocked.
 
 ---
 
