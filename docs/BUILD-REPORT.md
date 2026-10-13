@@ -34,6 +34,93 @@ re-run.
 The previous version of this report said 35/35 units and "the Mac lost power
 mid-run"; both were stale and are gone.
 
+## 0.11 Keyboard arrows, and the edited box stays above the keyboard (owner request, 2026-10-13)
+
+Owner, 2026-10-13 (screenshots of the reference app's accessory bar): "update
+it so we have arrow buttons when I open the text boxes to move to the next one"
+and "make the active text box be scrolled above the keyboard as currently if it
+is too low down it's blocked".
+
+Done:
+
+- **The keyboard bar carries ← → ✓.** The chevrons walk every inline box on
+  the workout screen in the order they appear — session bodyweight and note,
+  each exercise's note, then each set row left to right (weight → reps → time
+  → distance → kcal → RPE → notes), across exercises. The list is
+  `ActiveWorkoutView.focusOrder`, built from the same models `SetRowView`
+  draws; the bar (`KeyboardCellBar`) only walks it, and the chevrons are
+  disabled at the ends. The check closes the keyboard (it was a "Done" word);
+  its identifier is unchanged so existing tests still tap it.
+- **The bodyweight field joins the focus system.** It sat outside it, so
+  "Done" did not close its keyboard at all; now the arrows reach it and the
+  check closes it.
+- **The edited box scrolls above the keyboard.** Every `InlineCell` /
+  `InlineTextField` carries its own `CellFocus` as a scroll address; the
+  workout screen (`ScrollViewReader`) scrolls to the focused box on focus
+  (40% anchor) and again when the keyboard finishes opening, because the first
+  scroll is measured against the full-height viewport.
+
+Version 1.1.8 build 11. The routine screens keep their Done-only bar; their
+boxes are not a row of cells to walk.
+
+### 0.11.1 Tests
+
+- `testKeyboardArrowsStepBetweenBoxes` — 60 typed into weight, → to reps typed
+  12, → to RPE typed 8, ← ← back to weight, cleared and typed 55; all three
+  boxes read back exactly what was typed into them, so the arrows moved the
+  focus (typing goes to the focused box).
+- `testFocusedBoxIsScrolledAboveTheKeyboard` — the Push Day workout scrolled to
+  the bottom, the lowest weight box tapped and typed into; the assertions are
+  geometry against the keyboard's own frame (box bottom ≤ the keyboard top,
+  and the keyboard must be really showing — height > 150 pt — or the check is
+  vacuous). It prints `KEYBOARD-GEOMETRY box=… keyboard=… done=…` for the log.
+
+### 0.11.2 A simulator trap worth an hour: the keys do not show on a bare tap
+
+On this simulator (Xcode 26.5, 2026-10-13), a bare tap on a box leaves the
+software keyboard parked off-screen — the keyboard element's frame is
+`(0, 891, 402, 233)` on an 874-pt screen, off the bottom edge — while the
+accessory bar is drawn at the screen's bottom, over the tab bar. Typing raises
+the keys. September's tour captured keys on the same tap-only flow, so this is
+a simulator-side change since 2026-09-25, not the app: with the new scroll
+hooks temporarily disabled (throwaway `kbd-diag` branch, deleted) the keys
+stayed parked, and this finding is why the old form of the geometry check had
+been passing against an invisible keyboard. Both the test and the capture now
+type a character first (the real flow), and the test asserts the keyboard is
+actually up.
+
+### 0.11.3 The pre-07:00 gate failure, diagnosed and fixed (demo seed)
+
+`testEmptyBoxesHintThePreviousPerformance` failed twice in batch b1 on the
+06:47 run: it expected the hint "120" (the newest Competition Bench session,
+created by the test) and read "100". Not a regression from this change — the
+seeded demo data:
+
+- `seedDemoData` placed "today's" session at a literal 07:00, so before 07:00
+  local the seeded session was in the FUTURE.
+- The hint resolver reads the newest session containing the exercise as "the
+  last time", so the future seed outranked both sessions the test creates.
+- Evidence: the same code failed at 06:47 and passed at 07:12; and the fixed
+  seed proved itself on a throwaway branch that moves the demo's clock to
+  23:00 (a seeded time that is always in the future for a morning run) — the
+  hint test passes there because the clamp pulls the session back. The clamp
+  keeps the end of today's 90-minute session in the past (15-minute margin).
+
+### 0.11.4 Captures
+
+- `docs/visual/10c-box-above-keyboard.png` — the tapped box above the keyboard
+  with the accessory bar's arrows visible.
+- `docs/visual/10b-set-cell-typed.png` — refreshed: the bar with ‹ › ✓ over
+  the keyboard, caret in the box.
+- `docs/visual/10-rpe-inline.png` — refreshed: the RPE box with 8 typed,
+  the inline chips, and the new bar.
+
+### 0.11.5 Gate (chunked — the runner dies with the simulator on this host)
+
+- Unit: 36/36 at `d5134df` (swift-testing: `Test run with 36 tests in 5 suites passed`), and a Release-configuration build for device (`-destination generic/platform=iOS`, `CODE_SIGNING_ALLOWED=NO`) also SUCCEEDED, so the archive step has no compile surprise waiting.
+- UI: the chunked suite is **19/19 green at `d5134df`** — b1 5/5 (including the hint test the seed fix unblocked), b2 5/5, b3 5/5 (including `testKeyboardArrowsStepBetweenBoxes`), b4 3/3 (including `testFocusedBoxIsScrolledAboveTheKeyboard`, which printed `KEYBOARD-GEOMETRY box=(79.7, 304.3, 18.7, 19.7) keyboard=(0.0, 583.0, 402.0, 233.0) done=(349.0, 524.0, 26.0, 36.0)` — the box's bottom edge 200 pt clear of the accessory bar), b5 1/1 (`testOfflineDrill`). Every batch rc=0, `CHUNKS-RESULT ALL-GREEN`. The only change after `d5134df` is the capture flow in `RepLogVisualTourTests` (not part of the gate): the tour ran at `11357bc`, `testVisualTour` passed, and the three keyboard captures above were pulled from that run and committed; the rest of the set is unchanged from the previous pass.
+- Publish: live at https://replog.eamonmckiernan.im/replog/ — IPA sha256 `0d22496957a66a1eb7a3e2a82dd722a96fea7ce5a2ea163445bf64e10ef43d58` (703,717 bytes, 1.1.8/build 11 confirmed inside the shipped Info.plist). The public copy was downloaded back and its hash matches the archive byte-for-byte; meta.json and manifest.plist verified. Headless signing needed `security unlock-keychain -p` plus `set-key-partition-list -S apple-tool:,apple:,codesign:` in the same ssh session as the archive — without the partition list, codesign fails `errSecInternalComponent` even with the keychain unlocked.
+
 ---
 
 ## 0. Inline entry — no text-entry sheets (2026-09-23, after the gate above)

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// The core screen (plan §6.2): teal finish check, centred date, timer +
 /// overflow capsule; session card; one card per exercise; rest timer dock.
@@ -43,23 +44,40 @@ struct ActiveWorkoutView: View {
         // One pass over history for the whole screen: every card's hint line is
         // built here, so a card does not fetch its own history on each render.
         let hints = hintsByEntry
-        return ScrollView {
-            VStack(spacing: 16) {
-                sessionCard
-                ForEach(session.exerciseEntries.sorted(by: { $0.sortOrder < $1.sortOrder })) { entry in
-                    ExerciseCardView(
-                        entry: entry,
-                        unit: entry.displayUnit(global: settings.unit),
-                        isEditing: true,
-                        hints: hints[ObjectIdentifier(entry)] ?? [],
-                        focus: $focus
-                    )
+        return ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 16) {
+                    sessionCard
+                    ForEach(session.exerciseEntries.sorted(by: { $0.sortOrder < $1.sortOrder })) { entry in
+                        ExerciseCardView(
+                            entry: entry,
+                            unit: entry.displayUnit(global: settings.unit),
+                            isEditing: true,
+                            hints: hints[ObjectIdentifier(entry)] ?? [],
+                            focus: $focus
+                        )
+                    }
+                    addExerciseButton
                 }
-                addExerciseButton
+                .padding(.vertical, 8)
             }
-            .padding(.vertical, 8)
+            .scrollDismissesKeyboard(.interactively)
+            // Keep the box being edited above the keyboard (owner request,
+            // 2026-10-13). Scrolled when the focus lands and again when the
+            // keyboard finishes opening: the first scroll is measured against
+            // the full-height viewport, so on its own it leaves a box low on
+            // the screen behind the keyboard.
+            .onChange(of: focus) { _, newValue in
+                guard let cell = newValue else { return }
+                scroll(to: cell, via: proxy)
+            }
+            .onReceive(NotificationCenter.default.publisher(
+                for: UIResponder.keyboardDidShowNotification)
+            ) { _ in
+                guard let cell = focus else { return }
+                scroll(to: cell, via: proxy)
+            }
         }
-        .scrollDismissesKeyboard(.interactively)
         .background(Palette.bg)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -138,9 +156,9 @@ struct ActiveWorkoutView: View {
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)
             }
-            // The number pads have no return key: this is how the keyboard
-            // closes.
-            KeyboardDoneButton(focus: $focus)
+            // The number pads have no return key: the chevrons step between the
+            // boxes, the check closes the keyboard (owner request, 2026-10-13).
+            KeyboardCellBar(focus: $focus, order: focusOrder)
         }
         .safeAreaInset(edge: .bottom) {
             if showTimer {
@@ -259,6 +277,10 @@ struct ActiveWorkoutView: View {
                 .frame(width: 80)
                 .font(Typography.mono(17))
                 .accessibilityIdentifier("bodyweight-field")
+                // In the box order, so the chevrons can step to it and the
+                // check closes it like any other box (2026-10-13). It used to
+                // be outside the focus system, where "Done" did nothing.
+                .focused($focus, equals: CellFocus(owner: ObjectIdentifier(session), field: .bodyweight))
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
@@ -367,6 +389,44 @@ struct ActiveWorkoutView: View {
             )
         }
         return out
+    }
+
+    /// Every inline box on this screen, in the order they appear: the session
+    /// card's bodyweight and note, then each exercise card — its note, then
+    /// each set row left to right (weight, reps, time, distance, kcal, RPE,
+    /// notes — the columns `SetRowView` draws). The keyboard's chevrons walk
+    /// this list (owner request, 2026-10-13).
+    private var focusOrder: [CellFocus] {
+        var cells: [CellFocus] = []
+        let sessionOwner = ObjectIdentifier(session)
+        cells.append(CellFocus(owner: sessionOwner, field: .bodyweight))
+        cells.append(CellFocus(owner: sessionOwner, field: .workoutNote))
+        for entry in session.exerciseEntries.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+            cells.append(CellFocus(owner: ObjectIdentifier(entry), field: .exerciseNote))
+            for set in entry.setEntries.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+                let owner = ObjectIdentifier(set)
+                let type = entry.setType
+                if type.hasWeight { cells.append(CellFocus(owner: owner, field: .weight)) }
+                if type.hasReps { cells.append(CellFocus(owner: owner, field: .reps)) }
+                if type.hasTime { cells.append(CellFocus(owner: owner, field: .time)) }
+                if type.hasCardioExtras {
+                    cells.append(CellFocus(owner: owner, field: .distance))
+                    cells.append(CellFocus(owner: owner, field: .kcal))
+                }
+                if type.hasRPE { cells.append(CellFocus(owner: owner, field: .rpe)) }
+                cells.append(CellFocus(owner: owner, field: .notes))
+            }
+        }
+        return cells
+    }
+
+    /// Bring the box being edited into view, above the keyboard. The 40%
+    /// anchor leaves it clear of the keyboard while keeping the rows above it
+    /// in sight.
+    private func scroll(to cell: CellFocus, via proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.2)) {
+            proxy.scrollTo(cell, anchor: UnitPoint(x: 0.5, y: 0.4))
+        }
     }
 
     private func addSuperset(_ exercises: [Exercise]) {

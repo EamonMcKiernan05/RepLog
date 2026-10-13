@@ -8,7 +8,7 @@ import SwiftUI
 struct CellFocus: Hashable {
     enum Field: Hashable {
         case weight, reps, time, distance, kcal, rpe, notes
-        case exerciseNote, workoutNote, routineName, warmup, working
+        case exerciseNote, workoutNote, bodyweight, routineName, warmup, working
     }
 
     let owner: ObjectIdentifier
@@ -137,6 +137,10 @@ struct InlineCell: View {
         // still in @State) used to drop what was typed. Commit it on the way
         // out — same rule as losing focus (owner report, 2026-09-24).
         .onDisappear { finishEditing() }
+        // The cell's own address: a screen that wants to scroll the focused
+        // box above the keyboard does it by this value (ScrollViewReader,
+        // 2026-10-13).
+        .id(focusValue)
     }
 
     /// Commit the draft and go back to showing the model's value. The guard on
@@ -228,6 +232,9 @@ struct InlineTextField: View {
         // isFocused)` never ran and the typed note was thrown away. Commit on
         // the way out.
         .onDisappear { finishEditing() }
+        // Same address as `InlineCell`: the focused field can be scrolled
+        // into view by its `CellFocus` (2026-10-13).
+        .id(focusValue)
     }
 
     private func finishEditing() {
@@ -265,5 +272,70 @@ struct KeyboardDoneButton: ToolbarContent {
             Button("Done") { focus.wrappedValue = nil }
                 .accessibilityIdentifier("keyboard-done")
         }
+    }
+}
+
+/// The keyboard's accessory bar for a screen whose boxes can be walked in
+/// order (owner request, 2026-10-13 — the reference app's arrows): a chevron
+/// each way to step to the previous / next box, then a check to close the
+/// keyboard. One per screen.
+///
+/// The chevrons are disabled at the ends of the order, and when the focused
+/// box is not part of it.
+struct KeyboardCellBar: ToolbarContent {
+    let focus: FocusState<CellFocus?>.Binding
+    /// Every inline box on the screen, in the order they appear. The screen
+    /// owns this list (`ActiveWorkoutView.focusOrder`); the bar only walks it.
+    let order: [CellFocus]
+
+    var body: some ToolbarContent {
+        ToolbarItemGroup(placement: .keyboard) {
+            Button {
+                step(-1)
+            } label: {
+                Image(systemName: "chevron.left")
+            }
+            .disabled(!canStep(-1))
+            .accessibilityLabel("Previous box")
+            .accessibilityIdentifier("keyboard-prev")
+
+            Button {
+                step(1)
+            } label: {
+                Image(systemName: "chevron.right")
+            }
+            .disabled(!canStep(1))
+            .accessibilityLabel("Next box")
+            .accessibilityIdentifier("keyboard-next")
+
+            Spacer()
+
+            Button {
+                focus.wrappedValue = nil
+            } label: {
+                Image(systemName: "checkmark")
+            }
+            .accessibilityLabel("Done")
+            .accessibilityIdentifier("keyboard-done")
+        }
+    }
+
+    /// Where the focused box sits in the order — nil when the focus is on a
+    /// box this bar was not given.
+    private var index: Int? {
+        guard let current = focus.wrappedValue else { return nil }
+        return order.firstIndex(of: current)
+    }
+
+    /// The buttons stay disabled at the ends of the order, so a dead press
+    /// cannot be mistaken for a broken arrow.
+    private func canStep(_ delta: Int) -> Bool {
+        guard let i = index else { return false }
+        return order.indices.contains(i + delta)
+    }
+
+    private func step(_ delta: Int) {
+        guard let i = index, order.indices.contains(i + delta) else { return }
+        focus.wrappedValue = order[i + delta]
     }
 }

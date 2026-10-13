@@ -217,6 +217,9 @@ final class RepLogVisualTourTests: XCTestCase {
                 await settle(1)
             }
             await tapAny([app.textFields["rpe-cell"].firstMatch], "rpe cell")
+            // Type so the software keyboard is really up: a bare tap leaves the
+            // keys parked off-screen on this simulator (2026-10-13).
+            app.textFields["rpe-cell"].firstMatch.typeText("8")
             await settle(1)
             shot("10-rpe-inline")
             await tapAny([app.buttons["rpe-chip-8"]], "rpe chip 8")
@@ -261,6 +264,38 @@ final class RepLogVisualTourTests: XCTestCase {
                 noteField.typeText("felt heavy")
                 await tapAny([app.buttons["keyboard-done"]], "keyboard done")
             }
+
+            // A box low on the screen, tapped: it must land above the keyboard
+            // with the accessory bar's arrows showing (owner request,
+            // 2026-10-13 — it used to stay behind the keyboard). The gating
+            // test asserts the geometry; this capture shows it.
+            for _ in 0..<3 { app.swipeUp() }
+            await settle(1)
+            let lowCells = app.textFields.matching(identifier: "weight-cell")
+            var lowCell: XCUIElement?
+            for i in stride(from: lowCells.count - 1, through: 0, by: -1) {
+                let candidate = lowCells.element(boundBy: i)
+                if candidate.isHittable, candidate.frame.minY > app.frame.height * 0.5 {
+                    lowCell = candidate
+                    break
+                }
+            }
+            if let lowCell {
+                lowCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                // Type to raise the software keyboard: a bare tap leaves the
+                // keys parked off-screen on this simulator (accessory bar
+                // drawn, keys hidden) — the capture is only meaningful with
+                // the keys up.
+                lowCell.typeText("15")
+                await settle(1.2)
+                shot("10c-box-above-keyboard")
+                await tapAny([app.buttons["keyboard-done"]], "keyboard done")
+                await settle(0.8)
+            } else {
+                print("TOUR-MISS low box for the keyboard capture")
+            }
+            // Back to the top so the captures below keep their framing.
+            for _ in 0..<4 { app.swipeDown() }
             await settle(1)
         }
 
