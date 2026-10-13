@@ -1004,12 +1004,18 @@ final class RepLogUITests: XCTestCase {
 
         let keyboard = app.keyboards.firstMatch
         XCTAssertTrue(keyboard.exists, "the keyboard did not open for the tapped box")
+        // Prove the software keyboard is really up: on this simulator a bare
+        // tap leaves the keys parked off-screen and the check below would then
+        // pass against nothing (2026-10-13).
+        XCTAssertGreaterThan(keyboard.frame.height, 150,
+            "the software keyboard is not showing (frame \(keyboard.frame)) — the geometry check would be vacuous")
         let done = app.buttons["keyboard-done"]
         XCTAssertTrue(done.exists, "the keyboard's accessory bar is missing")
         // Clear of BOTH the keyboard and its accessory bar, whichever way the
         // keyboard element's frame counts them.
         let barTop = min(keyboard.frame.minY, done.frame.minY)
         let after = target.frame
+        print("KEYBOARD-GEOMETRY box=\(after) keyboard=\(keyboard.frame) done=\(done.frame)")
         XCTAssertLessThanOrEqual(after.maxY, barTop + 1,
             "the focused box is behind the keyboard: box bottom y=\(after.maxY), bar top y=\(barTop) (before the tap the box was y=\(before.minY)-\(before.maxY), screen \(screen.height))")
     }
