@@ -114,9 +114,18 @@ private func seedDemoData(store: DataStore, settings: Settings) {
     settings.onboarded = true
 
     let cal = Calendar.current
+    /// A demo session's clock time — morning workouts, but TODAY's session can
+    /// never be in the FUTURE. A seeded "today 07:00" that has not happened yet
+    /// outranks every session a test creates at `.now` as "the last time" an
+    /// exercise was done, and the hint logic reads the newest session (found
+    /// 2026-10-13: the hint test ran at 06:47, saw the seeded session as newest
+    /// and read 100 where it expected 120). Pulled back far enough that the
+    /// session's END (90 minutes later) lands in the past too.
     func day(_ offset: Int, hour: Int, minute: Int) -> Date {
-        cal.date(bySettingHour: hour, minute: minute, second: 0,
-                 of: cal.date(byAdding: .day, value: -offset, to: .now)!)!
+        let base = cal.date(byAdding: .day, value: -offset, to: .now)!
+        let target = cal.date(bySettingHour: hour, minute: minute, second: 0, of: base)!
+        guard offset == 0 else { return target }
+        return min(target, cal.date(byAdding: .minute, value: -105, to: .now)!)
     }
 
     // Routine with a scheme.
