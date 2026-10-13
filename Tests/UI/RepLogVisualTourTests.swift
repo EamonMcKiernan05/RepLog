@@ -279,6 +279,11 @@ final class RepLogVisualTourTests: XCTestCase {
             }
             if let lowCell {
                 lowCell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                // Type to raise the software keyboard: a bare tap leaves the
+                // keys parked off-screen on this simulator (accessory bar
+                // drawn, keys hidden) — the capture is only meaningful with
+                // the keys up.
+                lowCell.typeText("15")
                 await settle(1.2)
                 shot("10c-box-above-keyboard")
                 await tapAny([app.buttons["keyboard-done"]], "keyboard done")

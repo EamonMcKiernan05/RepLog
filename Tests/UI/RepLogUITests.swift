@@ -994,6 +994,12 @@ final class RepLogUITests: XCTestCase {
         }
         let before = target.frame
         target.tap()
+        // Raise the software keyboard by typing: a bare tap leaves the keys
+        // parked off-screen on this simulator (the accessory bar is drawn, the
+        // keys are not), and this assertion is only meaningful against a
+        // keyboard that is really showing. Typing is also the real flow, and
+        // it must land in the box that was tapped.
+        target.typeText("15")
         await settle(2)
 
         let keyboard = app.keyboards.firstMatch
