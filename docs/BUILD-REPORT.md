@@ -20,7 +20,27 @@ Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
 
 ## Build status
 
-**Status: the whole Mac gate is green at commit `0f29921`** — `** BUILD
+**1.1.9 / build 12 (2026-10-23) — shipped and published.** Gate on `9a599ea`,
+run in one pass: `** BUILD SUCCEEDED **`, **40/40 unit**, **17/17 UI** (four
+batches of five, two, five, two). Published to
+`https://replog.eamonmckiernan.im` at 19:52 UTC; the served IPA's
+`sha256_16 1736eee8fe4edc30` matches the built file, and `manifest.plist` comes
+back as `application/xml` with an `https://` software-package URL.
+
+Two defects in this round were found by looking at the simulator, not by the
+suite: the `Reps` column title wrapped to its own line beside the two-line notes
+box (every column title is now `lineLimit(1)`; only the notes value spans rows),
+and a Log row opened the session as a navigation push, leaving the tab bar over
+the last set row (both paths are the full-screen cover now).
+
+**Policy deviation, flagged for the owner:** the routine importer's parser ships
+with 13 swift-testing cases in `Tests/Unit/RoutineCSVTests.swift`. That is new
+unit coverage, which the 2026-09-24 policy above rules out — the rationale for
+keeping it is that a file-picker import cannot be reached by a UI test, the same
+reason the pre-existing codec/importer files are kept. Delete the file (and its
+line in `scripts/logic-tests.sh`) if the owner would rather hold the line.
+
+**Status at `0f29921` (1.1.8): the whole Mac gate is green** — `** BUILD
 SUCCEEDED **`, 36/36 unit tests, **12/12 UI tests** including the in-simulator
 offline drill, in one `scripts/mac-tests.sh` run (§1.1, §0.1 and §0.3). The dark-mode visual
 pass covers every screen against the 17 reference screenshots (§4), and the
