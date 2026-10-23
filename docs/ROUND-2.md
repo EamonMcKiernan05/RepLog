@@ -36,7 +36,8 @@ Programs are drafted at the bottom and are **not** built this round.
   `Mode.superset`, `addSuperset()`.
 - `ActiveWorkoutView`: drop `addSuperset`, the `allowSuperset:`/`onSuperset:` arguments.
 - `StartWorkoutSheet`: drops the copied `supersetId` when duplicating an exercise.
-- `CSVCodec`: stops writing `superset_id`; the reader still tolerates the column so old files import.
+- `CSVCodec`: unchanged. `superset_id` and `kcal` stay in the header and are written empty, so the export
+  keeps its frozen v1 shape, old files still import, and the golden-file test does not have to move.
 - Proof: add two exercises in a row in a UI test; no Superset control exists.
 
 ### 1b. Exercise types
