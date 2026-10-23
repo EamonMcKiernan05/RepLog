@@ -1,6 +1,14 @@
 # Round 2 — the owner's list (2026-10-23)
 
-Owner's words, split by what they ask for. Nothing here is built yet except where a line says so.
+Owner's words, split by what they ask for.
+
+**Done on branch `round-2` (2026-10-23, uncompiled — the Mac is unreachable):**
+supersets, the two exercise types and calories are out; sync is gone with its
+drill, its tests and its settings; one-session CSV export is in the workout
+menu; the routine-import reader and its 13 tests are in, and
+`scripts/logic-tests.sh` runs them on this machine (green). **Next:** the
+routine import UI, then the note, session-presentation and timer work, all of
+which need the Mac to look at.
 
 ## Rule for this round: nothing that already stores data may lose a column
 
