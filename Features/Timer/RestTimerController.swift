@@ -45,6 +45,10 @@ final class RestTimerController: @unchecked Sendable {
     }
 
     func toggle() {
+        // At 00:00 the play button RESTARTS the interval rather than doing
+        // nothing: a timer that has just finished is exactly when you press play
+        // for the next set (found reading the bar back, 2026-10-23).
+        if !isRunning && remaining <= 0 { remaining = duration }
         isRunning ? pause() : start()
     }
 
