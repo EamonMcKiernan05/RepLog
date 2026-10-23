@@ -87,24 +87,6 @@ struct LogTabView: View {
                     .environment(\.defaultMinListRowHeight, 0)
                 }
             }
-            // Value-based destination for the session rows
-            // (NavigationLink(value: session.id)). It must NOT share a
-            // view with the item-based destination further down or SwiftUI
-            // silently drops it and the row taps do nothing.
-            //
-            // EVERY session opens the same editor, finished or not (owner,
-            // 2026-09-24: "update things so I can edit a finished workout
-            // the same way I can an active one"). The editor knows which
-            // state it is in: a finished record gets no finish control, no
-            // Live Activity and no second Health write, and a correction
-            // re-queues it for upload. The read-only detail screen is gone
-            // with it — its one unique action (Delete Workout) moved into
-            // the editor's menu.
-            .navigationDestination(for: String.self) { id in
-                if let session = sessions.first(where: { $0.id == id }) {
-                    ActiveWorkoutView(session: session)
-                }
-            }
             .background(Palette.bg)
             .navigationTitle("Log")
             .navigationBarTitleDisplayMode(.large)
@@ -197,7 +179,14 @@ struct LogTabView: View {
             // label: the row view used to carry
             // .accessibilityElement(children: .combine), which made the row
             // swallow its own taps (present in the AX tree, taps dead).
-            NavigationLink(value: session.id) {
+            // A row opens the editor the SAME way the start list does: the
+            // full-screen cover, so the tab bar is out of reach and the
+            // screen's own header is the only chrome (owner request,
+            // 2026-10-23). It was a NavigationLink(value:) push, which left
+            // the tab bar sitting over the last set row.
+            Button {
+                router.activeSession = session
+            } label: {
                 SessionRowView(session: session)
                     .contentShape(Rectangle())
             }
