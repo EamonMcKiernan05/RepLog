@@ -75,6 +75,11 @@ struct InlineCell: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
+                // Column titles are ONE line: a wrapped "Reps" put the s on its
+                // own line beside a two-line Notes box (owner report, seen on
+                // the Mac, 2026-10-23). Only the notes VALUE spans rows.
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
             // The empty state is drawn as a sibling, not as the field's
             // `prompt:` — with a custom prompt style, iOS renders the text

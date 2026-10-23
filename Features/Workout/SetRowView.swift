@@ -185,6 +185,9 @@ struct SetRowView: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
+                // One line, always: see the matching note in `InlineCell`.
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
             Text(value.isEmpty ? "—" : value)
                 .font(wide ? NotesStyle.current.font
