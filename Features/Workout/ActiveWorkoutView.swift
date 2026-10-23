@@ -18,6 +18,7 @@ struct ActiveWorkoutView: View {
     @State private var showEndTime = false
     @State private var endTimeDraft: Date = .now
     @State private var confirmDelete = false
+    @State private var showExport = false
     /// Which inline cell (a set cell, an exercise note, the workout note) has
     /// the keyboard. One value for the screen: every card shares it and the
     /// keyboard's Done button clears it.
@@ -128,6 +129,14 @@ struct ActiveWorkoutView: View {
                         } label: {
                             Label("Workout Notes", systemImage: "text.alignleft")
                         }
+                        // Between the notes and the delete, where the owner
+                        // asked for it (2026-10-23).
+                        Button {
+                            showExport = true
+                        } label: {
+                            Label("Export CSV", systemImage: "square.and.arrow.up")
+                        }
+                        .accessibilityIdentifier("export-session-csv")
                         // Moved here from the read-only detail screen, which
                         // this editor replaced.
                         Button(role: .destructive) {
@@ -160,6 +169,9 @@ struct ActiveWorkoutView: View {
             SelectExerciseSheet { exercise in
                 addExercise(exercise)
             }
+        }
+        .sheet(isPresented: $showExport) {
+            SessionExportSheet(session: session)
         }
         .sheet(isPresented: $showEndTime) {
             EndTimePickerSheet(initial: endTimeDraft) { picked in
