@@ -179,7 +179,7 @@ struct AddExerciseSheet: View {
                 }
                 Section("Exercise Type") {
                     Picker("Type", selection: $type) {
-                        ForEach(ExerciseType.allCases, id: \.self) { t in
+                        ForEach(ExerciseType.selectable + (ExerciseType.selectable.contains(type) ? [] : [type]), id: \.self) { t in
                             Text(t.displayName).tag(t)
                         }
                     }
@@ -278,7 +278,7 @@ struct ExerciseEditorSheet: View {
                 }
                 Section("Exercise Type") {
                     Picker("Type", selection: $type) {
-                        ForEach(ExerciseType.allCases, id: \.self) { t in
+                        ForEach(ExerciseType.selectable + (ExerciseType.selectable.contains(type) ? [] : [type]), id: \.self) { t in
                             Text(t.displayName).tag(t)
                         }
                     }

@@ -150,7 +150,7 @@ struct RepeatWorkoutSheet: View {
         var order = 0
         for entry in last.exerciseEntries.sorted(by: { $0.sortOrder < $1.sortOrder }) {
             guard let ex = entry.exercise else { continue }
-            let newEntry = ExerciseEntry(exercise: ex, sortOrder: order, supersetId: entry.supersetId)
+            let newEntry = ExerciseEntry(exercise: ex, sortOrder: order)
             for set in entry.setEntries.sorted(by: { $0.sortOrder < $1.sortOrder }) {
                 let ns = SetEntry(setNumber: set.setNumber, setType: set.setType)
                 switch mode {

@@ -111,14 +111,6 @@ struct SetRowView: View {
                         keyboard: .decimalPad,
                         commit: commitDistance
                     )
-                    cell(
-                        label: "kcal",
-                        value: set.kcal.map { String(Int($0)) } ?? "",
-                        id: "kcal-cell",
-                        field: .kcal,
-                        keyboard: .decimalPad,
-                        commit: commitKcal
-                    )
                 }
                 // RPE column — after Reps/Time, before Notes.
                 if type.hasRPE {
@@ -288,16 +280,6 @@ struct SetRowView: View {
             set.distanceM = nil
         } else if let v = Double(t), v >= 0 {
             set.distanceM = v
-        }
-        store.save()
-    }
-
-    private func commitKcal(_ text: String) {
-        let t = text.trimmingCharacters(in: .whitespaces)
-        if t.isEmpty {
-            set.kcal = nil
-        } else if let v = Double(t), v >= 0 {
-            set.kcal = v
         }
         store.save()
     }

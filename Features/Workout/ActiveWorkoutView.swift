@@ -7,7 +7,6 @@ import UIKit
 struct ActiveWorkoutView: View {
     @Environment(DataStore.self) private var store
     @Environment(Settings.self) private var settings
-    @Environment(SyncEngine.self) private var sync
     @Environment(\.dismiss) private var dismiss
     let session: Session
 
@@ -19,16 +18,6 @@ struct ActiveWorkoutView: View {
     @State private var showEndTime = false
     @State private var endTimeDraft: Date = .now
     @State private var confirmDelete = false
-    /// True when this screen opened on an already-finished workout: every edit
-    /// is then a correction to an existing record, not a live workout.
-    @State private var editingExistingRecord = false
-    /// Set on the way out when the workout is being DELETED.
-    ///
-    /// The re-queue in `.onDisappear` must not run then: it would queue an edit
-    /// for a session that no longer exists, and touching a model after
-    /// `context.delete` is a hard failure in SwiftData. Owner report,
-    /// 2026-09-25: "deleting a workout from its own menu leaves it in the Log".
-    @State private var deleting = false
     /// Which inline cell (a set cell, an exercise note, the workout note) has
     /// the keyboard. One value for the screen: every card shares it and the
     /// keyboard's Done button clears it.
@@ -81,7 +70,6 @@ struct ActiveWorkoutView: View {
         .background(Palette.bg)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            editingExistingRecord = isFinished
             // Reviewing an old workout must not look like training is happening:
             // no Live Activity, and no Health permission prompt.
             guard !isFinished else { return }
@@ -169,15 +157,9 @@ struct ActiveWorkoutView: View {
             }
         }
         .sheet(isPresented: $showAddExercise) {
-            SelectExerciseSheet(
-                allowSuperset: true,
-                onSelect: { exercise in
-                    addExercise(exercise)
-                },
-                onSuperset: { exercises in
-                    addSuperset(exercises)
-                }
-            )
+            SelectExerciseSheet { exercise in
+                addExercise(exercise)
+            }
         }
         .sheet(isPresented: $showEndTime) {
             EndTimePickerSheet(initial: endTimeDraft) { picked in
@@ -187,12 +169,6 @@ struct ActiveWorkoutView: View {
         .confirmationDialog("Delete this workout?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) { deleteWorkout() }
                 .accessibilityIdentifier("delete-workout-confirm")
-        }
-        .onDisappear {
-            // A correction to an existing record has to be re-queued for upload;
-            // sync is manual, so nothing leaves the phone by itself. Never for a
-            // delete: the session is gone (see `deleting`).
-            if editingExistingRecord, !deleting { sync.sessionEdited(session) }
         }
         .confirmationDialog("Finish this workout?", isPresented: $confirmFinish, titleVisibility: .visible) {
             Button("Finish", role: .destructive) { finish() }
@@ -411,7 +387,6 @@ struct ActiveWorkoutView: View {
                 if type.hasTime { cells.append(CellFocus(owner: owner, field: .time)) }
                 if type.hasCardioExtras {
                     cells.append(CellFocus(owner: owner, field: .distance))
-                    cells.append(CellFocus(owner: owner, field: .kcal))
                 }
                 if type.hasRPE { cells.append(CellFocus(owner: owner, field: .rpe)) }
                 cells.append(CellFocus(owner: owner, field: .notes))
@@ -429,17 +404,6 @@ struct ActiveWorkoutView: View {
         }
     }
 
-    private func addSuperset(_ exercises: [Exercise]) {
-        let supID = "s\(session.exerciseEntries.filter { $0.supersetId != nil }.count / 1 + 1)"
-        var order = (session.exerciseEntries.map { $0.sortOrder }.max() ?? -1) + 1
-        for ex in exercises {
-            let entry = ExerciseEntry(exercise: ex, sortOrder: order, supersetId: supID)
-            session.exerciseEntries.append(entry)
-            order += 1
-        }
-        store.save()
-    }
-
     /// The session's day at the picked clock time. A workout that ran past
     /// midnight rolls to the next day rather than ending before it started.
     private func endDate(from picked: Date) -> Date {
@@ -453,12 +417,9 @@ struct ActiveWorkoutView: View {
         return d
     }
 
-    /// Delete from the phone only: `SyncEngine.sessionDeleted` drops it from the
-    /// upload queue and never talks to the service, so a copy that already
-    /// reached the sync database stays there (owner rule, 2026-09-23).
+    /// Delete from the phone. There is no upload queue any more (sync was
+    /// removed on owner request, 2026-10-23), so this is the only copy.
     private func deleteWorkout() {
-        deleting = true
-        sync.sessionDeleted(session)
         store.context.delete(session)
         store.save()
         dismiss()
@@ -473,11 +434,9 @@ struct ActiveWorkoutView: View {
         store.save()
         timer.stop()
         guard wasOpen else {
-            sync.sessionEdited(session)
             dismiss()
             return
         }
-        sync.sessionFinished(session)
         // End the Live Activity for this workout.
         WorkoutLiveActivityController.end()
         // Write to Apple Health (workout + bodyweight) when enabled.

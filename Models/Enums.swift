@@ -19,16 +19,24 @@ enum ExerciseType: String, Codable, CaseIterable, Sendable {
 
     var displayName: String {
         switch self {
-        case .weightReps: "Strength — Weight, Reps"
+        case .weightReps: "Weights"
         case .weightTime: "Strength — Weight, Time"
         case .bwWeightReps: "Bodyweight — Weight, Reps (BW+)"
         case .bwAssisted: "Bodyweight — Assisted, Reps (BW−)"
         case .bwReps: "Bodyweight — Reps"
         case .bwTime: "Bodyweight — Time"
-        case .cardio: "Cardio — Time, Distance, Calories"
+        case .cardio: "Cardio — Time, Distance"
         case .note: "Other — Note per set"
         }
     }
+
+    /// The types the owner can pick (2026-10-23): two, not eight.
+    ///
+    /// The other cases stay in the enum because existing exercises are stored
+    /// with their raw values — deleting a case would fail to decode them and
+    /// take the row with it. They keep rendering exactly as they do now; they
+    /// are simply never offered for a new exercise.
+    static let selectable: [ExerciseType] = [.weightReps, .cardio]
 
     var group: String {
         switch self {
@@ -71,7 +79,8 @@ enum ExerciseType: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// Whether the set row shows distance + kcal cells.
+    /// Whether the set row shows a distance cell. The kcal cell was removed on
+    /// owner request (2026-10-23); `SetEntry.kcal` keeps any stored values.
     var hasCardioExtras: Bool { self == .cardio }
 
     /// Whether RPE applies to this type.
