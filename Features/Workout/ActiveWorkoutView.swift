@@ -10,7 +10,6 @@ struct ActiveWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
     let session: Session
 
-    @State private var showTimer = false
     @State private var showAddExercise = false
     @State private var confirmFinish = false
     /// The End Time row opens a clock picker; confirming it finishes the
@@ -87,82 +86,25 @@ struct ActiveWorkoutView: View {
                 Task { await health.requestAuthorization() }
             }
         }
+        // The session has no navigation bar: it opens on top of the app with
+        // its own header (owner request, 2026-10-23). The keyboard accessory
+        // bar still rides the toolbar system.
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar {
-            // Only an OPEN workout can be finished. On a finished record the
-            // back button is the way out: every edit is saved as it is made.
-            if !isFinished {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        // Ask first: the checkmark used to call finish() straight
-                        // away and end the workout on a misplaced tap.
-                        confirmFinish = true
-                    } label: {
-                        Image(systemName: "checkmark")
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(.black)
-                            .frame(width: 36, height: 36)
-                            .background(Circle().fill(Palette.accent))
-                    }
-                    .accessibilityLabel("Finish workout")
-                    .accessibilityIdentifier("finish-workout")
-                }
-            }
-            ToolbarItem(placement: .principal) {
-                Text(session.date.formatted(.dateTime.day().month(.abbreviated)))
-                    .font(.headline)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: 4) {
-                    Button {
-                        showTimer = true
-                    } label: {
-                        Image(systemName: "timer")
-                    }
-                    .accessibilityLabel("Rest timer")
-                    .accessibilityIdentifier("timer-button")
-                    Menu {
-                        Button { showAddExercise = true } label: {
-                            Label("Add Exercise", systemImage: "plus")
-                        }
-                        Button {
-                            focus = CellFocus(owner: ObjectIdentifier(session), field: .workoutNote)
-                        } label: {
-                            Label("Workout Notes", systemImage: "text.alignleft")
-                        }
-                        // Between the notes and the delete, where the owner
-                        // asked for it (2026-10-23).
-                        Button {
-                            showExport = true
-                        } label: {
-                            Label("Export CSV", systemImage: "square.and.arrow.up")
-                        }
-                        .accessibilityIdentifier("export-session-csv")
-                        // Moved here from the read-only detail screen, which
-                        // this editor replaced.
-                        Button(role: .destructive) {
-                            confirmDelete = true
-                        } label: {
-                            Label("Delete Workout", systemImage: "trash")
-                        }
-                        .accessibilityIdentifier("delete-workout")
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .accessibilityIdentifier("workout-menu")
-                    }
-                }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-            }
             // The number pads have no return key: the chevrons step between the
             // boxes, the check closes the keyboard (owner request, 2026-10-13).
             KeyboardCellBar(focus: $focus, order: focusOrder)
         }
+        .safeAreaInset(edge: .top) {
+            header
+        }
+        // The bar is part of an OPEN workout, always there (owner request,
+        // 2026-10-23). A finished record is being corrected, not trained, so it
+        // gets no timer.
         .safeAreaInset(edge: .bottom) {
-            if showTimer {
-                RestTimerView(controller: timer) {
-                    showTimer = false
-                }
-                .transition(.move(edge: .bottom))
+            if !isFinished {
+                RestTimerBar(controller: timer)
+                    .transition(.move(edge: .bottom))
             }
         }
         .sheet(isPresented: $showAddExercise) {
@@ -196,6 +138,85 @@ struct ActiveWorkoutView: View {
         }
     }
 
+
+    /// The screen's own header, because the navigation bar is hidden: a way out
+    /// on the left (the check finishes an open workout; the chevron only leaves
+    /// the screen), the date in the middle, the menu on the right.
+    private var header: some View {
+        HStack(spacing: 10) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Palette.textSecondary)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Leave workout")
+            .accessibilityIdentifier("close-workout")
+
+            if !isFinished {
+                Button {
+                    // Ask first: the check used to finish on a misplaced tap.
+                    confirmFinish = true
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(.black)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Palette.accent))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Finish workout")
+                .accessibilityIdentifier("finish-workout")
+            }
+
+            Spacer(minLength: 0)
+
+            Text(session.date.formatted(.dateTime.day().month(.abbreviated)))
+                .font(.headline)
+
+            Spacer(minLength: 0)
+
+            Menu {
+                Button { showAddExercise = true } label: {
+                    Label("Add Exercise", systemImage: "plus")
+                }
+                Button {
+                    focus = CellFocus(owner: ObjectIdentifier(session), field: .workoutNote)
+                } label: {
+                    Label("Workout Notes", systemImage: "text.alignleft")
+                }
+                // Between the notes and the delete, where the owner asked for
+                // it (2026-10-23).
+                Button {
+                    showExport = true
+                } label: {
+                    Label("Export CSV", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("export-session-csv")
+                Button(role: .destructive) {
+                    confirmDelete = true
+                } label: {
+                    Label("Delete Workout", systemImage: "trash")
+                }
+                .accessibilityIdentifier("delete-workout")
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Palette.textPrimary)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("workout-menu")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+        .background(Palette.bg)
+    }
+
     private var sessionCard: some View {
         VStack(spacing: 0) {
             Text(session.routineName.isEmpty ? "Workout" : session.routineName)
@@ -213,6 +234,8 @@ struct ActiveWorkoutView: View {
                 placeholder: "Notes",
                 id: "session-notes-field",
                 text: session.notes,
+                axis: .vertical,
+                lineLimit: 2...12,
                 focus: $focus,
                 focusValue: CellFocus(owner: ObjectIdentifier(session), field: .workoutNote),
                 commit: { text in

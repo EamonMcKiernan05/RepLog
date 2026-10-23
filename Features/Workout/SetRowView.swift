@@ -133,6 +133,7 @@ struct SetRowView: View {
                     keyboard: .default,
                     hint: hints.notes,
                     wide: true,
+                    multiline: true,
                     commit: commitNotes
                 )
             }
@@ -150,6 +151,7 @@ struct SetRowView: View {
                       field: CellFocus.Field, keyboard: UIKeyboardType,
                       hint: String = "",
                       wide: Bool = false,
+                      multiline: Bool = false,
                       commit: @escaping (String) -> Void) -> some View {
         if isEditing {
             InlineCell(
@@ -165,6 +167,7 @@ struct SetRowView: View {
                 valueSize: layout.numberSize,
                 fixedWidth: wide ? nil : layout.numberWidth,
                 valueFont: wide ? NotesStyle.current.font : nil,
+                multiline: multiline,
                 focus: focus,
                 focusValue: CellFocus(owner: owner, field: field),
                 commit: commit
@@ -187,7 +190,10 @@ struct SetRowView: View {
                 .font(wide ? NotesStyle.current.font
                            : Typography.mono(layout.numberSize, value.isEmpty ? .regular : .bold))
                 .foregroundStyle(isPlaceholder ? Palette.textSecondary.opacity(0.6) : Palette.textPrimary)
-                .lineLimit(1)
+                // A note that was typed over several lines reads back over
+                // several lines (owner request, 2026-10-23).
+                .lineLimit(wide ? nil : 1)
+                .fixedSize(horizontal: false, vertical: wide)
                 .padding(.leading, wide ? NotesStyle.current.valueInset(wide: true) : 0)
         }
         // A wide cell's label rides above its own value — centred in a cell

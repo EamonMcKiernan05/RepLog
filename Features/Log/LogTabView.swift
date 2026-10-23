@@ -144,12 +144,14 @@ struct LogTabView: View {
                     .accessibilityIdentifier("plus")
                 }
             }
-            // The item-based destination (active workout) lives here; the
-            // value-based one (session detail) is on the content above.
-            // Kept on separate views deliberately: one destination modifier per
-            // view is the documented, unambiguous shape.
-            .navigationDestination(item: $router.activeSession) { session in
-                ActiveWorkoutView(session: session)
+            // The open workout covers the app rather than pushing onto the Log
+            // tab (owner request, 2026-10-23: "it should open on top with the
+            // app navigation bar hidden"): the tab bar is not reachable
+            // mid-workout, and the screen draws its own header.
+            .fullScreenCover(item: $router.activeSession) { session in
+                NavigationStack {
+                    ActiveWorkoutView(session: session)
+                }
             }
             .sheet(isPresented: $showStartSheet) {
                 StartWorkoutSheet()

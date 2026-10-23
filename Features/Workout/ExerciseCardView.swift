@@ -121,6 +121,8 @@ struct ExerciseCardView: View {
                     id: "exercise-note-field",
                     text: entry.notes,
                     font: .caption,
+                    axis: .vertical,
+                    lineLimit: 2...12,
                     focus: focus,
                     focusValue: CellFocus(owner: owner, field: .exerciseNote),
                     commit: { text in

@@ -367,10 +367,10 @@ final class RepLogUITests: XCTestCase {
     /// 2026-09-24 gate run, which read as "no rows in the Log").
     @MainActor
     private func leaveWorkoutScreen() async {
-        await swipeBackFromPushedScreen()
-        if await wait(for: firstSessionRow(), timeout: 6) { return }
-        let back = app.navigationBars.buttons.element(boundBy: 0)
-        if back.exists { await tapSettled(back) }
+        // The workout covers the app and has no navigation bar (owner request,
+        // 2026-10-23): its own header's chevron is the way out.
+        let close = app.buttons["close-workout"]
+        if await wait(for: close, timeout: 6) { await tapSettled(close) }
         if await wait(for: firstSessionRow(), timeout: 6) { return }
         await tapSettled(app.tabBars.buttons.element(boundBy: 0))
         await settle(1.5)
@@ -599,7 +599,7 @@ final class RepLogUITests: XCTestCase {
                        "the hint came back as something other than the last performance")
 
         // 6. "By Routine" asks the ROUTINE, not the newest session: 100, not 120.
-        await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
+        await tapSettled(app.buttons["close-workout"])
         await settle()
         await tapSettled(app.tabBars.buttons.element(boundBy: 1))
         await settle()
@@ -651,7 +651,7 @@ final class RepLogUITests: XCTestCase {
         // plain insert.
         await typeInCell("notes-cell", "felt easy")
         await dismissKeyboard()
-        await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
+        await tapSettled(app.buttons["close-workout"])
         await settle()
         let again = await expectSessionRow("row missing after leaving the editor")
         await tapSettled(again)
