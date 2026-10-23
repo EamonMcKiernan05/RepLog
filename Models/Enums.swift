@@ -93,7 +93,8 @@ enum SetType: String, Codable, Sendable {
     case drop = "drop"
 }
 
-/// Outbox state machine (plan §4.3).
+/// Where a session sat in the upload queue. Sync was removed on 2026-10-23;
+/// the field stays in the model so existing stores keep decoding.
 enum SyncState: String, Codable, Sendable {
     case local      // never uploaded
     case queued     // finished offline, waiting

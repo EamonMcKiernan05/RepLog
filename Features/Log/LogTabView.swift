@@ -4,7 +4,6 @@ import SwiftData
 struct LogTabView: View {
     @Environment(DataStore.self) private var store
     @Environment(AppRouter.self) private var router
-    @Environment(SyncEngine.self) private var sync
     @State private var editMode: EditMode = .inactive
     @State private var showStartSheet = false
     @State private var showRepeatSheet = false
@@ -132,10 +131,8 @@ struct LogTabView: View {
                     .accessibilityIdentifier("log-edit")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    // A single +, as asked (owner, 2026-09-25: "remove the 'n
-                    // to sync' button on the top of the log page. Just make it
-                    // a single + button"). The sync control moved to Profile:
-                    // sync is manual, so it needs a home somewhere.
+                    // A single +, as asked (owner, 2026-09-25). There is no
+                    // sync control anywhere now: sync was removed on 2026-10-23.
                     Button {
                         showStartSheet = true
                     } label: {
@@ -166,8 +163,6 @@ struct LogTabView: View {
                 Button("Delete", role: .destructive) { deletePendingRow() }
                     .accessibilityIdentifier("row-delete-confirm")
                 Button("Cancel", role: .cancel) { pendingDelete = nil }
-            } message: {
-                Text("It stays in the sync database if it has already been uploaded.")
             }
         }
     }
@@ -225,14 +220,12 @@ struct LogTabView: View {
         }
     }
 
-    /// Delete the pending row. Local only: `sessionDeleted` drops it from the
-    /// upload queue and never calls the service, so a copy that already reached
-    /// the sync database stays there.
+    /// Delete the pending row. The phone holds the only copy: sync was removed
+    /// on owner request (2026-10-23).
     private func deletePendingRow() {
         guard let session = pendingDelete else { return }
         pendingDelete = nil
         if router.activeSession === session { router.activeSession = nil }
-        sync.sessionDeleted(session)
         store.context.delete(session)
         store.save()
         if sessions.isEmpty { editMode = .inactive }
