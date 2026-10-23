@@ -31,6 +31,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog
         INFOPLIST_FILE: App/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1"
         SUPPORTS_MACCATALYST: NO
@@ -39,6 +40,7 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: RepLog
+        CFBundleIconName: AppIcon
         CFBundleShortVersionString: "1.1.9"
         CFBundleVersion: "12"
         UILaunchScreen: {}
