@@ -21,7 +21,7 @@ Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
 ## Build status
 
 **Range-aware Statistics export (2026-10-24) — branch `stats-range-export`,
-verified, not published.** The overall-statistics chart screens (Statistics →
+verified and published for testing as 1.1.10 (build 13).** The overall-statistics chart screens (Statistics →
 Overall Statistics → any metric) now carry an export button in the navigation
 bar. It writes the sessions inside the selected range — 1M / 3M / 6M / 1Y /
 All — instead of the whole history, and the file name carries the range
@@ -42,6 +42,12 @@ existing `-DemoData` history is untouched, so previous captures still match.
 Captures: `docs/visual/30-range-export-chart.png` (the export button on the
 chart) and `30b-range-export-sheet.png` (the sheet reading "6 sessions · 20
 sets" for 1Y).
+
+Published 2026-10-24 21:18 UTC: archive + ad-hoc export from the branch, IPA
+`sha256_16 e60154e0a3922868` served at `https://replog.eamonmckiernan.im` and
+hashed again from outside the LAN — identical. `manifest.plist` is
+`application/xml` with an `https://` package URL and `bundle-version` 1.1.10;
+the embedded profile is "iOS Team Ad Hoc" and lists the phone.
 
 Known, pre-existing, not touched: the Group picker's segments truncate to
 "Ses…" / "Mon…" on this width; it has been that way since the pickers shipped.
