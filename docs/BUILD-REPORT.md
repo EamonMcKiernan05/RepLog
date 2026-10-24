@@ -20,6 +20,32 @@ Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
 
 ## Build status
 
+**Range-aware Statistics export (2026-10-24) — branch `stats-range-export`,
+verified, not published.** The overall-statistics chart screens (Statistics →
+Overall Statistics → any metric) now carry an export button in the navigation
+bar. It writes the sessions inside the selected range — 1M / 3M / 6M / 1Y /
+All — instead of the whole history, and the file name carries the range
+(`RepLog-1Y-2026-10-24.csv`), so a range file cannot be mistaken for the
+full-history one. The chart and the export read the same `sessionsInRange`
+computed property, so the two cannot disagree. The full-history export on
+Profile and on the Statistics hub is unchanged.
+
+Gate on `38f8f76`: `** BUILD SUCCEEDED **`, **40/40 unit** (5 suites),
+**18/18 UI** in four batches (5 / 5 / 5 / 3), first attempt each. The proof is
+the simulator's own files after the run, not the screen: `RepLog-1M` held 3
+sessions (18 lines of CSV), `RepLog-1Y` 6 (21 lines), `RepLog-All` 7 (22
+lines) — the counts the picker implies, read from the bytes. The new UI test
+`testStatisticsExportRespectsTheRange` seeds `-DemoHistory` (extra sessions 40
+/ 150 / 300 / 600 days back) so every window holds a different number; the
+existing `-DemoData` history is untouched, so previous captures still match.
+
+Captures: `docs/visual/30-range-export-chart.png` (the export button on the
+chart) and `30b-range-export-sheet.png` (the sheet reading "6 sessions · 20
+sets" for 1Y).
+
+Known, pre-existing, not touched: the Group picker's segments truncate to
+"Ses…" / "Mon…" on this width; it has been that way since the pickers shipped.
+
 **1.1.9 / build 12 (2026-10-23) — shipped and published.** Gate on `9a599ea`,
 run in one pass: `** BUILD SUCCEEDED **`, **40/40 unit**, **17/17 UI** (four
 batches of five, two, five, two). Published to
@@ -1258,7 +1284,7 @@ Tailscale, and the on-device VoiceOver pass.
 # The fast gate (seconds): service pytest + the CSV validator over fixtures
 bash scripts/verify.sh
 
-# The full Mac gate: build + 36 unit + 7 UI (incl. the offline drill)
+# The full Mac gate: build + 40 unit + 18 UI (incl. the offline drill)
 bash scripts/mac-tests.sh              # pulls, builds, tests, cleans up
 
 # The two standalone test classes (not part of the gate)
