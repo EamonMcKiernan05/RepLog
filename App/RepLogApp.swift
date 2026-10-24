@@ -155,6 +155,21 @@ private func seedDemoData(store: DataStore, settings: Settings) {
                   exSets: [(bench, [(100, 5, 7.5), (110, 4, 8), (120, 3, 8.5), (125, 2, 9)]),
                            (dips, [(10, 8, 7), (12.5, 8, 8), (15, 6, 8.5)])], bw: 102.0)
 
+    // Older history for the Statistics range-export test: sessions 40 / 150 /
+    // 300 / 600 days back, so 1M, 3M, 6M, 1Y and All each hold a different
+    // number of sessions. Gated on -DemoHistory so every existing capture and
+    // test still sees exactly the three-session demo it always has.
+    if CommandLine.arguments.contains("-DemoHistory") {
+        _ = mkSession(offset: 40, name: "Legs",
+                      exSets: [(squat, [(130, 5, 8)])], bw: 101.5)
+        _ = mkSession(offset: 150, name: "Push Day",
+                      exSets: [(bench, [(95, 5, 7.5)])], bw: 100.5)
+        _ = mkSession(offset: 300, name: "Legs",
+                      exSets: [(squat, [(125, 5, 8)])], bw: 99.0)
+        _ = mkSession(offset: 600, name: "Push Day",
+                      exSets: [(bench, [(90, 5, 8)])], bw: 97.5)
+    }
+
     ctx.insert(BodyweightEntry(date: cal.startOfDay(for: .now), weightKg: 102.0))
     store.save()
 }

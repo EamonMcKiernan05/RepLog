@@ -84,10 +84,22 @@ struct OverallMetricView: View {
     @State private var showActual: Bool = true
     @State private var showTrend: Bool = true
     @State private var selectedDate: Date?
+    @State private var showExport = false
 
     enum ChartRange: String, CaseIterable, Identifiable {
         case month = "1M", quarter = "3M", half = "6M", year = "1Y", all = "All"
         var id: String { rawValue }
+
+        /// Plain-English window, used by the range export's caption.
+        var window: String {
+            switch self {
+            case .month: "the last month"
+            case .quarter: "the last 3 months"
+            case .half: "the last 6 months"
+            case .year: "the last year"
+            case .all: "all time"
+            }
+        }
     }
     enum Grouping: String, CaseIterable, Identifiable {
         case session = "Session", week = "Week", month = "Month", year = "Year"
@@ -99,21 +111,31 @@ struct OverallMetricView: View {
         let value: Double
     }
 
-    private var points: [ChartPoint] {
-        let sessions = store.sessions()
+    /// Sessions inside the selected range. The chart and the range export both
+    /// read this, so the exported file can never hold sessions the graph above
+    /// it does not show (owner request, 2026-10-24).
+    private var sessionsInRange: [Session] {
+        let all = store.sessions()
+        guard range != .all else { return all }
         let cal = Calendar.current
         let now = Date()
-        let filtered: [Session]
-        switch range {
-        case .month: filtered = sessions.filter { cal.date(byAdding: .month, value: -1, to: now)! <= $0.date }
-        case .quarter: filtered = sessions.filter { cal.date(byAdding: .month, value: -3, to: now)! <= $0.date }
-        case .half: filtered = sessions.filter { cal.date(byAdding: .month, value: -6, to: now)! <= $0.date }
-        case .year: filtered = sessions.filter { cal.date(byAdding: .year, value: -1, to: now)! <= $0.date }
-        case .all: filtered = sessions
+        let (component, value): (Calendar.Component, Int) = switch range {
+        case .month: (.month, -1)
+        case .quarter: (.month, -3)
+        case .half: (.month, -6)
+        case .year: (.year, -1)
+        case .all: (.year, 0)
         }
+        let start = cal.date(byAdding: component, value: value, to: now)!
+        return all.filter { $0.date >= start }
+    }
+
+    private var points: [ChartPoint] {
+        let sessions = sessionsInRange
+        let cal = Calendar.current
         // Bucket by grouping.
         var buckets: [Date: [Session]] = [:]
-        for s in filtered {
+        for s in sessions {
             let key: Date
             switch grouping {
             case .session: key = s.date
@@ -230,6 +252,23 @@ struct OverallMetricView: View {
         .background(Palette.bg)
         .navigationTitle(metric.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showExport = true
+                } label: {
+                    Label("Export CSV", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("export-range-csv")
+            }
+        }
+        .sheet(isPresented: $showExport) {
+            ExportSheet(
+                sessions: sessionsInRange,
+                fileNamePrefix: "RepLog-\(range.rawValue)",
+                caption: "From the chart above — \(range.window)."
+            )
+        }
         .onAppear {
             showActual = settings.showActualData
             showTrend = settings.showTrend
@@ -602,40 +641,73 @@ struct ExerciseHistoryView: View {
 }
 
 /// CSV export (plan §6.7, T5.4): produces the same bytes the sync engine sends.
+///
+/// `sessions` is nil for the full-history export (Profile and the Statistics
+/// hub). An overall-metric screen passes the sessions inside its selected
+/// range, so the file matches the chart it came from (owner request,
+/// 2026-10-24).
 struct ExportSheet: View {
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    var sessions: [Session]? = nil
+    var fileNamePrefix: String = "RepLog"
+    var caption: String = "Exports all sessions in the frozen sync schema — the same bytes lift-sync stores."
     @State private var exportURL: URL?
+
+    private var rows: [Session] { sessions ?? store.sessions() }
+
+    private var setCount: Int {
+        rows.flatMap { $0.exerciseEntries }.reduce(0) { $0 + $1.setEntries.count }
+    }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                Text("Exports all sessions in the frozen sync schema — the same bytes lift-sync stores.")
+                Text(caption)
                     .font(.subheadline)
                     .foregroundStyle(Palette.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
 
-                if let url = exportURL {
-                    ShareLink(item: url) {
-                        Label("Share CSV", systemImage: "square.and.arrow.up")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Palette.accent)
-                    .padding(.horizontal, 24)
+                if rows.isEmpty {
+                    Text("Nothing to export here yet.")
+                        .font(.subheadline)
+                        .foregroundStyle(Palette.textSecondary)
+                        .accessibilityIdentifier("export-empty")
                 } else {
-                    Button {
-                        export()
-                    } label: {
-                        Text("Export")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
+                    // What the file will hold: the count is the honest proof
+                    // that the range reached the export.
+                    Text("\(rows.count) session\(rows.count == 1 ? "" : "s") · \(setCount) sets")
+                        .font(.footnote)
+                        .foregroundStyle(Palette.textSecondary)
+                        .accessibilityIdentifier("export-summary")
+
+                    if let url = exportURL {
+                        ShareLink(item: url) {
+                            Label("Share CSV", systemImage: "square.and.arrow.up")
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Palette.accent)
+                        .padding(.horizontal, 24)
+                        Text(url.lastPathComponent)
+                            .font(.caption)
+                            .foregroundStyle(Palette.textSecondary)
+                            .accessibilityIdentifier("export-filename")
+                    } else {
+                        Button {
+                            export()
+                        } label: {
+                            Text("Export")
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Palette.accent)
+                        .padding(.horizontal, 24)
+                        .accessibilityIdentifier("export-run")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Palette.accent)
-                    .padding(.horizontal, 24)
                 }
                 Spacer()
             }
@@ -645,6 +717,7 @@ struct ExportSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
+                        .accessibilityIdentifier("export-done")
                 }
             }
         }
@@ -652,10 +725,9 @@ struct ExportSheet: View {
     }
 
     private func export() {
-        let sessions = store.sessions()
-        let csv = CSVCodec.encode(sessions: sessions)
+        let csv = CSVCodec.encode(sessions: rows)
         let url = URL.temporaryDirectory
-            .appendingPathComponent("RepLog-\(CSVCodec.date(.now)).csv")
+            .appendingPathComponent("\(fileNamePrefix)-\(CSVCodec.date(.now)).csv")
         do {
             try csv.data(using: .utf8)!.write(to: url)
             exportURL = url
