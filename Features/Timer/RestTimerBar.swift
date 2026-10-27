@@ -41,7 +41,11 @@ struct RestTimerBar: View {
                 .frame(height: 0.5)
         }
         .animation(.easeOut(duration: 0.18), value: expanded)
-        .accessibilityIdentifier("timer-bar")
+        // NOTE: no accessibilityIdentifier on this container. An identifier on a
+        // container OVERWRITES every child's identifier — measured 2026-10-27:
+        // with `timer-bar` here, `timer-display`, `timer-toggle`, `timer-reset`
+        // and `timer-expand` all reported identifier 'timer-bar' and no query
+        // for them could match. The pieces are identified individually.
     }
 
     // MARK: - Progress line (the visible "end of it")
