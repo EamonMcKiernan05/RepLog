@@ -1217,6 +1217,10 @@ final class RepLogUITests: XCTestCase {
         await tapSettled(app.buttons["done"])
         await settle()
 
+        // Settings was opened from Profile: get back to the Log tab, which is
+        // where the workout starts from.
+        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
+        await settle()
         await startFreshWorkout()
 
         // The bar is up, showing the interval the setting gave it.

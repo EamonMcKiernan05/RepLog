@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# mac-tests.sh — the full Mac gate, one run: regenerate the project, build the
-# app, run the unit suite, then the UI suite. Everything runs on the Mac over
-# ssh; this script exits non-zero if any step fails.
+# mac-tests.sh — the Mac gate, one run: regenerate the project, build the app,
+# then the UI suite. Everything runs on the Mac over ssh; this script exits
+# non-zero if any step fails.
 #
-# The gate is: ** BUILD SUCCEEDED ** + the unit suite + the UI suite, all
-# green. Owner policy (2026-09-24): new behaviour is proven by END-TO-END (UI)
-# tests, not unit tests — do not add unit tests for new work.
+# The gate is: ** BUILD SUCCEEDED ** + the UI suite, all green. Owner policy
+# (2026-09-24, restated 2026-10-27): new behaviour is proven by END-TO-END (UI)
+# tests only. The unit suite is NOT part of this gate — the old unit files are
+# still in Tests/Unit but nothing runs them.
 # The accessibility-audit class is excluded here on purpose (it REPORTS
 # issues instead of gating on them); run it standalone with
 #   -only-testing:RepLogUITests/RepLogAccessibilityTests
@@ -37,10 +38,7 @@ run "cd $REPO_DIR && $BREW_BIN/xcodegen generate"
 # 2. Build the app (plus the RepLogWidget extension).
 run "cd $REPO_DIR && xcodebuild -scheme RepLog -destination '$DEST' build"
 
-# 3. Unit tests (swift-testing).
-run "cd $REPO_DIR && xcodebuild test -scheme RepLog -destination '$DEST' -only-testing:RepLogTests"
-
-# 4. UI tests (XCUITest).
+# 3. UI tests (XCUITest).
 run "cd $REPO_DIR && xcodebuild test -scheme RepLog -destination '$DEST' \
   -only-testing:RepLogUITests \
   -skip-testing:RepLogUITests/RepLogAccessibilityTests \

@@ -4,19 +4,16 @@ Date: 2026-09-23 (pass ran 22–23 Sep 2026). Host: WSL fleet host (edit/commit)
 + `ssh mac` (build/test — macOS 26.6.2, Xcode 26.5, iPhone 17 Pro simulator,
 iOS 26.5).
 
-## Testing policy (owner, 2026-09-24)
+## Testing policy (owner, 2026-09-24; tightened 2026-10-27)
 
 **End-to-end only.** New behaviour is proven by UI tests that drive the app in a
 simulator and assert what the owner can see — he tests on a phone, and that is
-the thing that has to work. Unit tests are not written for new work: they prove
-internals he never touches. The five pre-existing unit files (CSV codec,
-importer, metrics, outbox, targets) stay where they are — they cover the sync
-engine and the maths, which a UI test cannot reach — but nothing new is added to
-them. The seven unit tests written for the routine pre-fill rule on 2026-09-24
-were removed the same day under this rule.
+the thing that has to work. **Unit tests are neither written nor run** (2026-10-27:
+"no more unit tests!"): `scripts/mac-tests.sh` builds and runs the UI suite only.
+The five files in `Tests/Unit` are dormant — they still exist in the tree but
+nothing in the gate runs them, and they are not a reason to keep a change green.
 
-Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
-(including the in-simulator offline drill) in one run.
+Gate: `scripts/mac-tests.sh` — build, then the UI suite, in one run.
 
 ## Build status
 
