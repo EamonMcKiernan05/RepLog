@@ -67,18 +67,9 @@ enum CSVCodec {
 
     // MARK: - Field encoding
 
-    /// One CSV cell: quote when needed; escape formula-shaped text.
-    static func field(_ value: String) -> String {
-        if value.isEmpty { return "" }
-        var text = value
-        if let first = text.first, "=+-@".contains(first) {
-            text = " " + text
-        }
-        if text.contains(",") || text.contains("\"") || text.contains("\n") || text.contains("\r") {
-            return "\"" + text.replacingOccurrences(of: "\"", with: "\"\"") + "\""
-        }
-        return text
-    }
+    /// One CSV cell. The rules live in `CSVFields` so the routine importer
+    /// quotes exactly the same way.
+    static func field(_ value: String) -> String { CSVFields.escape(value) }
 
     // MARK: - Session encoding
 
@@ -198,46 +189,8 @@ enum CSVCodec {
         return out
     }
 
-    /// Split one CSV line respecting quotes.
-    static func splitLine(_ line: String) -> [String] {
-        var out: [String] = []
-        var cur = ""
-        var inQuotes = false
-        var i = line.startIndex
-        while i < line.endIndex {
-            let ch = line[i]
-            if inQuotes {
-                if ch == "\"" {
-                    let next = line.index(after: i)
-                    if next < line.endIndex, line[next] == "\"" {
-                        cur.append("\"")
-                        i = line.index(after: next)
-                        continue
-                    }
-                    inQuotes = false
-                    i = line.index(after: i)
-                    continue
-                }
-                cur.append(ch)
-                i = line.index(after: i)
-                continue
-            }
-            switch ch {
-            case "\"":
-                inQuotes = true
-                i = line.index(after: i)
-            case ",":
-                out.append(cur)
-                cur = ""
-                i = line.index(after: i)
-            default:
-                cur.append(ch)
-                i = line.index(after: i)
-            }
-        }
-        out.append(cur)
-        return out
-    }
+    /// Split one CSV line respecting quotes (rules in `CSVFields`).
+    static func splitLine(_ line: String) -> [String] { CSVFields.split(line) }
 }
 
 enum CSVError: Error {

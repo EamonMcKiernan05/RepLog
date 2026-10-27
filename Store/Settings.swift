@@ -7,8 +7,8 @@ import SwiftUI
 /// re-render when it changes) exposed through a computed accessor that also
 /// persists to UserDefaults. The previous version used computed properties
 /// that read UserDefaults directly; `@Observable` does not track those, so a
-/// toggle or picker updated the store but never re-rendered the UI (e.g. the
-/// Sync URL field never appeared after enabling sync).
+/// toggle or picker updated the store but never re-rendered the UI (a
+/// permission row never appeared after its toggle was flipped).
 @Observable
 final class Settings {
     private enum Key {
@@ -27,8 +27,6 @@ final class Settings {
         static let perSecondBuzz = "timer.perSecondBuzz"
         static let finishReminder = "log.finishReminder"
         static let analytics = "privacy.analytics"
-        static let syncEnabled = "sync.enabled"
-        static let syncURL = "sync.url"
         static let onboarded = "onboarded"
         static let singleLimbDefault = "singleLimbDefault"
     }
@@ -65,10 +63,6 @@ final class Settings {
         UserDefaults.standard.string(forKey: Key.finishReminder) ?? "off"
     private var _analytics: Bool =
         UserDefaults.standard.object(forKey: Key.analytics) as? Bool ?? true
-    private var _syncEnabled: Bool =
-        UserDefaults.standard.object(forKey: Key.syncEnabled) as? Bool ?? false
-    private var _syncURL: String =
-        UserDefaults.standard.string(forKey: Key.syncURL) ?? ""
     private var _onboarded: Bool =
         UserDefaults.standard.object(forKey: Key.onboarded) as? Bool ?? false
     private var _singleLimbDefault: Bool =
@@ -137,14 +131,6 @@ final class Settings {
         get { _analytics }
         set { _analytics = newValue; UserDefaults.standard.set(newValue, forKey: Key.analytics) }
     }
-    var syncEnabled: Bool {
-        get { _syncEnabled }
-        set { _syncEnabled = newValue; UserDefaults.standard.set(newValue, forKey: Key.syncEnabled) }
-    }
-    var syncURL: String {
-        get { _syncURL }
-        set { _syncURL = newValue; UserDefaults.standard.set(newValue, forKey: Key.syncURL) }
-    }
     var onboarded: Bool {
         get { _onboarded }
         set { _onboarded = newValue; UserDefaults.standard.set(newValue, forKey: Key.onboarded) }
@@ -153,40 +139,5 @@ final class Settings {
     var singleLimbDefault: Bool {
         get { _singleLimbDefault }
         set { _singleLimbDefault = newValue; UserDefaults.standard.set(newValue, forKey: Key.singleLimbDefault) }
-    }
-
-    /// The sync token lives in the Keychain, never UserDefaults.
-    var syncToken: String {
-        get { Keychain.get("syncToken") ?? "" }
-        set { Keychain.set(newValue, "syncToken") }
-    }
-}
-
-/// Minimal Keychain wrapper for the sync token.
-enum Keychain {
-    static func set(_ value: String, _ key: String) {
-        let data = Data(value.utf8)
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
-        ]
-        SecItemDelete(query as CFDictionary)
-        guard !value.isEmpty else { return }
-        var add = query
-        add[kSecValueData as String] = data
-        SecItemAdd(add as CFDictionary, nil)
-    }
-
-    static func get(_ key: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
     }
 }

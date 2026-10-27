@@ -1,48 +1,26 @@
 import SwiftUI
 import SwiftData
 
-/// Select Exercise sheet (plan §6.4): Cancel / title / + / …; search field;
-/// category list; drill into a category for variants; bottom segmented
-/// Regular | Superset.
+/// Select Exercise sheet (plan §6.4): Cancel / title / +; search field;
+/// category list; drill into a category for variants.
 ///
-/// Generic: used both to add exercises to a workout (single or superset) and
-/// to pick/replace one exercise in a routine.
+/// Generic: used both to add exercises to a workout and to pick/replace one
+/// exercise in a routine. Supersets were removed on owner request
+/// (2026-10-23) — one exercise at a time, always.
 struct SelectExerciseSheet: View {
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
     var title: String = "Select Exercise"
-    var allowSuperset: Bool = false
     var onSelect: (Exercise) -> Void
-    var onSuperset: (([Exercise]) -> Void)? = nil
 
     @State private var search = ""
-    @State private var mode: Mode = .regular
     @State private var selectedCategory: Category?
-    @State private var selectedExercises: Set<String> = []
     @State private var showAddExercise = false
-
-    enum Mode: String, CaseIterable {
-        case regular = "Regular"
-        case superset = "Superset"
-    }
 
     var body: some View {
         NavigationStack {
             categoryList
-                .safeAreaInset(edge: .bottom) {
-                if allowSuperset {
-                    Picker("Mode", selection: $mode) {
-                        ForEach(Mode.allCases, id: \.self) { m in
-                            Text(m.rawValue).tag(m)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Palette.bg)
-                }
-            }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -50,18 +28,10 @@ struct SelectExerciseSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 4) {
-                        Button {
-                            showAddExercise = true
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        if mode == .superset && !selectedExercises.isEmpty {
-                            Button("Add (\(selectedExercises.count))") {
-                                addSuperset()
-                            }
-                            .fontWeight(.semibold)
-                        }
+                    Button {
+                        showAddExercise = true
+                    } label: {
+                        Image(systemName: "plus")
                     }
                 }
             }
@@ -96,7 +66,7 @@ struct SelectExerciseSheet: View {
         .navigationDestination(for: Category.self) { cat in
             categoryDetail(cat)
         }
-        }
+    }
 
     /// Categories matching the search: by category name or by any contained
     /// exercise name, so "Squat" surfaces the "Squats" category.
@@ -142,48 +112,22 @@ struct SelectExerciseSheet: View {
 
     @ViewBuilder
     private func exerciseRow(_ ex: Exercise) -> some View {
-        if allowSuperset && mode == .superset {
+        Button {
+            onSelect(ex)
+            dismiss()
+        } label: {
             HStack {
-                Image(systemName: selectedExercises.contains(ex.name) ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(selectedExercises.contains(ex.name) ? Palette.accent : Palette.textSecondary)
                 Text(ex.name)
                 Spacer()
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if selectedExercises.contains(ex.name) {
-                    selectedExercises.remove(ex.name)
+                if ex.builtin {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(Palette.textSecondary)
                 } else {
-                    selectedExercises.insert(ex.name)
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(Palette.textSecondary)
                 }
             }
-        } else {
-            Button {
-                onSelect(ex)
-                dismiss()
-            } label: {
-                HStack {
-                    Text(ex.name)
-                    Spacer()
-                    if ex.builtin {
-                        Image(systemName: "info.circle")
-                            .foregroundStyle(Palette.textSecondary)
-                    } else {
-                        Image(systemName: "ellipsis")
-                            .foregroundStyle(Palette.textSecondary)
-                    }
-                }
-            }
-            .accessibilityIdentifier("pick-\(ex.name)")
         }
-    }
-
-    // MARK: - Actions
-
-    private func addSuperset() {
-        let picked = selectedExercises.sorted().compactMap { store.exercise(named: $0) }
-        onSuperset?(picked)
-        selectedExercises.removeAll()
-        dismiss()
+        .accessibilityIdentifier("pick-\(ex.name)")
     }
 }

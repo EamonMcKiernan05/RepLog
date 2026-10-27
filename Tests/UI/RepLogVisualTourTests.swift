@@ -319,11 +319,15 @@ final class RepLogVisualTourTests: XCTestCase {
             await tapAny([app.buttons["end-time-cancel"]], "cancel end time")
             await settle(1)
 
-            // Rest timer dock (plan §6.8).
-            await tapAny([app.buttons["timer-button"]], "timer button")
+            // Rest timer bar (owner request, 2026-10-23): collapsed, then
+            // expanded, then collapsed again. The bar is always on screen in an
+            // open workout, so this captures both states.
+            await settle(0.5)
+            shot("12a-rest-timer-bar")
+            await tapAny([app.buttons["timer-expand"], app.buttons["Expand timer"]], "expand timer")
             await settle(1)
-            shot("12-rest-timer")
-            await tapAny([app.buttons["Close timer"]], "close timer")
+            shot("12b-rest-timer-open")
+            await tapAny([app.buttons["timer-expand"], app.buttons["Collapse timer"]], "collapse timer")
             await settle(0.8)
         }
 

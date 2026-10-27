@@ -7,6 +7,7 @@ struct RoutinesTabView: View {
     @Environment(DataStore.self) private var store
     @State private var editMode: EditMode = .inactive
     @State private var showAdd = false
+    @State private var showImport = false
 
     var body: some View {
         @Bindable var store = store
@@ -55,19 +56,35 @@ struct RoutinesTabView: View {
                     .buttonStyle(.plain)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showAdd = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .foregroundStyle(Palette.accent)
+                    HStack(spacing: 4) {
+                        Menu {
+                            Button {
+                                showImport = true
+                            } label: {
+                                Label("Import CSV", systemImage: "square.and.arrow.down")
+                            }
+                            .accessibilityIdentifier("import-routines")
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                        .accessibilityIdentifier("routines-menu")
+                        Button {
+                            showAdd = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .foregroundStyle(Palette.accent)
+                        }
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.circle)
                     }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.circle)
                 }
             }
             .environment(\.editMode, $editMode)
             .sheet(isPresented: $showAdd) {
                 RoutineEditorSheet(routine: nil)
+            }
+            .sheet(isPresented: $showImport) {
+                RoutineImportSheet()
             }
         }
     }

@@ -45,6 +45,10 @@ final class RestTimerController: @unchecked Sendable {
     }
 
     func toggle() {
+        // At 00:00 the play button RESTARTS the interval rather than doing
+        // nothing: a timer that has just finished is exactly when you press play
+        // for the next set (found reading the bar back, 2026-10-23).
+        if !isRunning && remaining <= 0 { remaining = duration }
         isRunning ? pause() : start()
     }
 
@@ -120,5 +124,17 @@ final class RestTimerController: @unchecked Sendable {
 
     static func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    /// Ask for notification permission the first time a timer is started, so
+    /// the alert that tells you rest is over arrives when the app is closed
+    /// (owner request, 2026-10-23). Asked once: iOS remembers the answer, and a
+    /// denied permission is not re-prompted — a silent no-op from then on.
+    static func requestAuthorizationIfNeeded() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .notDetermined else { return }
+            UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        }
     }
 }

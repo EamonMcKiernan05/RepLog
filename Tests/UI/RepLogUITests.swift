@@ -133,19 +133,18 @@ final class RepLogUITests: XCTestCase {
 
     /// Switch to the Profile tab and prove it is on screen.
     ///
-    /// Where the sync control lives since 2026-09-25. A tab tap can be
-    /// swallowed while the previous screen settles, and a loaded-but-not-shown
-    /// Profile still reports its elements — `sync-now` came back with a hit
-    /// point of (-1, -1) and the tap failed — so prove it is hittable first.
+    /// A tab tap can be swallowed while the previous screen settles, and a
+    /// loaded-but-not-shown Profile still reports its elements with a hit point
+    /// of (-1, -1), so prove a real control is hittable first.
     @MainActor
     private func openProfileTab() async {
         for _ in 0..<3 {
             await tapSettled(app.tabBars.buttons.element(boundBy: 3))
-            if app.buttons["sync-now"].isHittable { return }
+            if app.buttons["export-csv"].isHittable { return }
         }
     }
 
-    /// Walk onboarding (units -> privacy -> skip sync) to the Log tab.
+    /// Walk onboarding (units -> privacy) to the Log tab.
     @MainActor
     private func completeOnboarding() async {
         for _ in 0..<3 {
@@ -368,10 +367,10 @@ final class RepLogUITests: XCTestCase {
     /// 2026-09-24 gate run, which read as "no rows in the Log").
     @MainActor
     private func leaveWorkoutScreen() async {
-        await swipeBackFromPushedScreen()
-        if await wait(for: firstSessionRow(), timeout: 6) { return }
-        let back = app.navigationBars.buttons.element(boundBy: 0)
-        if back.exists { await tapSettled(back) }
+        // The workout covers the app and has no navigation bar (owner request,
+        // 2026-10-23): its own header's chevron is the way out.
+        let close = app.buttons["close-workout"]
+        if await wait(for: close, timeout: 6) { await tapSettled(close) }
         if await wait(for: firstSessionRow(), timeout: 6) { return }
         await tapSettled(app.tabBars.buttons.element(boundBy: 0))
         await settle(1.5)
@@ -600,7 +599,7 @@ final class RepLogUITests: XCTestCase {
                        "the hint came back as something other than the last performance")
 
         // 6. "By Routine" asks the ROUTINE, not the newest session: 100, not 120.
-        await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
+        await tapSettled(app.buttons["close-workout"])
         await settle()
         await tapSettled(app.tabBars.buttons.element(boundBy: 1))
         await settle()
@@ -652,7 +651,7 @@ final class RepLogUITests: XCTestCase {
         // plain insert.
         await typeInCell("notes-cell", "felt easy")
         await dismissKeyboard()
-        await tapSettled(app.navigationBars.buttons.element(boundBy: 0))
+        await tapSettled(app.buttons["close-workout"])
         await settle()
         let again = await expectSessionRow("row missing after leaving the editor")
         await tapSettled(again)
@@ -841,43 +840,6 @@ final class RepLogUITests: XCTestCase {
         // "Abs" should be filtered out.
         let gone = !app.buttons["category-Abs"].exists
         XCTAssertTrue(gone, "'Abs' should be filtered out when searching 'Squat'")
-    }
-
-    // MARK: - Sync URL + token
-
-    @MainActor
-    func testSyncURLAndTokenFields() async {
-        await completeOnboarding()
-        let profile = app.tabBars.buttons.element(boundBy: 3)
-        await expectExists(profile, "'Profile' tab not found")
-        await tapSettled(profile)
-        let settings = app.buttons["settings-link"]
-        await expectExists(settings, "'Settings' not found in Profile")
-        await tapSettled(settings)
-
-        // Scroll to the Sync section.
-        let toggle = app.switches["enable-sync"]
-        for _ in 0..<8 where !toggle.exists {
-            app.swipeUp()
-            await settle(0.5)
-        }
-        XCTAssertTrue(toggle.exists, "'Enable Sync' toggle not found")
-        await tapSwitchKnob(toggle)
-
-        let url = app.textFields["sync-url-field"]
-        await expectExists(url, "sync URL field not found")
-        url.tap()
-        url.typeText("http://192.168.1.12:8080")
-
-        let token = app.secureTextFields["sync-token-field"]
-        await expectExists(token, "sync token field not found")
-        token.tap()
-        token.typeText("test-token-123")
-
-        let done = app.buttons["done"]
-        await expectExists(done, "Settings 'Done' not found")
-        await tapSettled(done)
-        await dismissSavePasswordPrompt()
     }
 
     // MARK: - Set notes
@@ -1158,270 +1120,4 @@ final class RepLogUITests: XCTestCase {
         }
     }
 
-    // MARK: - Offline drill (plan §7.5)
-
-    /// The lift-sync service for this drill: a real uvicorn on a private
-    /// port with a private token (no real data, no prod service), controlled
-    /// by scripts/drill_supervisor.py (the test bundle is iOS-compiled and
-    /// cannot spawn processes on the Mac host).
-    private let supervisorPort = 8392
-    private let drillToken = "uitest-drill-token"
-    /// The simulator shares the Mac's network stack, so the Mac's loopback is
-    /// reachable directly (proven: the supervisor calls to 127.0.0.1:8392
-    /// succeed from the simulator).
-    private let drillServiceURL = "http://127.0.0.1:8391"
-
-    @MainActor
-    private func supervisor(_ path: String, method: String = "GET") async -> Data? {
-        var req = URLRequest(url: URL(string: "http://127.0.0.1:\(supervisorPort)\(path)")!)
-        req.httpMethod = method
-        do {
-            let (data, _) = try await URLSession.shared.data(for: req)
-            return data
-        } catch { return nil }
-    }
-
-    @MainActor
-    private func supervisorJSON(_ path: String, method: String = "POST") async -> [String: Any]? {
-        guard let data = await supervisor(path, method: method) else { return nil }
-        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-    }
-
-    /// Data rows in the service's CSV (header excluded). The drill's service
-    /// always starts in a FRESH data dir, so any row here was written by this
-    /// run — that is what makes "exactly one upload" checkable without
-    /// guessing which Log row is the new session.
-    @MainActor
-    private func drillCSVDataRows() async -> Int {
-        guard let data = await supervisor("/csv"),
-              let text = String(data: data, encoding: .utf8) else { return -1 }
-        return max(0, text.split(separator: "\n").count - 1)
-    }
-
-    /// The session_id of the CSV's first data row (the uploaded session).
-    @MainActor
-    private func drillCSVFirstSessionID() async -> String? {
-        guard let data = await supervisor("/csv"),
-              let text = String(data: data, encoding: .utf8) else { return nil }
-        for line in text.split(separator: "\n").dropFirst() {
-            let id = line.split(separator: ",", maxSplits: 1).first.map(String.init) ?? ""
-            if !id.isEmpty { return id }
-        }
-        return nil
-    }
-
-    /// POST the same session payload again (the resurrection attempt).
-    @MainActor
-    private func drillReimport(sessionID: String) async throws -> Int {
-        let body: [String: Any] = [
-            "session_id": sessionID,
-            "date": "2026-09-22",
-            "sets": [["exercise": "Drill", "set_number": 1, "weight_kg": 100.0, "reps": 5]],
-        ]
-        var req = URLRequest(url: URL(string: "\(drillServiceURL)/v1/sessions")!)
-        req.httpMethod = "POST"
-        req.setValue("Bearer \(drillToken)", forHTTPHeaderField: "Authorization")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (_, resp) = try await URLSession.shared.data(for: req)
-        return (resp as? HTTPURLResponse)?.statusCode ?? -1
-    }
-
-    /// Plan §7.5, in-simulator: service stopped -> finish a session ->
-    /// relaunch the app -> service back up -> nothing uploads until sync is
-    /// tapped -> exactly one upload -> delete the workout on the phone (LOCAL
-    /// only: the database copy stays) -> re-import is accepted, not refused.
-    @MainActor
-    func testOfflineDrill() async {
-        // 0. Supervisor must be reachable (started by scripts/mac-tests.sh).
-        guard await supervisor("/health") != nil else {
-            // A skip would let the gate look green while the drill never ran;
-            // the supervisor is mac-tests.sh's job, so its absence is a failure.
-            XCTFail("drill supervisor not running on 127.0.0.1:\(supervisorPort) — start it via scripts/mac-tests.sh")
-            return
-        }
-        // The service must be down for the offline phase.
-        await supervisorJSON("/stop")
-
-        // 1. Sync is pre-configured by the -SyncURL/-SyncToken launch
-        // arguments (see RepLogApp): typing into the Settings form triggers
-        // iOS's AutoFill "Save Password?" prompt, and while that alert is up
-        // every later tap is swallowed. The Settings form itself is covered by
-        // testSyncURLAndTokenFields. The service is stopped for this phase.
-        app.terminate()
-        app.launchArguments = ["-ResetRepLog", "YES",
-                               "-SyncURL", drillServiceURL,
-                               "-SyncToken", drillToken]
-        app.launch()
-        await settle(2)
-        await completeOnboarding()
-
-        // 2. Finish a session while the service is stopped -> queued offline.
-        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
-        await startFreshWorkout()
-        await addFirstExercise()
-        await fillFirstSet(weight: "100", reps: "5", rpe: "8")
-        await finishWorkout()
-        await settle(3)
-
-        // The session is in the Log. (Its id is NOT read from here: the Log
-        // holds earlier sessions too, and "the first row" is not reliably the
-        // new one — the service's fresh CSV is the source of truth below.)
-        await expectSessionRow("session row not shown after offline finish")
-
-        // 3. Relaunch the app (queue must survive the restart). -ResetRepLog NO
-        // keeps the persisted state; the sync args are re-applied so the
-        // configured server is unambiguous.
-        app.terminate()
-        await settle(1)
-        app.launchArguments = ["-ResetRepLog", "NO",
-                               "-SyncURL", drillServiceURL,
-                               "-SyncToken", drillToken]
-        app.launch()
-        await settle(3)
-
-        // 4. Service back up -> the queued session uploads exactly once.
-        let started = await supervisorJSON("/start")
-        guard let started, started["ok"] as? Bool == true else {
-            XCTFail("drill service failed to start: \(String(describing: started?["error"]))")
-            return
-        }
-        // The service must be reachable from the simulator before we blame the
-        // upload: this test process and the app share the simulator's network
-        // stack, so a 200 here means the app's POST path is the same.
-        let healthReq = URLRequest(url: URL(string: "\(drillServiceURL)/v1/health")!)
-        let healthResult = try? await URLSession.shared.data(for: healthReq)
-        XCTAssertEqual((healthResult?.1 as? HTTPURLResponse)?.statusCode, 200,
-                       "drill service not reachable from the simulator at \(drillServiceURL)/v1/health")
-
-        // The queue survived the restart and is visible where the sync control
-        // lives: Profile (owner, 2026-09-25 — the Log's toolbar is a single +).
-        // Its label is the real state, so it reads "1 to sync".
-        await openProfileTab()
-        let syncNow = app.buttons["sync-now"]
-        await expectExists(syncNow, "Profile's sync control not found before syncing")
-        let queuedLabel = (syncNow.label as? String) ?? ""
-        XCTAssertTrue(queuedLabel.contains("1 to sync"),
-                      "the sync control should read '1 to sync' while one session is queued, got '\(queuedLabel)'")
-
-        // Sync is manual (owner request, 2026-09-23): nothing uploads on launch
-        // or when the network comes back, so prove the queue waits, then tap the
-        // Log's sync control and poll for the upload.
-        try? await Task.sleep(nanoseconds: 8_000_000_000)
-        let rowsWithoutTap = await drillCSVDataRows()
-        XCTAssertEqual(rowsWithoutTap, 0,
-                       "nothing may upload until sync is tapped, got \(rowsWithoutTap) row(s)")
-
-        var rows = rowsWithoutTap
-        var attempt = 0
-        while rows != 1 && attempt < 20 {
-            if attempt % 4 == 0 {
-                // The control is disabled while a sync is in flight (by
-                // design), and a disabled element has no hit point: re-tapping
-                // it threw "not hittable" and killed the drill on 2026-09-25.
-                // Retry only when it is actually hittable — the loop exists to
-                // poll, not to hammer.
-                let syncNow = app.buttons["sync-now"]
-                if await wait(for: syncNow, timeout: 5), syncNow.isHittable {
-                    await tapSettled(syncNow)
-                }
-            }
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
-            rows = await drillCSVDataRows()
-            attempt += 1
-        }
-        XCTAssertEqual(rows, 1,
-                       "expected exactly one uploaded row (the service starts empty), got \(rows)")
-        // The CSV (not the Log) names the session — and the delete below
-        // removes that row, so keep the id.
-        guard let fullID = await drillCSVFirstSessionID() else {
-            XCTFail("uploaded session id not readable from the service CSV")
-            return
-        }
-        let sid = String(fullID.prefix(8))
-        // Exactly one upload: one upsert event for this session in the audit.
-        guard let auditData = await supervisor("/audit"),
-              let audit = String(data: auditData, encoding: .utf8) else {
-            XCTFail("audit log not readable"); return
-        }
-        let upserts = audit.components(separatedBy: "\n").filter {
-            $0.contains("\"type\":\"upsert\"") && $0.contains(fullID)
-        }.count
-        XCTAssertEqual(upserts, 1, "expected exactly one upload, got \(upserts) upsert events")
-
-        // 5. Delete the session in the app -> LOCAL ONLY (owner rule,
-        //    2026-09-23): the phone forgets the workout, and the copy that
-        //    already reached the sync database stays there.
-        await tapSettled(app.tabBars.buttons.element(boundBy: 0))
-        // The tab tap can be swallowed while another screen settles; the Log's
-        // "+" is the proof we are on the Log before hunting for the row.
-        if !(await wait(for: app.buttons["plus"], timeout: 6)) {
-            await tapSettled(app.tabBars.buttons.element(boundBy: 0))
-        }
-        await expectExists(app.buttons["plus"], "Log tab not shown before delete")
-        let rowToDelete = app.buttons["session-row-\(sid)"]
-        await expectExists(rowToDelete, "uploaded session's row (session-row-\(sid)) not in the Log")
-        await tapSettled(rowToDelete)
-        await expectExists(app.buttons["workout-menu"], "the workout editor did not open")
-        await tapSettled(app.buttons["workout-menu"])
-        await tapSettled(app.buttons["delete-workout"])
-        await confirmDialog("delete-workout-confirm", "delete confirmation not shown")
-        await settle(3)
-
-        // Be explicit about being back on the Log before reading it. The Log is
-        // a List now (2026-09-25), and a List that is off-screen behind a pushed
-        // screen keeps its last rendered cell in the accessibility tree — so
-        // reading it while the editor is still up says "the row is still
-        // there" even though the session is gone. The editor pops itself on
-        // delete; if it has not, pop it, then read the Log.
-        if app.buttons["workout-menu"].exists {
-            await leaveWorkoutScreen()
-        }
-        await settle(1.5)
-        await expectExists(app.buttons["log-edit"], "not back on the Log after deleting")
-
-        // Gone from the phone, and the editor screen left with it (the old
-        // detail screen used to stay on a deleted model, which read as "delete
-        // did nothing").
-        XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
-                       "deleted session should be gone from the Log")
-        // The detail screen must have dismissed. Since 2026-09-25 the Log's
-        // trailing toolbar is a single "+", so it no longer collapses into an
-        // overflow button when the Log is empty; Edit stays the steadier
-        // marker either way.
-        await expectExists(app.buttons["log-edit"], "not back on the Log after deleting")
-        XCTAssertFalse(app.buttons["workout-menu"].exists,
-                       "the workout editor was still up after deleting")
-        // The database copy is untouched and no delete was ever sent.
-        let rowsAfterDelete = await drillCSVDataRows()
-        XCTAssertEqual(rowsAfterDelete, 1,
-                       "the uploaded session must stay in the sync database after a phone delete, got \(rowsAfterDelete) row(s)")
-        guard let jsonlData = await supervisor("/audit"),
-              let jsonl = String(data: jsonlData, encoding: .utf8) else {
-            XCTFail("audit log not readable"); return
-        }
-        XCTAssertFalse(jsonl.contains("\"type\":\"delete\""),
-                       "a phone delete must never send a server-side delete")
-
-        // 6. Re-import the same session -> accepted as an upsert (there is no
-        //    tombstone any more) and the database still holds exactly one row.
-        let status = (try? await drillReimport(sessionID: fullID)) ?? -1
-        XCTAssertTrue(status < 400,
-                      "re-import after a phone-only delete should be accepted, got \(status)")
-        let rowsAfterReimport = await drillCSVDataRows()
-        XCTAssertEqual(rowsAfterReimport, 1,
-                       "the database copy must survive, got \(rowsAfterReimport) row(s)")
-
-        // And a further sync must not bring it back on the phone.
-        await openProfileTab()
-        let finalSync = app.buttons["sync-now"]
-        if await wait(for: finalSync, timeout: 5), finalSync.isHittable {
-            await tapSettled(finalSync)
-        }
-        await settle(3)
-        XCTAssertFalse(app.buttons["session-row-\(sid)"].exists,
-                       "a locally deleted session must not come back after syncing")
-
-        await supervisorJSON("/stop")
-    }
 }

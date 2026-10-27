@@ -111,14 +111,6 @@ struct SetRowView: View {
                         keyboard: .decimalPad,
                         commit: commitDistance
                     )
-                    cell(
-                        label: "kcal",
-                        value: set.kcal.map { String(Int($0)) } ?? "",
-                        id: "kcal-cell",
-                        field: .kcal,
-                        keyboard: .decimalPad,
-                        commit: commitKcal
-                    )
                 }
                 // RPE column — after Reps/Time, before Notes.
                 if type.hasRPE {
@@ -141,6 +133,7 @@ struct SetRowView: View {
                     keyboard: .default,
                     hint: hints.notes,
                     wide: true,
+                    multiline: true,
                     commit: commitNotes
                 )
             }
@@ -158,6 +151,7 @@ struct SetRowView: View {
                       field: CellFocus.Field, keyboard: UIKeyboardType,
                       hint: String = "",
                       wide: Bool = false,
+                      multiline: Bool = false,
                       commit: @escaping (String) -> Void) -> some View {
         if isEditing {
             InlineCell(
@@ -173,6 +167,7 @@ struct SetRowView: View {
                 valueSize: layout.numberSize,
                 fixedWidth: wide ? nil : layout.numberWidth,
                 valueFont: wide ? NotesStyle.current.font : nil,
+                multiline: multiline,
                 focus: focus,
                 focusValue: CellFocus(owner: owner, field: field),
                 commit: commit
@@ -190,12 +185,18 @@ struct SetRowView: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
+                // One line, always: see the matching note in `InlineCell`.
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
             Text(value.isEmpty ? "—" : value)
                 .font(wide ? NotesStyle.current.font
                            : Typography.mono(layout.numberSize, value.isEmpty ? .regular : .bold))
                 .foregroundStyle(isPlaceholder ? Palette.textSecondary.opacity(0.6) : Palette.textPrimary)
-                .lineLimit(1)
+                // A note that was typed over several lines reads back over
+                // several lines (owner request, 2026-10-23).
+                .lineLimit(wide ? nil : 1)
+                .fixedSize(horizontal: false, vertical: wide)
                 .padding(.leading, wide ? NotesStyle.current.valueInset(wide: true) : 0)
         }
         // A wide cell's label rides above its own value — centred in a cell
@@ -288,16 +289,6 @@ struct SetRowView: View {
             set.distanceM = nil
         } else if let v = Double(t), v >= 0 {
             set.distanceM = v
-        }
-        store.save()
-    }
-
-    private func commitKcal(_ text: String) {
-        let t = text.trimmingCharacters(in: .whitespaces)
-        if t.isEmpty {
-            set.kcal = nil
-        } else if let v = Double(t), v >= 0 {
-            set.kcal = v
         }
         store.save()
     }

@@ -45,6 +45,10 @@ struct InlineCell: View {
     /// Type for the value. nil = the monospaced number face at `valueSize`;
     /// the Notes column passes the app's own text font (see `NotesStyle`).
     var valueFont: Font? = nil
+    /// Multi-line notes (owner request, 2026-10-23): the Return key inserts a
+    /// newline instead of closing the box, the box starts at two lines and
+    /// grows with the text, and the row grows with it.
+    var multiline: Bool = false
     let focus: FocusState<CellFocus?>.Binding
     let focusValue: CellFocus
     /// Parse-and-write. Called on submit and on focus loss — never per
@@ -71,12 +75,17 @@ struct InlineCell: View {
             Text(label)
                 .font(Typography.label)
                 .foregroundStyle(Palette.textSecondary)
+                // Column titles are ONE line: a wrapped "Reps" put the s on its
+                // own line beside a two-line Notes box (owner report, seen on
+                // the Mac, 2026-10-23). Only the notes VALUE spans rows.
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
             // The empty state is drawn as a sibling, not as the field's
             // `prompt:` — with a custom prompt style, iOS renders the text
             // being typed in the prompt's grey while the keyboard is up, so a
             // value you are entering looks like a placeholder.
-            ZStack(alignment: wide ? .leading : .center) {
+            ZStack(alignment: wide ? (multiline ? .topLeading : .leading) : .center) {
                 // Shown only while the box is empty, and gone the moment there
                 // is a draft or a value. Delete the text and it comes back
                 // (owner, 2026-09-25).
@@ -98,15 +107,20 @@ struct InlineCell: View {
                             if typed == nil { draftBase = value }
                             typed = newValue
                         }
-                    )
+                    ),
+                    axis: multiline ? .vertical : .horizontal
                 )
                 .textFieldStyle(.plain)
                 .font(valueFont ?? Typography.mono(valueSize, .bold))
                 .foregroundStyle(Palette.textPrimary)
                 .keyboardType(keyboard)
                 .multilineTextAlignment(alignment)
-                .submitLabel(.done)
-                .fixedSize(horizontal: !wide, vertical: false)
+                .submitLabel(multiline ? .return : .done)
+                .modifier(NotesLineLimit(multiline: multiline))
+                // A multi-line box must be allowed to grow TALLER than its
+                // frame; a one-line box keeps its fixed width so a short value
+                // does not stretch the column.
+                .fixedSize(horizontal: !wide, vertical: multiline)
                 // A minimum width keeps an EMPTY box focusable: a zero-width
                 // field takes the keyboard but gives no caret to aim at.
                 // Narrow cells centre their value under their label; only the
@@ -118,7 +132,9 @@ struct InlineCell: View {
                        alignment: wide ? .leading : .center)
                 .focused(focus, equals: focusValue)
                 .accessibilityIdentifier(id)
-                .onSubmit { finishEditing() }
+                // A vertical-axis field inserts a newline on Return; committing
+                // there would close the box instead (owner request, 2026-10-23).
+                .onSubmit { if !multiline { finishEditing() } }
                 .onChange(of: isFocused) { _, focused in
                     if !focused { finishEditing() }
                 }
@@ -218,10 +234,13 @@ struct InlineTextField: View {
             .multilineTextAlignment(alignment)
             .modifier(LineLimitIf(range: axis == nil ? nil : lineLimit))
             .labelsHidden()
-            .submitLabel(.done)
+            // Multi-line: Return inserts a newline and the box grows; the note
+            // is committed on focus loss (owner request, 2026-10-23).
+            .submitLabel(axis == nil ? .done : .return)
+            .fixedSize(horizontal: false, vertical: axis != nil)
             .focused(focus, equals: focusValue)
             .accessibilityIdentifier(id)
-            .onSubmit { finishEditing() }
+            .onSubmit { if axis == nil { finishEditing() } }
             .onChange(of: isFocused) { _, focused in
                 if !focused { finishEditing() }
             }
@@ -244,6 +263,21 @@ struct InlineTextField: View {
         draftBase = nil
         guard text == base else { return }
         commit(draft)
+    }
+}
+
+/// Two lines minimum, twelve maximum, for a multi-line notes box: two lines is
+/// the owner's default height, and the cap stops a pasted essay from pushing
+/// the rest of the card off the screen.
+private struct NotesLineLimit: ViewModifier {
+    let multiline: Bool
+
+    func body(content: Content) -> some View {
+        if multiline {
+            content.lineLimit(2...12)
+        } else {
+            content.lineLimit(1)
+        }
     }
 }
 

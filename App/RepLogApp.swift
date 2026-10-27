@@ -7,7 +7,6 @@ struct RepLogApp: App {
     @State private var store: DataStore
     @State private var settings: Settings
     @State private var router: AppRouter
-    @State private var syncEngine: SyncEngine
 
     /// True when the app process is the host for a *hosted unit-test* bundle.
     /// In that context the app's UI is never looked at (the unit tests are pure
@@ -36,14 +35,10 @@ struct RepLogApp: App {
                 defaults.removePersistentDomain(forName: bundleID)
             }
             UserDefaults.standard.removePersistentDomain(forName: bundleID)
-            // The SwiftData store is the other half of "persisted state", and
-            // leaving it behind is not harmless: the outbox is rebuilt from
-            // each session's syncState (SyncEngine.rehydrateOutbox), so a
-            // session left queued by an earlier run re-uploads the moment a
-            // sync URL is configured. That is how the offline drill uploaded a
-            // previous session on top of its own and read 9 CSV rows where it
-            // asserts 1. Safe here: the container is created lazily, on first
-            // access, so nothing has the store open yet.
+            // The SwiftData store is the other half of "persisted state":
+            // without it a UI test starts at onboarding and then finds last
+            // run's sessions in the Log. Safe here because the container is
+            // created lazily, on first access, so nothing has it open yet.
             wipeStore()
         }
         let s = DataStore()
@@ -56,27 +51,11 @@ struct RepLogApp: App {
                 seedDemoData(store: s, settings: set)
             }
         }
-        // Test hook: -SyncURL <url> -SyncToken <token> pre-configures sync so
-        // the offline drill does not have to type into the Settings form.
-        // Typing into the token SecureField triggers iOS's AutoFill "Save
-        // Password?" prompt, and while that alert is up every later tap in a
-        // UI test is swallowed (that is what stalled the drill twice on
-        // 2026-09-22). This writes exactly what the Settings screen writes:
-        // URL + enabled in UserDefaults, token in the Keychain.
-        let launchArgs = args
-        if let i = launchArgs.firstIndex(of: "-SyncURL"), i + 1 < launchArgs.count {
-            set.syncURL = launchArgs[i + 1]
-            if let j = launchArgs.firstIndex(of: "-SyncToken"), j + 1 < launchArgs.count {
-                set.syncToken = launchArgs[j + 1]
-            }
-            set.syncEnabled = true
-        }
         // Created AFTER the reset so isOnboarding reads the wiped state.
         let r = AppRouter()
         _store = State(initialValue: s)
         _settings = State(initialValue: set)
         _router = State(initialValue: r)
-        _syncEngine = State(initialValue: SyncEngine(store: s, settings: set))
     }
 
     var body: some Scene {
@@ -89,11 +68,7 @@ struct RepLogApp: App {
                     .environment(store)
                     .environment(settings)
                     .environment(router)
-                    .environment(syncEngine)
                     .tint(Palette.accent)
-                    .task {
-                        syncEngine.start()
-                    }
             }
         }
         // No .modelContainer(): nothing uses @Query or the modelContext

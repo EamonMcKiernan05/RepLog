@@ -119,3 +119,67 @@ struct EndTimePickerSheet: View {
         .onAppear { picked = initial }
     }
 }
+
+
+/// Export THIS session as a CSV, from the workout's own menu (owner request,
+/// 2026-10-23). Same bytes the full export produces, one session deep, so the
+/// file drops straight into the same spreadsheet.
+///
+/// The file is written when the sheet opens and shared from it: one tap from
+/// the menu, then the system share sheet, with no intermediate Export button.
+struct SessionExportSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let session: Session
+
+    @State private var exportURL: URL?
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                if let url = exportURL {
+                    ShareLink(item: url) {
+                        Label("Share CSV", systemImage: "square.and.arrow.up")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Palette.accent)
+                    .padding(.horizontal, 24)
+                    .accessibilityIdentifier("share-session-csv")
+                    Text(url.lastPathComponent)
+                        .font(.caption)
+                        .foregroundStyle(Palette.textSecondary)
+                } else {
+                    Text("This session has no sets to export yet.")
+                        .font(.subheadline)
+                        .foregroundStyle(Palette.textSecondary)
+                }
+                Spacer()
+            }
+            .padding(.top)
+            .navigationTitle("Export CSV")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                        .accessibilityIdentifier("session-export-done")
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .onAppear { export() }
+    }
+
+    private func export() {
+        let csv = CSVCodec.encode(session: session)
+        let name = session.routineName.isEmpty ? "Workout" : session.routineName
+        let safe = name.replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+        let url = URL.temporaryDirectory
+            .appendingPathComponent("RepLog-\(CSVCodec.date(session.date))-\(safe).csv")
+        guard let data = csv.data(using: .utf8), (try? data.write(to: url)) != nil else {
+            return
+        }
+        exportURL = url
+    }
+}

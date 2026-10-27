@@ -7,11 +7,9 @@ import UIKit
 struct ActiveWorkoutView: View {
     @Environment(DataStore.self) private var store
     @Environment(Settings.self) private var settings
-    @Environment(SyncEngine.self) private var sync
     @Environment(\.dismiss) private var dismiss
     let session: Session
 
-    @State private var showTimer = false
     @State private var showAddExercise = false
     @State private var confirmFinish = false
     /// The End Time row opens a clock picker; confirming it finishes the
@@ -19,16 +17,7 @@ struct ActiveWorkoutView: View {
     @State private var showEndTime = false
     @State private var endTimeDraft: Date = .now
     @State private var confirmDelete = false
-    /// True when this screen opened on an already-finished workout: every edit
-    /// is then a correction to an existing record, not a live workout.
-    @State private var editingExistingRecord = false
-    /// Set on the way out when the workout is being DELETED.
-    ///
-    /// The re-queue in `.onDisappear` must not run then: it would queue an edit
-    /// for a session that no longer exists, and touching a model after
-    /// `context.delete` is a hard failure in SwiftData. Owner report,
-    /// 2026-09-25: "deleting a workout from its own menu leaves it in the Log".
-    @State private var deleting = false
+    @State private var showExport = false
     /// Which inline cell (a set cell, an exercise note, the workout note) has
     /// the keyboard. One value for the screen: every card shares it and the
     /// keyboard's Done button clears it.
@@ -81,7 +70,6 @@ struct ActiveWorkoutView: View {
         .background(Palette.bg)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            editingExistingRecord = isFinished
             // Reviewing an old workout must not look like training is happening:
             // no Live Activity, and no Health permission prompt.
             guard !isFinished else { return }
@@ -98,86 +86,34 @@ struct ActiveWorkoutView: View {
                 Task { await health.requestAuthorization() }
             }
         }
+        // The session has no navigation bar: it opens on top of the app with
+        // its own header (owner request, 2026-10-23). The keyboard accessory
+        // bar still rides the toolbar system.
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar {
-            // Only an OPEN workout can be finished. On a finished record the
-            // back button is the way out: every edit is saved as it is made.
-            if !isFinished {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        // Ask first: the checkmark used to call finish() straight
-                        // away and end the workout on a misplaced tap.
-                        confirmFinish = true
-                    } label: {
-                        Image(systemName: "checkmark")
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(.black)
-                            .frame(width: 36, height: 36)
-                            .background(Circle().fill(Palette.accent))
-                    }
-                    .accessibilityLabel("Finish workout")
-                    .accessibilityIdentifier("finish-workout")
-                }
-            }
-            ToolbarItem(placement: .principal) {
-                Text(session.date.formatted(.dateTime.day().month(.abbreviated)))
-                    .font(.headline)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: 4) {
-                    Button {
-                        showTimer = true
-                    } label: {
-                        Image(systemName: "timer")
-                    }
-                    .accessibilityLabel("Rest timer")
-                    .accessibilityIdentifier("timer-button")
-                    Menu {
-                        Button { showAddExercise = true } label: {
-                            Label("Add Exercise", systemImage: "plus")
-                        }
-                        Button {
-                            focus = CellFocus(owner: ObjectIdentifier(session), field: .workoutNote)
-                        } label: {
-                            Label("Workout Notes", systemImage: "text.alignleft")
-                        }
-                        // Moved here from the read-only detail screen, which
-                        // this editor replaced.
-                        Button(role: .destructive) {
-                            confirmDelete = true
-                        } label: {
-                            Label("Delete Workout", systemImage: "trash")
-                        }
-                        .accessibilityIdentifier("delete-workout")
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .accessibilityIdentifier("workout-menu")
-                    }
-                }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-            }
             // The number pads have no return key: the chevrons step between the
             // boxes, the check closes the keyboard (owner request, 2026-10-13).
             KeyboardCellBar(focus: $focus, order: focusOrder)
         }
+        .safeAreaInset(edge: .top) {
+            header
+        }
+        // The bar is part of an OPEN workout, always there (owner request,
+        // 2026-10-23). A finished record is being corrected, not trained, so it
+        // gets no timer.
         .safeAreaInset(edge: .bottom) {
-            if showTimer {
-                RestTimerView(controller: timer) {
-                    showTimer = false
-                }
-                .transition(.move(edge: .bottom))
+            if !isFinished {
+                RestTimerBar(controller: timer)
+                    .transition(.move(edge: .bottom))
             }
         }
         .sheet(isPresented: $showAddExercise) {
-            SelectExerciseSheet(
-                allowSuperset: true,
-                onSelect: { exercise in
-                    addExercise(exercise)
-                },
-                onSuperset: { exercises in
-                    addSuperset(exercises)
-                }
-            )
+            SelectExerciseSheet { exercise in
+                addExercise(exercise)
+            }
+        }
+        .sheet(isPresented: $showExport) {
+            SessionExportSheet(session: session)
         }
         .sheet(isPresented: $showEndTime) {
             EndTimePickerSheet(initial: endTimeDraft) { picked in
@@ -187,12 +123,6 @@ struct ActiveWorkoutView: View {
         .confirmationDialog("Delete this workout?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) { deleteWorkout() }
                 .accessibilityIdentifier("delete-workout-confirm")
-        }
-        .onDisappear {
-            // A correction to an existing record has to be re-queued for upload;
-            // sync is manual, so nothing leaves the phone by itself. Never for a
-            // delete: the session is gone (see `deleting`).
-            if editingExistingRecord, !deleting { sync.sessionEdited(session) }
         }
         .confirmationDialog("Finish this workout?", isPresented: $confirmFinish, titleVisibility: .visible) {
             Button("Finish", role: .destructive) { finish() }
@@ -206,6 +136,85 @@ struct ActiveWorkoutView: View {
                 store.save()
             }
         }
+    }
+
+
+    /// The screen's own header, because the navigation bar is hidden: a way out
+    /// on the left (the check finishes an open workout; the chevron only leaves
+    /// the screen), the date in the middle, the menu on the right.
+    private var header: some View {
+        HStack(spacing: 10) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Palette.textSecondary)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Leave workout")
+            .accessibilityIdentifier("close-workout")
+
+            if !isFinished {
+                Button {
+                    // Ask first: the check used to finish on a misplaced tap.
+                    confirmFinish = true
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(.black)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Palette.accent))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Finish workout")
+                .accessibilityIdentifier("finish-workout")
+            }
+
+            Spacer(minLength: 0)
+
+            Text(session.date.formatted(.dateTime.day().month(.abbreviated)))
+                .font(.headline)
+
+            Spacer(minLength: 0)
+
+            Menu {
+                Button { showAddExercise = true } label: {
+                    Label("Add Exercise", systemImage: "plus")
+                }
+                Button {
+                    focus = CellFocus(owner: ObjectIdentifier(session), field: .workoutNote)
+                } label: {
+                    Label("Workout Notes", systemImage: "text.alignleft")
+                }
+                // Between the notes and the delete, where the owner asked for
+                // it (2026-10-23).
+                Button {
+                    showExport = true
+                } label: {
+                    Label("Export CSV", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("export-session-csv")
+                Button(role: .destructive) {
+                    confirmDelete = true
+                } label: {
+                    Label("Delete Workout", systemImage: "trash")
+                }
+                .accessibilityIdentifier("delete-workout")
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Palette.textPrimary)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("workout-menu")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+        .background(Palette.bg)
     }
 
     private var sessionCard: some View {
@@ -225,6 +234,8 @@ struct ActiveWorkoutView: View {
                 placeholder: "Notes",
                 id: "session-notes-field",
                 text: session.notes,
+                axis: .vertical,
+                lineLimit: 2...12,
                 focus: $focus,
                 focusValue: CellFocus(owner: ObjectIdentifier(session), field: .workoutNote),
                 commit: { text in
@@ -411,7 +422,6 @@ struct ActiveWorkoutView: View {
                 if type.hasTime { cells.append(CellFocus(owner: owner, field: .time)) }
                 if type.hasCardioExtras {
                     cells.append(CellFocus(owner: owner, field: .distance))
-                    cells.append(CellFocus(owner: owner, field: .kcal))
                 }
                 if type.hasRPE { cells.append(CellFocus(owner: owner, field: .rpe)) }
                 cells.append(CellFocus(owner: owner, field: .notes))
@@ -429,17 +439,6 @@ struct ActiveWorkoutView: View {
         }
     }
 
-    private func addSuperset(_ exercises: [Exercise]) {
-        let supID = "s\(session.exerciseEntries.filter { $0.supersetId != nil }.count / 1 + 1)"
-        var order = (session.exerciseEntries.map { $0.sortOrder }.max() ?? -1) + 1
-        for ex in exercises {
-            let entry = ExerciseEntry(exercise: ex, sortOrder: order, supersetId: supID)
-            session.exerciseEntries.append(entry)
-            order += 1
-        }
-        store.save()
-    }
-
     /// The session's day at the picked clock time. A workout that ran past
     /// midnight rolls to the next day rather than ending before it started.
     private func endDate(from picked: Date) -> Date {
@@ -453,12 +452,9 @@ struct ActiveWorkoutView: View {
         return d
     }
 
-    /// Delete from the phone only: `SyncEngine.sessionDeleted` drops it from the
-    /// upload queue and never talks to the service, so a copy that already
-    /// reached the sync database stays there (owner rule, 2026-09-23).
+    /// Delete from the phone. There is no upload queue any more (sync was
+    /// removed on owner request, 2026-10-23), so this is the only copy.
     private func deleteWorkout() {
-        deleting = true
-        sync.sessionDeleted(session)
         store.context.delete(session)
         store.save()
         dismiss()
@@ -473,11 +469,9 @@ struct ActiveWorkoutView: View {
         store.save()
         timer.stop()
         guard wasOpen else {
-            sync.sessionEdited(session)
             dismiss()
             return
         }
-        sync.sessionFinished(session)
         // End the Live Activity for this workout.
         WorkoutLiveActivityController.end()
         // Write to Apple Health (workout + bodyweight) when enabled.

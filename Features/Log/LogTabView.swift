@@ -4,7 +4,6 @@ import SwiftData
 struct LogTabView: View {
     @Environment(DataStore.self) private var store
     @Environment(AppRouter.self) private var router
-    @Environment(SyncEngine.self) private var sync
     @State private var editMode: EditMode = .inactive
     @State private var showStartSheet = false
     @State private var showRepeatSheet = false
@@ -88,24 +87,6 @@ struct LogTabView: View {
                     .environment(\.defaultMinListRowHeight, 0)
                 }
             }
-            // Value-based destination for the session rows
-            // (NavigationLink(value: session.id)). It must NOT share a
-            // view with the item-based destination further down or SwiftUI
-            // silently drops it and the row taps do nothing.
-            //
-            // EVERY session opens the same editor, finished or not (owner,
-            // 2026-09-24: "update things so I can edit a finished workout
-            // the same way I can an active one"). The editor knows which
-            // state it is in: a finished record gets no finish control, no
-            // Live Activity and no second Health write, and a correction
-            // re-queues it for upload. The read-only detail screen is gone
-            // with it — its one unique action (Delete Workout) moved into
-            // the editor's menu.
-            .navigationDestination(for: String.self) { id in
-                if let session = sessions.first(where: { $0.id == id }) {
-                    ActiveWorkoutView(session: session)
-                }
-            }
             .background(Palette.bg)
             .navigationTitle("Log")
             .navigationBarTitleDisplayMode(.large)
@@ -132,10 +113,8 @@ struct LogTabView: View {
                     .accessibilityIdentifier("log-edit")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    // A single +, as asked (owner, 2026-09-25: "remove the 'n
-                    // to sync' button on the top of the log page. Just make it
-                    // a single + button"). The sync control moved to Profile:
-                    // sync is manual, so it needs a home somewhere.
+                    // A single +, as asked (owner, 2026-09-25). There is no
+                    // sync control anywhere now: sync was removed on 2026-10-23.
                     Button {
                         showStartSheet = true
                     } label: {
@@ -147,12 +126,14 @@ struct LogTabView: View {
                     .accessibilityIdentifier("plus")
                 }
             }
-            // The item-based destination (active workout) lives here; the
-            // value-based one (session detail) is on the content above.
-            // Kept on separate views deliberately: one destination modifier per
-            // view is the documented, unambiguous shape.
-            .navigationDestination(item: $router.activeSession) { session in
-                ActiveWorkoutView(session: session)
+            // The open workout covers the app rather than pushing onto the Log
+            // tab (owner request, 2026-10-23: "it should open on top with the
+            // app navigation bar hidden"): the tab bar is not reachable
+            // mid-workout, and the screen draws its own header.
+            .fullScreenCover(item: $router.activeSession) { session in
+                NavigationStack {
+                    ActiveWorkoutView(session: session)
+                }
             }
             .sheet(isPresented: $showStartSheet) {
                 StartWorkoutSheet()
@@ -166,8 +147,6 @@ struct LogTabView: View {
                 Button("Delete", role: .destructive) { deletePendingRow() }
                     .accessibilityIdentifier("row-delete-confirm")
                 Button("Cancel", role: .cancel) { pendingDelete = nil }
-            } message: {
-                Text("It stays in the sync database if it has already been uploaded.")
             }
         }
     }
@@ -200,7 +179,14 @@ struct LogTabView: View {
             // label: the row view used to carry
             // .accessibilityElement(children: .combine), which made the row
             // swallow its own taps (present in the AX tree, taps dead).
-            NavigationLink(value: session.id) {
+            // A row opens the editor the SAME way the start list does: the
+            // full-screen cover, so the tab bar is out of reach and the
+            // screen's own header is the only chrome (owner request,
+            // 2026-10-23). It was a NavigationLink(value:) push, which left
+            // the tab bar sitting over the last set row.
+            Button {
+                router.activeSession = session
+            } label: {
                 SessionRowView(session: session)
                     .contentShape(Rectangle())
             }
@@ -225,14 +211,12 @@ struct LogTabView: View {
         }
     }
 
-    /// Delete the pending row. Local only: `sessionDeleted` drops it from the
-    /// upload queue and never calls the service, so a copy that already reached
-    /// the sync database stays there.
+    /// Delete the pending row. The phone holds the only copy: sync was removed
+    /// on owner request (2026-10-23).
     private func deletePendingRow() {
         guard let session = pendingDelete else { return }
         pendingDelete = nil
         if router.activeSession === session { router.activeSession = nil }
-        sync.sessionDeleted(session)
         store.context.delete(session)
         store.save()
         if sessions.isEmpty { editMode = .inactive }

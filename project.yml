@@ -24,7 +24,6 @@ targets:
       - Models
       - Store
       - Engine
-      - Sync
       - Features
       - DesignSystem
       - Resources
