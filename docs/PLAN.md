@@ -1,5 +1,10 @@
 # RepLog — a RepCount clone for iOS (native SwiftUI)
 
+> **Status: historical spec.** The app was built from this document and has
+> shipped. The sync service it describes (§4.2, §7) was removed on 2026-10-23
+> along with supersets and the extra exercise types; §4.4 (the CSV schema) is
+> still the live contract that `Engine/CSVCodec.swift` implements.
+
 > **For Hermes:** implement with the `subagent-driven-development` skill — one subagent per task, spec review then quality review. This file is the contract; do not silently re-scope.
 
 **Goal:** A native iOS workout tracker that reproduces RepCount's look, feel and full feature set (free + premium), adds an **RPE column** between Reps and Notes, stores everything on-device, and optionally syncs finished sessions to a **self-hosted CSV** that AI agents can read cheaply and unambiguously.

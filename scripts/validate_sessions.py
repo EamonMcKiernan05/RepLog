@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""validate_sessions.py — validity checking for the RepLog sync CSV.
+"""validate_sessions.py — validity checking for a RepLog CSV.
+
+Point it at any export the app writes (Statistics or Profile → Export CSV) or
+at the committed golden fixture.
 
 This checks DATA VALIDITY only (plan §4.6): schema/column set, ISO dates,
 rpe 1-10 or blank, reps 0-100 or blank, weight_kg 0-500 or blank,

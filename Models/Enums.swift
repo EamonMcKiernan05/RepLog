@@ -93,15 +93,9 @@ enum SetType: String, Codable, Sendable {
     case drop = "drop"
 }
 
-/// Where a session sat in the upload queue. Sync was removed on 2026-10-23;
-/// the field stays in the model so existing stores keep decoding.
-enum SyncState: String, Codable, Sendable {
-    case local      // never uploaded
-    case queued     // finished offline, waiting
-    case uploaded   // server has the current version
-    case dirty      // edited after upload, re-post needed
-    case failed     // last attempt failed, will retry
-}
+/// Where a session sat in the upload queue, before sync was removed on
+/// 2026-10-23. Nothing reads this any more; the raw value stays on the model
+/// (Models.swift `syncStateRaw`) so existing stores keep decoding.
 
 enum SingleLimb: String, Codable, Sendable {
     case defaultNo = "default_no"

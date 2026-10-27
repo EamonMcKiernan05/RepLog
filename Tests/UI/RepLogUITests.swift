@@ -6,9 +6,8 @@ import CoreGraphics
 /// injection does not update SwiftUI @State bindings (plan §7.3):
 ///   - RPE entry (numeric pad + chips)
 ///   - exercise search
-///   - sync URL + token
 ///   - set notes
-///   - the in-simulator offline drill (plan §7.5)
+///   - keyboard arrows and the focused box clearing the software keyboard
 /// agent-device handles navigation and screenshots; this drives the typing.
 ///
 /// Every element the test touches carries an explicit accessibilityIdentifier

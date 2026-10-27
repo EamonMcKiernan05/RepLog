@@ -1,74 +1,65 @@
 # RepLog
 
-A native SwiftUI iOS workout tracker, plus an optional self-hosted CSV sync
-service. Everything is stored on-device (SwiftData, zero third-party Swift
-dependencies); finished sessions can optionally sync to a flat
-`sessions.csv` that AI agents can read cheaply and unambiguously.
+A native SwiftUI iOS workout tracker. Everything is stored on-device in
+SwiftData, with zero third-party Swift dependencies. History leaves the phone
+as a CSV you choose to export — nothing syncs anywhere.
+
+Shipped and in daily owner use. Current version `1.1.10` (build 13).
 
 ## What it does
 
 - **Log** — history grouped by month, session rows with date badge, routine
-  name, exercise summary and duration.
-- **Active workout** — one screen per workout: session card (start/end,
+  name, exercise summary and duration. A row opens the workout as the full
+  screen editor; swipe to delete.
+- **Active workout** — opens as a full-screen cover with its own header, so
+  the tab bar cannot be reached mid-session. Session card (start/end,
   bodyweight, notes), one card per exercise, set rows with weight · reps ·
-  **RPE** · notes, placeholders from your last performance, rest timer with
-  ring + presets.
-- **All eight exercise types** — Strength (weight+reps, weight+time),
-  Bodyweight (BW+, BW−, reps, time), Cardio (time/distance/calories), Other
-  (note per set).
-- **Routines** — create, edit, duplicate, reorder; per-exercise warm-up /
-  working sets and a note; "Start this Workout".
-- **Exercise library** — 12 categories, 150+ seeded exercises, add/edit,
-  single arm/leg, transfer data.
-- **Statistics** — overall metrics, per-exercise history with volume and
-  e1RM (Brzycki) charts, personal records per rep range, seasonal bests,
-  session records.
-- **Supersets, drop sets, repeat workout**, bodyweight handling
-  (BW+/BW−/multiplier), single arm/leg volume doubling.
-- **kg/lb** global unit with per-exercise override inside a workout.
-- **CSV export** (same bytes the sync service stores) and in-app import to
-  rebuild a fresh phone from a file.
-- **Offline-first** — sync is manual (the sync button on the Log shows what
-  is waiting); the outbox queues finished sessions and retries with backoff.
-  Deleting a workout on the phone is local-only: a copy that already reached
-  the sync database stays there.
+  **RPE** · notes, placeholders from your last performance.
+- **Exercise types** — the picker offers **Weights** and **Cardio**. Older
+  exercises stored as bodyweight or note-per-set types still render exactly as
+  they did; they are simply not offered for a new exercise (converting them
+  would change the volume maths on old sessions).
+- **Routines** — create, edit, duplicate, reorder; warm-up / working sets and
+  a note per exercise; "Start this Workout". **Routine import** takes a CSV,
+  shows what it will do, then imports.
+- **Exercise library** — 12 categories, 150+ seeded exercises, add and edit,
+  single arm/leg handling.
+- **Statistics** — overall metrics, per-exercise history with volume and e1RM
+  (Brzycki) charts, personal records per rep range, seasonal bests, session
+  records.
+- **Rest timer** — a collapsible bar pinned to the bottom of an open session,
+  with a notification scheduled when it starts.
+- **kg/lb** global unit with a per-exercise override inside a workout.
+- **CSV in and out** — export the whole history from Profile, or only the
+  range on the chart you are looking at (1M / 3M / 6M / 1Y / All). Import
+  rebuilds a fresh phone from a file.
 
-## The RPE column
+## The CSV format
 
-Per set, optional, half-point steps 1.0–10.0, displayed as `8` not `8.0`.
-Appears in active-workout rows, completed-session rows, exercise history,
-routine targets and the CSV — immediately after Reps, before Notes.
+One header line, one row per set, LF, UTF-8, no BOM. The column set and the
+order are a frozen contract (`docs/PLAN.md` §4.4) — `Tests/Fixtures/golden_session.csv`
+pins the exact bytes and the unit tests fail if the codec drifts from it.
 
-## The sync service (lift-sync)
-
-A tiny FastAPI service, one Docker image, no database. The phone pushes each
-finished session; the service upserts it into `sessions.csv` behind a single
-writer lock (atomic temp-file + rename), appends to a JSONL audit trail, and
-records tombstones so a deleted session cannot be re-imported.
-
-- `POST /v1/sessions` — upsert by `session_id` (bearer auth)
-- `DELETE /v1/sessions/{id}` — delete + tombstone
-- `GET /v1/health`, `GET /v1/export.csv`
-
-See [`service/README.md`](service/README.md) for running it. The CSV schema
-is frozen in [`docs/PLAN.md`](docs/PLAN.md) §4.4.
+- weight always in kg
+- RPE a plain number, one decimal at most, blank when not recorded
+- text fields quoted when needed; leading `= + - @` escaped with a space so a
+  spreadsheet cannot execute a note
 
 ## Layout
 
 ```
-App/            entry point, router, root tab view, Info.plist
+App/            entry point, router, root tab view
 Models/         SwiftData @Model types + the frozen enums
-Store/          DataStore (container + seeding), Settings, Keychain
+Store/          DataStore (container + seeding), Settings, routine import
 Engine/         Metrics, Targets, CSVCodec, Importer (pure, unit-tested)
-Sync/           SyncEngine, Outbox (state machine), LiftSyncClient
 Features/       Log / Workout / Routines / Exercises / Statistics /
-                Profile / Timer
-DesignSystem/   Palette, Typography (sampled from the reference app)
+                Profile / Timer / Integrations
+DesignSystem/   Palette, SwipeToDelete
 Resources/      SeedExercises.json, SeedCategories.json
+Widget/         Live Activity widget extension
 Tests/          Unit (swift-testing) + UI (XCUITest) + Fixtures
-service/        lift-sync (FastAPI) + pytest suite + Docker
-scripts/        repcount_import.py, validate_sessions.py, mac-tests.sh
-docs/           PLAN.md (the spec), BUILD-REPORT.md
+scripts/        the test gates and the CSV validator
+docs/           PLAN.md (the spec), BUILD-REPORT.md, ROUND-2.md, visual captures
 ```
 
 ## Building (on the Mac)
@@ -79,12 +70,29 @@ xcodegen generate
 xcodebuild -scheme RepLog -destination "platform=iOS Simulator,name=iPhone 17 Pro" build
 ```
 
-Or run the whole gate (build + unit + UI tests) from the repo on any host
-that can `ssh mac`:
+The whole gate (build + unit + UI tests) runs from any host that can
+`ssh mac`:
 
 ```bash
 scripts/mac-tests.sh
 ```
+
+## Tests
+
+- **Unit (swift-testing), 40 tests:** CSV codec against the golden file,
+  importer, routine CSV, metrics (volume per type, bodyweight multiplier,
+  single-arm doubling, Brzycki e1RM, PRs), targets.
+- **UI (XCUITest), 18 tests:** every text-entry flow plus the flows that
+  cannot be checked without a running app — RPE entry and chips, exercise
+  search, set notes, the keyboard arrows and the focused box clearing the
+  software keys, finish confirmation, swipe-delete, routine notes, and the
+  range-limited statistics export.
+- **Fast logic gate, no Mac:** `scripts/logic-tests.sh` compiles the
+  Foundation-only files and runs their tests on any machine with a Swift
+  toolchain. Seconds, not the suite.
+- **CSV validity, no Mac:** `scripts/verify.sh` checks the golden fixture
+  against the frozen §4.4 schema with `scripts/validate_sessions.py`. Point
+  that script at any exported file to check a real export.
 
 ## Installing on a device (over the air)
 
@@ -98,41 +106,18 @@ install without Xcode, a cable or Bonjour:
    session cannot reach the signing keychain.
 2. Copy the IPA to the host and publish it with
    `/srv/downloads/publish.sh --slug replog --ipa /tmp/RepLog.ipa --name RepLog
-   --bundle im.eamon.replog --version 1.1.4 --base https://replog.eamonmckiernan.im`.
+   --bundle im.eamon.replog --version 1.1.10 --base https://replog.eamonmckiernan.im`.
 3. On the iPhone, open `https://replog.eamonmckiernan.im/replog/` **in Safari**
    and tap Install RepLog.
 
 Ad-hoc means only devices listed in the provisioning profile can install it.
 
-## Running the service
-
-```bash
-cd service
-uv sync
-export LIFT_SYNC_TOKEN=$(openssl rand -hex 16)
-export LIFT_SYNC_DATA_DIR=./data
-uvicorn lift_sync.app:app --port 8080
-```
-
-In the app: Profile → Settings → Sync → enter the URL
-(`http://192.168.1.12:8080` or your tailnet address) and the token.
-
-## Tests
-
-- **Unit (swift-testing):** metrics (volume per type, bodyweight multiplier,
-  single-arm doubling, Brzycki e1RM, PRs), targets, CSV codec (golden file
-  byte-identical to the Python service + round trip), importer, outbox state
-  machine.
-- **UI (XCUITest):** every text-entry flow (RPE, search, sync URL/token,
-  set notes) — agent-device cannot type into SwiftUI fields.
-- **Service (pytest):** upsert idempotency, two concurrent POSTs,
-  delete/tombstone + no resurrection, atomic rewrite, auth, malformed
-  payloads.
-
-
 ## Notes
 
-- The CSV is not encrypted at rest; it lives on a LAN/tailnet share with
-  bearer auth. Fine for training data, said out loud.
-- No accounts, no paywall, no analytics (the toggle exists for parity and is
-  wired to nothing).
+- Removed on 2026-10-23 (round 2): supersets, the extra exercise types, the
+  calories cell, and the self-hosted sync service in full. Nothing stored was
+  dropped — the phone's history survives.
+- The export file is not encrypted. It is a CSV you hand to someone; treat it
+  like one.
+- No accounts, no paywall. The analytics toggle exists for parity and is wired
+  to nothing.

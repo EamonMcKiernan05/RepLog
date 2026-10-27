@@ -1,12 +1,11 @@
 import Foundation
 import SwiftData
 
-/// In-app importer (plan §4.5.4, T8.3): read a new-schema sync CSV from the
-/// Files app and rebuild sessions in a fresh phone's store.
+/// In-app importer (plan §4.5.4, T8.3): read a RepLog CSV from the Files app
+/// and rebuild sessions in a fresh phone's store.
 ///
-/// The legacy RepCount 7-column export is converted first by
-/// `scripts/repcount_import.py` (the one-time migration); this importer
-/// reads the frozen new schema that script (and the sync service) produce.
+/// It reads the frozen §4.4 schema — the same bytes CSV export writes, so an
+/// export from one phone rebuilds the next one.
 enum Importer {
     struct Result {
         var sessions: Int

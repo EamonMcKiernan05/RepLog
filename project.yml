@@ -46,13 +46,6 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        NSAppTransportSecurity:
-          NSAllowsLocalNetworking: true
-        NSLocalNetworkUsageDescription: "RepLog talks to your lift-sync server on your local network or tailnet over plain HTTP to sync finished workouts."
-        UIBackgroundModes:
-          - fetch
-        BGTaskSchedulerPermittedIdentifiers:
-          - im.eamon.replog.sync
         NSSupportsLiveActivities: true
         NSHealthShareUsageDescription: "RepLog reads your bodyweight from Apple Health so bodyweight exercises and volume maths are accurate."
         NSHealthUpdateUsageDescription: "RepLog writes your workouts and bodyweight to Apple Health."

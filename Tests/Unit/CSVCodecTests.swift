@@ -4,8 +4,7 @@ import Foundation
 
 @Suite("CSVCodec")
 struct CSVCodecTests {
-    /// Build the fixture session that the golden file was generated from
-    /// (via the Python service — the reference implementation).
+    /// Build the fixture session that the golden file was generated from.
     private func fixtureSession() -> (Session, [ExerciseEntry]) {
         let session = Session(id: "8f2c1d90abcd", date: date("2026-09-21"))
         session.startTime = date("2026-09-21", "06:04")

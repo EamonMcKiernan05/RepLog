@@ -69,6 +69,8 @@ final class Session {
     var bodyweightKg: Double?
     var notes: String
     var routineName: String
+    /// Legacy: the sync upload queue's state, kept so existing stores decode.
+    /// Sync was removed on 2026-10-23; nothing reads or writes this.
     var syncStateRaw: String
     var createdAt: Date
     var exercises: [ExerciseEntry] = []
@@ -82,13 +84,8 @@ final class Session {
         self.date = date
         self.routineName = routineName
         self.notes = ""
-        self.syncStateRaw = SyncState.local.rawValue
+        self.syncStateRaw = "local"
         self.createdAt = .now
-    }
-
-    var syncState: SyncState {
-        get { SyncState(rawValue: syncStateRaw) ?? .local }
-        set { syncStateRaw = newValue.rawValue }
     }
 
     var duration: TimeInterval {
