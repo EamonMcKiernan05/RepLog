@@ -21,10 +21,8 @@ final class Settings {
         static let healthEnabled = "health.enabled"
         static let autofillWeight = "log.autofillWeight"
         static let autocorrectNotes = "log.autocorrectNotes"
-        static let timerSound = "timer.sound"
-        static let autoStartTimer = "timer.autoStart"
+        static let defaultRest = "timer.defaultRest"
         static let keepScreenOn = "timer.keepScreenOn"
-        static let perSecondBuzz = "timer.perSecondBuzz"
         static let finishReminder = "log.finishReminder"
         static let analytics = "privacy.analytics"
         static let onboarded = "onboarded"
@@ -51,14 +49,10 @@ final class Settings {
         UserDefaults.standard.object(forKey: Key.autofillWeight) as? Bool ?? true
     private var _autocorrectNotes: Bool =
         UserDefaults.standard.object(forKey: Key.autocorrectNotes) as? Bool ?? true
-    private var _timerSound: String =
-        UserDefaults.standard.string(forKey: Key.timerSound) ?? "default"
-    private var _autoStartTimer: Bool =
-        UserDefaults.standard.object(forKey: Key.autoStartTimer) as? Bool ?? false
+    private var _defaultRest: Double =
+        UserDefaults.standard.object(forKey: Key.defaultRest) as? Double ?? 90
     private var _keepScreenOn: Bool =
         UserDefaults.standard.object(forKey: Key.keepScreenOn) as? Bool ?? true
-    private var _perSecondBuzz: Bool =
-        UserDefaults.standard.object(forKey: Key.perSecondBuzz) as? Bool ?? false
     private var _finishReminder: String =
         UserDefaults.standard.string(forKey: Key.finishReminder) ?? "off"
     private var _analytics: Bool =
@@ -106,21 +100,20 @@ final class Settings {
         get { _autocorrectNotes }
         set { _autocorrectNotes = newValue; UserDefaults.standard.set(newValue, forKey: Key.autocorrectNotes) }
     }
-    var timerSound: String {
-        get { _timerSound }
-        set { _timerSound = newValue; UserDefaults.standard.set(newValue, forKey: Key.timerSound) }
-    }
-    var autoStartTimer: Bool {
-        get { _autoStartTimer }
-        set { _autoStartTimer = newValue; UserDefaults.standard.set(newValue, forKey: Key.autoStartTimer) }
+    /// The rest timer's starting interval, in seconds (Settings → Timer). The
+    /// workout's timer reads it once when it opens, and −15/+15 nudge from
+    /// there. `Key.defaultRest` is the same UserDefaults key
+    /// `RestTimerController.settingKey` reads, so no extra plumbing.
+    var defaultRest: Double {
+        get { _defaultRest }
+        set {
+            _defaultRest = newValue
+            UserDefaults.standard.set(newValue, forKey: Key.defaultRest)
+        }
     }
     var keepScreenOn: Bool {
         get { _keepScreenOn }
         set { _keepScreenOn = newValue; UserDefaults.standard.set(newValue, forKey: Key.keepScreenOn) }
-    }
-    var perSecondBuzz: Bool {
-        get { _perSecondBuzz }
-        set { _perSecondBuzz = newValue; UserDefaults.standard.set(newValue, forKey: Key.perSecondBuzz) }
     }
     var finishReminder: String {
         get { _finishReminder }

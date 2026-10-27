@@ -74,12 +74,22 @@ struct ActiveWorkoutView: View {
             // no Live Activity, and no Health permission prompt.
             guard !isFinished else { return }
             // Live Activity for the in-progress workout (Dynamic Island + lock
-            // screen). Best-effort; no-op if unsupported.
+            // screen): the session clock counts up from the start date inside
+            // the widget, and every rest-timer change is pushed to it.
+            timer.onChange = { snapshot in
+                WorkoutLiveActivityController.update(rest: snapshot)
+            }
+            timer.reloadDefaultIfIdle()
             WorkoutLiveActivityController.start(
                 workoutName: session.routineName,
                 startDate: session.startTime ?? session.date,
-                exerciseCount: session.exerciseEntries.count
+                exerciseCount: session.exerciseEntries.count,
+                rest: timer.snapshot
             )
+            // The rest timer's alert is what tells him rest is over when the
+            // phone is in his pocket, so permission is asked once, here, rather
+            // than silently failing at the moment it matters.
+            RestTimerController.requestAuthorizationIfNeeded()
             // Ask for Health permissions once, when a workout is active and
             // Health is enabled (so the prompt is contextual, not at launch).
             if settings.healthEnabled {

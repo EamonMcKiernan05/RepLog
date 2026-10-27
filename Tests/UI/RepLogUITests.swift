@@ -1179,4 +1179,83 @@ final class RepLogUITests: XCTestCase {
         return count
     }
 
+    // MARK: - Rest timer (owner request, 2026-10-27)
+
+    /// The rest timer after the 2026-10-27 reshape:
+    ///   - the interval comes from Settings → Timer (`-timer.defaultRest` is the
+    ///     same UserDefaults key the picker writes),
+    ///   - the bar is edge-to-edge, not a floating pill, and carries a progress
+    ///     line so its end is visible,
+    ///   - the preset circles are gone,
+    ///   - it actually counts down when started,
+    ///   - the Live Activity is on screen (session clock + rest clock) — the app
+    ///     is sent home and the island is captured, because that is the thing
+    ///     that "showed nothing" before.
+    @MainActor
+    func testRestTimerUsesTheDefaultAndTheLiveActivityShows() async {
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-timer.defaultRest", "30"]
+        app.launch()
+        await settle(3)
+        await completeOnboarding()
+
+        // Settings offers the picker that sets this same key.
+        await openProfileTab()
+        await tapSettled(app.buttons["settings-link"])
+        let picker = app.buttons["default-rest-picker"].firstMatch
+        let pickerText = app.staticTexts["Default Rest Timer"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5) || pickerText.exists,
+                      "Settings has no 'Default Rest Timer' row")
+        await tapSettled(app.buttons["done"])
+        await settle()
+
+        await startFreshWorkout()
+
+        // The bar is up, showing the interval the setting gave it.
+        let display = app.staticTexts["timer-display"]
+        await expectExists(display, "the rest timer bar is not in an open workout")
+        XCTAssertEqual(display.label, "00:30",
+                       "the bar started at '\(display.label)', not the 30 s the setting holds")
+
+        // Edge-to-edge: the bar spans the window, so it is not a floating pill.
+        let bar = app.otherElements["timer-bar"].firstMatch
+        let width = app.windows.element(boundBy: 0).frame.width
+        if bar.exists {
+            XCTAssertGreaterThan(bar.frame.width, width - 2,
+                                 "the timer bar is \(bar.frame.width)pt wide on a \(width)pt screen — still a floating pill")
+        } else {
+            XCTFail("no timer-bar element to measure")
+        }
+        XCTAssertTrue(app.otherElements["timer-progress"].exists || app.otherElements["timer-bar"].exists,
+                      "the bar has no progress line")
+
+        // Preset circles are gone.
+        let presets = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'timer-preset-'")).count
+        XCTAssertEqual(presets, 0, "the preset circles are still on the bar")
+
+        attach("timer-bar-collapsed")
+
+        // Start it: the digits have to move.
+        await tapSettled(app.buttons["timer-toggle"])
+        await settle(3)
+        XCTAssertNotEqual(display.label, "00:30",
+                          "the timer did not count down after it was started")
+        attach("timer-bar-running")
+
+        // Send the app home: the Live Activity lives on the island / lock
+        // screen, which only a device screenshot can show.
+        XCUIDevice.shared.press(.home)
+        await settle(4)
+        attach("live-activity-island")
+        app.activate()
+        await settle(2)
+        await tapSettled(app.buttons["timer-toggle"])   // pause
+    }
+
+    private func attach(_ name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }

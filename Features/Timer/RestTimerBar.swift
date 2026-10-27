@@ -1,12 +1,19 @@
 import SwiftUI
 
 /// The rest timer as a bar pinned to the bottom of an OPEN workout (owner
-/// request, 2026-10-23: "a collapsible bar at the bottom of the screen, only
-/// showing inside the active session. The bar should be there permanently and
-/// has all the timer controls").
+/// request, 2026-10-23; reshaped 2026-10-27: "make the timer bar actually fill
+/// the whole bottom part of the screen and not be a floating pill. its the same
+/// colour as the background and really hard to see the end of it").
+///
+/// It is edge-to-edge and flush with the bottom of the display, sitting on a
+/// surface one step lighter than the page, with a hairline along its top edge
+/// and a progress line pinned to the very bottom. The line is the "end of it":
+/// accent over a visible track, shrinking as the interval runs out, so the bar
+/// reads as a timer even before you read the digits.
 ///
 /// Collapsed it is one row: a clock, the countdown, play/pause, reset, and a
-/// chevron. Expanded it adds the ring, −15s / +15s and the preset chips.
+/// chevron. Expanded it adds the ring and −15s / +15s. The interval itself is
+/// set in Settings → Timer (the preset circles are gone, owner request).
 /// Nothing here starts or stops the workout; it is the stopwatch you glance at
 /// between sets.
 struct RestTimerBar: View {
@@ -21,12 +28,38 @@ struct RestTimerBar: View {
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
             collapsedRow
+            progressLine
         }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .padding(.horizontal, 12)
-        .padding(.bottom, 6)
+        .background {
+            // Full bleed: the bar's surface reaches the physical bottom edge of
+            // the display instead of stopping above the home indicator.
+            Palette.control.ignoresSafeArea(edges: .bottom)
+        }
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Palette.separator)
+                .frame(height: 0.5)
+        }
         .animation(.easeOut(duration: 0.18), value: expanded)
         .accessibilityIdentifier("timer-bar")
+    }
+
+    // MARK: - Progress line (the visible "end of it")
+
+    private var progressLine: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(Palette.separator)
+                Rectangle()
+                    .fill(controller.isRunning || controller.remaining < controller.duration
+                          ? Palette.accent
+                          : Palette.textSecondary.opacity(0.35))
+                    .frame(width: max(0, geo.size.width * controller.progress))
+            }
+        }
+        .frame(height: 3)
+        .accessibilityIdentifier("timer-progress")
     }
 
     // MARK: - Collapsed row (always visible)
@@ -94,18 +127,18 @@ struct RestTimerBar: View {
             .accessibilityLabel(expanded ? "Collapse timer" : "Expand timer")
             .accessibilityIdentifier("timer-expand")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
     }
 
     // MARK: - Expanded controls
 
     private var expandedBody: some View {
         VStack(spacing: 16) {
-            Divider()
             ZStack {
                 Circle()
-                    .stroke(Palette.control, lineWidth: 8)
+                    .stroke(Palette.separator, lineWidth: 8)
                 Circle()
                     .trim(from: 0, to: controller.progress)
                     .stroke(Palette.accent, style: StrokeStyle(lineWidth: 8, lineCap: .round))
@@ -115,7 +148,7 @@ struct RestTimerBar: View {
                     .monospacedDigit()
             }
             .frame(width: 150, height: 150)
-            .padding(.top, 12)
+            .padding(.top, 16)
 
             HStack(spacing: 20) {
                 Button {
@@ -125,8 +158,9 @@ struct RestTimerBar: View {
                         .font(.body.weight(.bold))
                         .foregroundStyle(Palette.accent)
                         .frame(width: 60, height: 60)
-                        .background(Circle().fill(Palette.control))
+                        .background(Circle().fill(Palette.bg))
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Minus 15 seconds")
 
                 Button {
@@ -139,6 +173,7 @@ struct RestTimerBar: View {
                         .frame(width: 72, height: 72)
                         .background(Circle().fill(Palette.accent))
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel(controller.isRunning ? "Pause" : "Start")
 
                 Button {
@@ -148,67 +183,21 @@ struct RestTimerBar: View {
                         .font(.body.weight(.bold))
                         .foregroundStyle(Palette.accent)
                         .frame(width: 60, height: 60)
-                        .background(Circle().fill(Palette.control))
+                        .background(Circle().fill(Palette.bg))
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Plus 15 seconds")
             }
+            .padding(.bottom, 12)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(controller.presets, id: \.self) { preset in
-                        Button {
-                            controller.setDuration(preset)
-                        } label: {
-                            Text(Self.format(preset))
-                                .font(Typography.mono(15, .bold))
-                                .foregroundStyle(Palette.accent)
-                                .frame(width: 56, height: 56)
-                                .background(
-                                    Circle().fill(
-                                        controller.duration == preset
-                                        ? AnyShapeStyle(Palette.accent.opacity(0.25))
-                                        : AnyShapeStyle(Palette.control)
-                                    )
-                                )
-                                .overlay(
-                                    Circle().stroke(
-                                        controller.duration == preset ? Palette.accent : .clear,
-                                        lineWidth: 2
-                                    )
-                                )
-                        }
-                        .accessibilityIdentifier("timer-preset-\(Int(preset))")
-                    }
-                    Button {
-                        addPreset()
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.body.weight(.bold))
-                            .foregroundStyle(Palette.accent)
-                            .frame(width: 56, height: 56)
-                            .background(Circle().fill(Palette.control))
-                    }
-                    .accessibilityLabel("Add preset")
-                }
-                .padding(.horizontal, 4)
-            }
-            .padding(.bottom, 8)
+            Text("Rest length is set in Settings → Timer.")
+                .font(.caption)
+                .foregroundStyle(Palette.textSecondary)
+                .padding(.bottom, 10)
         }
     }
 
     private func toggleExpanded() {
         expanded.toggle()
-    }
-
-    private func addPreset() {
-        if !controller.presets.contains(controller.duration) {
-            controller.presets.append(controller.duration)
-            controller.presets.sort()
-        }
-    }
-
-    static func format(_ t: TimeInterval) -> String {
-        let s = Int(t)
-        return String(format: "%02d:%02d", s / 60, s % 60)
     }
 }
