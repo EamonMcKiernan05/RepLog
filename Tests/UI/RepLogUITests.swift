@@ -1199,13 +1199,21 @@ final class RepLogUITests: XCTestCase {
         await settle(3)
         await completeOnboarding()
 
-        // Settings offers the picker that sets this same key.
+        // Settings offers the picker that sets this same key. The Timer section
+        // is below the fold, and a SwiftUI Form does not instantiate rows that
+        // are far off-screen — scroll to it first.
         await openProfileTab()
         await tapSettled(app.buttons["settings-link"])
-        let picker = app.buttons["default-rest-picker"].firstMatch
-        let pickerText = app.staticTexts["Default Rest Timer"]
-        XCTAssertTrue(picker.waitForExistence(timeout: 5) || pickerText.exists,
-                      "Settings has no 'Default Rest Timer' row")
+        await settle()
+        let timerRow = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH 'Default Rest Timer'"))
+            .firstMatch
+        for _ in 0..<3 where !timerRow.exists {
+            app.collectionViews.firstMatch.swipeUp()
+            await settle(0.6)
+        }
+        XCTAssertTrue(timerRow.exists,
+                      "Settings has no 'Default Rest Timer' row — scroll reached the bottom without finding it")
         await tapSettled(app.buttons["done"])
         await settle()
 

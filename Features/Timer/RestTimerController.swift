@@ -108,7 +108,7 @@ final class RestTimerController: @unchecked Sendable {
                 guard let self, self.isRunning, let dl = self.deadline else { return }
                 self.remaining = max(0, dl.timeIntervalSinceNow)
                 if self.remaining <= 0 {
-                    self.finish()
+                    self.finish(alert: true)
                     return
                 }
                 try? await Task.sleep(for: .milliseconds(200))
@@ -125,18 +125,24 @@ final class RestTimerController: @unchecked Sendable {
         notifyChange()
     }
 
-    /// The interval ran out. With the app on screen the cue is a haptic (the
-    /// notification it also scheduled is withdrawn so the alert does not fire
-    /// on top of it); away from the app the notification arrives instead.
-    func finish() {
-        let wasRunning = isRunning || remaining > 0
+    /// The interval ran out — from the tick path, which is the only place that
+    /// knows it actually elapsed.
+    func finish() { finish(alert: false) }
+
+    /// With the app on screen the cue is a haptic, and the scheduled
+    /// notification is withdrawn so an alert does not fire on top of it. Away
+    /// from the app the notification IS the cue, so it is left in place to
+    /// arrive — cancelling it here is what would make a background finish
+    /// silent.
+    private func finish(alert: Bool) {
         isRunning = false
         remaining = 0
         deadline = nil
         tickTask?.cancel()
         tickTask = nil
-        cancelNotification()
-        if wasRunning { alertFinished() }
+        let active = UIApplication.shared.applicationState == .active
+        if active { cancelNotification() }
+        if alert && active { alertFinished() }
         notifyChange()
     }
 
