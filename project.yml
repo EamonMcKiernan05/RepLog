@@ -7,8 +7,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "1.1.8"
-    CURRENT_PROJECT_VERSION: "11"
+    MARKETING_VERSION: "1.1.9"
+    CURRENT_PROJECT_VERSION: "12"
     GENERATE_INFOPLIST_FILE: NO
     # Eamon's Apple Developer team (Individual, paid). With Automatic
     # signing this lets Xcode create the explicit App ID + profile the
@@ -32,6 +32,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: im.eamon.replog
         INFOPLIST_FILE: App/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1"
         SUPPORTS_MACCATALYST: NO
@@ -40,8 +41,9 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: RepLog
-        CFBundleShortVersionString: "1.1.8"
-        CFBundleVersion: "11"
+        CFBundleIconName: AppIcon
+        CFBundleShortVersionString: "1.1.9"
+        CFBundleVersion: "12"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -78,8 +80,8 @@ targets:
       path: Widget/RepLogWidget-Info.plist
       properties:
         CFBundleDisplayName: RepLog Widget
-        CFBundleShortVersionString: "1.1.8"
-        CFBundleVersion: "11"
+        CFBundleShortVersionString: "1.1.9"
+        CFBundleVersion: "12"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         NSSupportsLiveActivities: true
