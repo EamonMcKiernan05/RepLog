@@ -1120,4 +1120,64 @@ final class RepLogUITests: XCTestCase {
         }
     }
 
+    /// The Statistics chart's export ships the sessions the CHART shows, not
+    /// the whole history (owner request, 2026-10-24). -DemoHistory adds
+    /// sessions 40 / 150 / 300 / 600 days back on top of the three in the last
+    /// week, so every window holds strictly more sessions than the one inside it.
+    @MainActor
+    func testStatisticsExportRespectsTheRange() async {
+        app.terminate()
+        app.launchArguments = ["-ResetRepLog", "YES", "-DemoData", "YES", "-DemoHistory", "YES"]
+        app.launch()
+        await settle(3)
+        await completeOnboarding()
+
+        // Statistics -> Overall Statistics -> Volume (a chart screen with the
+        // range picker and its own export).
+        await tapSettled(app.tabBars.buttons.element(boundBy: 2))
+        let volume = app.buttons["Volume"].firstMatch
+        await expectExists(volume, "the Volume metric row is not on the Statistics screen")
+        await tapSettled(volume)
+        await expectExists(app.buttons["export-range-csv"], "the chart's export button is missing")
+
+        let month = await exportedSessionCount(range: "1M")
+        let year = await exportedSessionCount(range: "1Y")
+        let all = await exportedSessionCount(range: "All")
+
+        XCTAssertEqual(month, 3, "1M should hold the three demo sessions from this week, got \(month)")
+        XCTAssertEqual(year, 6, "1Y should hold every session except the 600-day one, got \(year)")
+        XCTAssertEqual(all, 7, "All should hold every seeded session, got \(all)")
+        XCTAssertLessThan(month, year,
+                          "the range did not reach the export: 1M and 1Y both exported \(month) sessions")
+        XCTAssertLessThan(year, all,
+                          "the range did not reach the export: 1Y and All both exported \(year) sessions")
+    }
+
+    /// Pick a range on the open chart, open its export sheet, and return the
+    /// session count the sheet says it will export.
+    @MainActor
+    private func exportedSessionCount(range: String) async -> Int {
+        let segment = app.buttons[range].firstMatch
+        await expectExists(segment, "range segment '\(range)' not found on the chart")
+        await tapSettled(segment)
+        await tapSettled(app.buttons["export-range-csv"])
+        let summary = app.staticTexts["export-summary"]
+        await expectExists(summary, "the export sheet's summary line is missing for range '\(range)'")
+        let label = summary.label
+        let count = Int(label.split(separator: " ").first ?? "") ?? -1
+        XCTAssertGreaterThanOrEqual(count, 0,
+                                    "could not read a session count out of '\(label)' for range '\(range)'")
+
+        // The filename carries the range, so a file that reaches Files can be
+        // told apart from the full-history export.
+        await tapSettled(app.buttons["export-run"])
+        let file = app.staticTexts["export-filename"]
+        await expectExists(file, "the export produced no file for range '\(range)'")
+        XCTAssertTrue(file.label.contains("-\(range)-"),
+                      "the filename '\(file.label)' does not carry the range '\(range)'")
+
+        await tapSettled(app.buttons["export-done"])
+        return count
+    }
+
 }
