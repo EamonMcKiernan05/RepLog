@@ -20,6 +20,33 @@ Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
 
 ## Build status
 
+**Cleanup: the retired sync service and its dead code (2026-10-27) — branch
+`cleanup-retired-sync`, built and published for testing as 1.1.11 (build 14).**
+No behaviour change. Deleted `service/` (lift-sync, Docker, pytest, and a
+committed `.venv` + `__pycache__` + `service/data/` the `.gitignore` had meant
+to exclude), `scripts/drill_supervisor.py`, the one-time
+`scripts/repcount_import.py`, the `SyncState` enum and `Session.syncState`
+accessor (`syncStateRaw` stays on the model so existing stores decode), and two
+captures of screens that no longer exist. `project.yml` loses the four
+Info.plist keys that only existed for sync — ATS local networking, the
+local-network usage string, background fetch, and the
+`im.eamon.replog.sync` BGTask id — and the shipped `Info.plist` now carries
+none of them. `scripts/verify.sh` is the CSV-schema gate alone. README
+rewritten for what the app is; `docs/PLAN.md` marked as the historical spec.
+
+Gates: `scripts/verify.sh` PASS, `scripts/logic-tests.sh` 13/13 (fleet host);
+on the Mac `xcodegen generate` + `** BUILD SUCCEEDED **`, **40/40 unit** (5
+suites), and one UI test, `testStatisticsExportRespectsTheRange`, `** TEST
+SUCCEEDED **` — the only user-facing code that moved was the export sheet's
+caption.
+
+Published 2026-10-27 11:59 UTC: ad-hoc archive from `d26081d` through the Mac's
+GUI session, IPA 826,632 bytes, `sha256_16 7001783abd57b391` served at
+`https://replog.eamonmckiernan.im` and hashed again over HTTPS — identical.
+`manifest.plist` is `application/xml` with an `https://` package URL and
+`bundle-version` 1.1.11; the embedded profile is "iOS Team Ad Hoc", valid to
+2027-09-23, listing the phone.
+
 **Range-aware Statistics export (2026-10-24) — branch `stats-range-export`,
 verified and published for testing as 1.1.10 (build 13).** The overall-statistics chart screens (Statistics →
 Overall Statistics → any metric) now carry an export button in the navigation
