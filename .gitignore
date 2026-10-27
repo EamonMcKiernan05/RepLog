@@ -2,6 +2,10 @@
 __pycache__/
 *.pyc
 
+# Tests are NOT kept in this repo (owner, 2026-10-27): end-to-end tests are run
+# ad hoc and live outside version control.
+Tests/
+
 # macOS
 .DS_Store
 
