@@ -156,8 +156,8 @@ struct LogTabView: View {
     /// The trash button is a SIBLING of the link, not inside its label: inside
     /// a button's label it never receives the tap (see the
     /// row-swallows-its-own-taps note in SessionRowView). Edit mode keeps this
-    /// control rather than the List's own, so the identifier the offline drill
-    /// taps stays put.
+    /// control rather than the List's own, so the `row-delete-…` identifier the
+    /// UI tests tap stays put.
     @ViewBuilder
     private func sessionRow(_ session: Session) -> some View {
         HStack(spacing: 0) {

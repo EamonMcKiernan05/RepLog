@@ -74,12 +74,22 @@ struct ActiveWorkoutView: View {
             // no Live Activity, and no Health permission prompt.
             guard !isFinished else { return }
             // Live Activity for the in-progress workout (Dynamic Island + lock
-            // screen). Best-effort; no-op if unsupported.
+            // screen): the session clock counts up from the start date inside
+            // the widget, and every rest-timer change is pushed to it.
+            timer.onChange = { snapshot in
+                WorkoutLiveActivityController.update(rest: snapshot)
+            }
+            timer.reloadDefaultIfIdle()
             WorkoutLiveActivityController.start(
                 workoutName: session.routineName,
                 startDate: session.startTime ?? session.date,
-                exerciseCount: session.exerciseEntries.count
+                exerciseCount: session.exerciseEntries.count,
+                rest: timer.snapshot
             )
+            // The rest timer's alert is what tells him rest is over when the
+            // phone is in his pocket. It is asked for on the timer's play
+            // button, not here: a permission sheet over a workout start is in
+            // the way of the thing he opened the app to do.
             // Ask for Health permissions once, when a workout is active and
             // Health is enabled (so the prompt is contextual, not at launch).
             if settings.healthEnabled {
@@ -101,10 +111,23 @@ struct ActiveWorkoutView: View {
         // The bar is part of an OPEN workout, always there (owner request,
         // 2026-10-23). A finished record is being corrected, not trained, so it
         // gets no timer.
-        .safeAreaInset(edge: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if !isFinished {
                 RestTimerBar(controller: timer)
                     .transition(.move(edge: .bottom))
+            }
+        }
+        // The bar's surface has to reach the physical bottom edge. A
+        // `safeAreaInset` view sits ABOVE the home-indicator strip and clips
+        // its background there (measured in a capture: a band of page
+        // background under the bar), so a hairline-tall block of the same
+        // colour is dropped into the safe area beneath it.
+        .overlay(alignment: .bottom) {
+            if !isFinished {
+                Palette.control
+                    .frame(height: 0.5)
+                    .ignoresSafeArea(edges: .bottom)
+                    .allowsHitTesting(false)
             }
         }
         .sheet(isPresented: $showAddExercise) {

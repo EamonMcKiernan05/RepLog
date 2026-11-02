@@ -121,14 +121,16 @@ struct SettingsView: View {
                     Toggle("Keep screen on when workout is active", isOn: $settings.keepScreenOn)
                 }
                 Section("Timer") {
-                    Picker("Timer Sound", selection: $settings.timerSound) {
-                        Text("Default").tag("default")
-                        Text("Bell").tag("bell")
-                        Text("Horn").tag("horn")
-                        Text("Alarm").tag("alarm")
+                    // The interval the bar starts at, in seconds. The preset
+                    // circles on the bar are gone (owner request, 2026-10-27):
+                    // one setting here, and −15/+15 on the bar for the set in
+                    // hand.
+                    Picker("Default Rest Timer", selection: $settings.defaultRest) {
+                        ForEach(RestTimerController.choices, id: \.self) { seconds in
+                            Text(Self.clock(Double(seconds))).tag(Double(seconds))
+                        }
                     }
-                    Toggle("Auto-start timer", isOn: $settings.autoStartTimer)
-                    Toggle("Per-second buzz", isOn: $settings.perSecondBuzz)
+                    .accessibilityIdentifier("default-rest-picker")
                 }
                 Section("Privacy") {
                     Toggle("Send Anonymous Analytics", isOn: $settings.analytics)
@@ -149,6 +151,12 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    /// "01:30" for a rest interval, so the picker reads like the bar does.
+    private static func clock(_ seconds: Double) -> String {
+        let s = Int(seconds)
+        return String(format: "%d:%02d", s / 60, s % 60)
     }
 }
 

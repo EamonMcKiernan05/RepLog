@@ -7,8 +7,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "1.1.10"
-    CURRENT_PROJECT_VERSION: "13"
+    MARKETING_VERSION: "1.1.12"
+    CURRENT_PROJECT_VERSION: "15"
     GENERATE_INFOPLIST_FILE: NO
     # Eamon's Apple Developer team (Individual, paid). With Automatic
     # signing this lets Xcode create the explicit App ID + profile the
@@ -41,18 +41,11 @@ targets:
       properties:
         CFBundleDisplayName: RepLog
         CFBundleIconName: AppIcon
-        CFBundleShortVersionString: "1.1.10"
-        CFBundleVersion: "13"
+        CFBundleShortVersionString: "1.1.12"
+        CFBundleVersion: "15"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        NSAppTransportSecurity:
-          NSAllowsLocalNetworking: true
-        NSLocalNetworkUsageDescription: "RepLog talks to your lift-sync server on your local network or tailnet over plain HTTP to sync finished workouts."
-        UIBackgroundModes:
-          - fetch
-        BGTaskSchedulerPermittedIdentifiers:
-          - im.eamon.replog.sync
         NSSupportsLiveActivities: true
         NSHealthShareUsageDescription: "RepLog reads your bodyweight from Apple Health so bodyweight exercises and volume maths are accurate."
         NSHealthUpdateUsageDescription: "RepLog writes your workouts and bodyweight to Apple Health."
@@ -79,8 +72,8 @@ targets:
       path: Widget/RepLogWidget-Info.plist
       properties:
         CFBundleDisplayName: RepLog Widget
-        CFBundleShortVersionString: "1.1.10"
-        CFBundleVersion: "13"
+        CFBundleShortVersionString: "1.1.12"
+        CFBundleVersion: "15"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         NSSupportsLiveActivities: true

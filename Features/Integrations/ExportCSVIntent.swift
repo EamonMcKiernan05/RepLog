@@ -3,8 +3,8 @@ import Foundation
 import UniformTypeIdentifiers
 
 /// A Shortcuts / App Intents action that exports the full history to a CSV
-/// file (plan §3.1 line 24). The same bytes the in-app export and the sync
-/// service produce (CSVCodec, frozen schema §4.4).
+/// file (plan §3.1 line 24) — the same bytes as the in-app export (CSVCodec,
+/// frozen schema §4.4).
 ///
 /// SDK notes (verified against the Xcode 26.5 SDK, 2026-09-22):
 ///  - A file-returning intent returns `some IntentResult & ReturnsValue<IntentFile>`

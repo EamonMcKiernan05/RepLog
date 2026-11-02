@@ -18,13 +18,13 @@ Final committed set: `docs/visual/` — one file per screen, plus
 |---|---|
 | 01-onboarding-units.png | Onboarding page 1 (kg/lb) |
 | 02-onboarding-privacy.png | Onboarding page 2 (data stays on the phone) |
-| 03-onboarding-sync.png | Onboarding page 3 (optional sync) |
 | 04-log.png | Log tab, populated |
 | 05-start-workout-sheet.png | Start Workout sheet |
 | 06-repeat-workout-sheet.png | Repeat Workout sheet |
 | 07-active-workout.png | Active workout, routine course loaded |
 | 08-select-exercise.png | Select Exercise sheet (categories) |
 | 09-select-exercise-category.png | Select Exercise, category drill-in |
+| 10c-box-above-keyboard.png | The tapped box scrolled clear of the software keyboard |
 | 10-rpe-inline.png | RPE typed in place — chips 6/7/7.5/8/8.5/9 sit under the editing row |
 | 10b-set-cell-typed.png | A weight typed straight into its set cell (caret in the box, keyboard up) |
 | 11-active-workout-populated.png | Active workout with RPE + a set note |
@@ -32,7 +32,7 @@ Final committed set: `docs/visual/` — one file per screen, plus
 | 11c-end-time-picker.png | The End Time row's clock picker — Done sets the end time and finishes the session |
 | 12-rest-timer.png | Rest timer sheet |
 | 12b-finish-confirm.png | The finish checkmark's confirmation dialog (asks first) |
-| 12c-log-in-progress.png | Log with the open workout marked "In progress", and the sync control top-right |
+| 12c-log-in-progress.png | Log with the open workout marked "In progress" |
 | 12d-open-workout-reopened.png | Tapping that row reopens the EDITOR, not the read-only detail |
 | 13-session-detail.png | Completed-session detail |
 | 14-routines-list.png | Routines list |
@@ -49,9 +49,10 @@ Final committed set: `docs/visual/` — one file per screen, plus
 | 25-export-csv-sheet.png | Export CSV sheet |
 | 22-exercise-library.png | Edit Exercises (library) |
 | 23-exercise-editor.png | Edit Exercise sheet |
-| 26-exercise-history.png | Per-exercise history |
 | 28-active-workout-foreground.png | Live Activity attempt: workout running |
 | 29-home-dynamic-island.png | Live Activity attempt: app sent home |
+| 30-range-export-chart.png | Export button in an overall-metric chart's nav bar |
+| 30b-range-export-sheet.png | The range export sheet, reading the selected range |
 
 ## How it was captured
 
@@ -79,7 +80,7 @@ Final committed set: `docs/visual/` — one file per screen, plus
 
 `agent-device type` / `fill` inject keystrokes at the OS level and SwiftUI
 `@State` bindings do not receive them, so anything that types (the RPE box,
-set notes, the sync fields) has to be driven by XCUITest. Navigation taps work
+set notes) has to be driven by XCUITest. Navigation taps work
 fine in both.
 
 ### Traps this pass hit (now encoded in the tour)
@@ -113,7 +114,3 @@ fine in both.
 - An iOS 26 toolbar clips a `.bordered` + `.capsule` text button to a circle
   showing one letter; an explicit capsule label with `.fixedSize()` renders
   correctly (this is what the Edit buttons use now).
-- iOS's "Save Password?" AutoFill prompt appears after typing into the sync
-  token field and swallows every later tap. The offline drill configures sync
-  through launch arguments (`-SyncURL` / `-SyncToken`) instead, and the sync
-  form test dismisses the prompt.

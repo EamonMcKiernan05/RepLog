@@ -20,10 +20,9 @@ struct RepLogApp: App {
 
     init() {
         // Test hook: -ResetRepLog YES wipes persisted state so UI tests always
-        // start at onboarding. -ResetRepLog NO must NOT reset: the offline
-        // drill relaunches with NO because the queued session and the sync
-        // config have to survive the restart (the old presence-only check
-        // wiped them, which would have broken the drill's later steps).
+        // start at onboarding. -ResetRepLog NO must NOT reset: a test that
+        // relaunches with NO has to find the previous run's data still there
+        // (the old presence-only check wiped it either way).
         let args = CommandLine.arguments
         let resetValue = args.firstIndex(of: "-ResetRepLog").map { i in
             i + 1 < args.count ? args[i + 1] : "YES"

@@ -69,11 +69,14 @@ The picker offers exactly two: **Weights** (weight, reps) and **Cardio** (time, 
 
 - Delete `Sync/SyncEngine.swift`, `Sync/Outbox.swift`, `Sync/LiftSyncClient.swift`,
   `Tests/Unit/OutboxTests.swift`, and the `SyncEngine` environment wiring.
-- `Session.syncStateRaw` stays (inert), `SyncState` stays as a decoding shim.
+- `Session.syncStateRaw` stays (inert). The `SyncState` enum itself went on 2026-10-27
+  (`cleanup-retired-sync`) — nothing read it, and the stored raw string is what keeps old stores
+  decoding.
 - `ProfileViews`: the sync URL/token/status section goes.
 - `LogTabView` / `ActiveWorkoutView`: the status control and `sessionEdited` calls go.
-- `Sync/` also holds nothing else, so the folder goes. `service/` (the Python server) is left in the
-  repo untouched and unused this round — deleting someone's running service is a separate decision.
+- `Sync/` also holds nothing else, so the folder goes. `service/` (the Python server) was left in the
+  repo untouched and unused this round — **deleted 2026-10-27** in `cleanup-retired-sync`, on the
+  owner's instruction once the app had been in daily use without it.
 - Every UI test that drives sync is removed with it; the count in the build report is corrected to the
   new total, not left stale.
 - Proof: `grep -r SyncEngine` is empty outside the shim; the app builds and the remaining suite is green.
@@ -170,5 +173,6 @@ Owner's shape, recorded so the model work is not guessed later:
 
 1. **The exercise-type change** — confirm legacy bodyweight types stay working-but-hidden rather than
    being converted. Converting changes volume maths on old sessions.
-2. **`service/`** — leave it in the repo unused, or delete it with the sync removal?
+2. **`service/`** — **resolved 2026-10-27:** deleted, with the drill supervisor and the one-off
+   `repcount_import.py` migration, on branch `cleanup-retired-sync`.
 3. **Routine CSV** — the shape above, or does the routine need prescribed reps before programs land?

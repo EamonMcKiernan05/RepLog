@@ -1,9 +1,9 @@
 import Foundation
 
-/// CSV encode/decode for the frozen sync schema v1 (plan §4.4).
+/// CSV encode/decode for the frozen schema v1 (plan §4.4).
 ///
-/// The header order and spelling are the contract. This codec mirrors the
-/// Python service's store byte-for-byte (verified by the golden-file test):
+/// The header order and spelling are the contract. The golden file in
+/// `Tests/Fixtures/golden_session.csv` pins the bytes:
 /// - weight always kg
 /// - rpe plain number, one decimal max, empty when not recorded
 /// - text fields quoted when needed; leading `= + - @` escaped with a space

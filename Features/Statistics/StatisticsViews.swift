@@ -640,7 +640,7 @@ struct ExerciseHistoryView: View {
     }
 }
 
-/// CSV export (plan §6.7, T5.4): produces the same bytes the sync engine sends.
+/// CSV export (plan §6.7, T5.4). The header order is the frozen §4.4 contract.
 ///
 /// `sessions` is nil for the full-history export (Profile and the Statistics
 /// hub). An overall-metric screen passes the sessions inside its selected
@@ -651,7 +651,7 @@ struct ExportSheet: View {
     @Environment(\.dismiss) private var dismiss
     var sessions: [Session]? = nil
     var fileNamePrefix: String = "RepLog"
-    var caption: String = "Exports all sessions in the frozen sync schema — the same bytes lift-sync stores."
+    var caption: String = "Exports all sessions as a CSV file — the frozen RepLog schema, unchanged since v1."
     @State private var exportURL: URL?
 
     private var rows: [Session] { sessions ?? store.sessions() }

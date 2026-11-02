@@ -4,21 +4,45 @@ Date: 2026-09-23 (pass ran 22–23 Sep 2026). Host: WSL fleet host (edit/commit)
 + `ssh mac` (build/test — macOS 26.6.2, Xcode 26.5, iPhone 17 Pro simulator,
 iOS 26.5).
 
-## Testing policy (owner, 2026-09-24)
+## Testing policy (owner, 2026-09-24; tightened 2026-10-27)
 
 **End-to-end only.** New behaviour is proven by UI tests that drive the app in a
 simulator and assert what the owner can see — he tests on a phone, and that is
-the thing that has to work. Unit tests are not written for new work: they prove
-internals he never touches. The five pre-existing unit files (CSV codec,
-importer, metrics, outbox, targets) stay where they are — they cover the sync
-engine and the maths, which a UI test cannot reach — but nothing new is added to
-them. The seven unit tests written for the routine pre-fill rule on 2026-09-24
-were removed the same day under this rule.
+the thing that has to work. **Unit tests are neither written nor run** (2026-10-27:
+"no more unit tests!"): `scripts/mac-tests.sh` builds and runs the UI suite only.
+The five files in `Tests/Unit` are dormant — they still exist in the tree but
+nothing in the gate runs them, and they are not a reason to keep a change green.
 
-Gate: `scripts/mac-tests.sh` — build, the unit suite, then the UI suite
-(including the in-simulator offline drill) in one run.
+Gate: `scripts/mac-tests.sh` — build, then the UI suite, in one run.
 
 ## Build status
+
+**Cleanup: the retired sync service and its dead code (2026-10-27) — branch
+`cleanup-retired-sync`, built and published for testing as 1.1.11 (build 14).**
+No behaviour change. Deleted `service/` (lift-sync, Docker, pytest, and a
+committed `.venv` + `__pycache__` + `service/data/` the `.gitignore` had meant
+to exclude), `scripts/drill_supervisor.py`, the one-time
+`scripts/repcount_import.py`, the `SyncState` enum and `Session.syncState`
+accessor (`syncStateRaw` stays on the model so existing stores decode), and two
+captures of screens that no longer exist. `project.yml` loses the four
+Info.plist keys that only existed for sync — ATS local networking, the
+local-network usage string, background fetch, and the
+`im.eamon.replog.sync` BGTask id — and the shipped `Info.plist` now carries
+none of them. `scripts/verify.sh` is the CSV-schema gate alone. README
+rewritten for what the app is; `docs/PLAN.md` marked as the historical spec.
+
+Gates: `scripts/verify.sh` PASS, `scripts/logic-tests.sh` 13/13 (fleet host);
+on the Mac `xcodegen generate` + `** BUILD SUCCEEDED **`, **40/40 unit** (5
+suites), and one UI test, `testStatisticsExportRespectsTheRange`, `** TEST
+SUCCEEDED **` — the only user-facing code that moved was the export sheet's
+caption.
+
+Published 2026-10-27 11:59 UTC: ad-hoc archive from `d26081d` through the Mac's
+GUI session, IPA 826,632 bytes, `sha256_16 7001783abd57b391` served at
+`https://replog.eamonmckiernan.im` and hashed again over HTTPS — identical.
+`manifest.plist` is `application/xml` with an `https://` package URL and
+`bundle-version` 1.1.11; the embedded profile is "iOS Team Ad Hoc", valid to
+2027-09-23, listing the phone.
 
 **Range-aware Statistics export (2026-10-24) — branch `stats-range-export`,
 verified and published for testing as 1.1.10 (build 13).** The overall-statistics chart screens (Statistics →
