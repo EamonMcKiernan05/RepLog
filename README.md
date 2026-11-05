@@ -47,9 +47,6 @@ order are a frozen contract (`docs/PLAN.md` §4.4), implemented in
 - text fields quoted when needed; leading `= + - @` escaped with a space so a
   spreadsheet cannot execute a note
 
-The golden fixture that guards those bytes, and the tests around it, are **not
-in this repo** — see Tests below.
-
 ## Layout
 
 ```
@@ -67,4 +64,3 @@ docs/           PLAN.md (the historical spec), BUILD-REPORT.md, ROUND-2.md,
                 visual captures
 ```
 
-`Tests/` is deliberately absent — it is gitignored.
